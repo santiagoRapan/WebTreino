@@ -1,0 +1,99 @@
+
+Interfaz usuario mobile
+Barra de funciones
+HOME (Landing)
+Contratar profesor
+Comenzar a entrenar
+AI
+Chatear y red social (eventualmente)
+
+Profesores
+SIN PROFESOR
+
+
+
+CON PROFESOR
+Chats con profesores
+
+Workout
+Entrenar / logger
+Armar rutinas
+
+Tools
+Conversiones, pesos, etc
+
+Profile
+Stats
+Configuración
+Opciones de perfil
+Opciones de visualización
+
+Barra superior
+Mensajes
+Chat IA
+
+
+User Mapping
+General
+Autenticación
+Identificación (mail y contraseña)
+Nombre de usuario
+Google, Apple
+Olvide contraseña (cambiar)
+Cerrar sesión
+Usuario
+Home
+Social
+Workout
+Gestión de rutinas
+Crear carpetas
+Armar rutinas —> Ejercicios
+Ejercicios: Armar nosotros los ejercicios existentes con nombres, explicación y video.
+Importar —> Trainer
+Eliminar
+Empezar rutina —> carga de datos
+
+Trainers
+Browser de trainers: por gym, por zona, por modalidad (presencial, virtual, mixto)
+Gestionar trainer
+Adquirir servicio
+Tools
+Perfil
+Estadísticas
+Objetivos
+Últimos entrenamientos
+Gestionar ejercicios propios
+Measures para trackear progreso
+Calendar, historial
+Settings
+Autenticación (cambiar nombre de usuario, cambiar contraseña, cerrar sesión)
+Trainer
+Agenda
+Pagos
+Fechas de pagos de alumnos
+Registrar pagos
+Entrenamientos y seguimiento de alumnos
+Envíos de rutinas
+
+Gestión de Alumnos
+Lista de alumnos
+Chat con alumnos
+Gestión de rutinas
+Armar
+Editar
+Enviar
+Vista de estadísticas
+Seguimiento de progreso
+
+Agente de IA
+Gestión de rutinas
+Creación con lenguaje coloquial
+Asignación a alumnos
+Consultas según estadísticas
+
+
+
+Siguientes cambios:
+3 puntitos en cada rutina al lado de asignar alumno que permita eliminar o mover la rutina de carpetas
+botones blancos en tema claro se pintan de un naranja muy fuerte, no todos. al pasar con el mouse
+botones negros en tema oscuro no se pintan de naranja
