@@ -1,8 +1,0 @@
-Seccion: Chat
-1) entre el buscador y la primera conversacion debe aparecer una seccion de archivados, boton Archivados (n) que te lleve a mostar los chats activados.
-2) hace funcionar las opciones de favoritos y archivar, al menos temporalmente hasta reiniciar ya que todsavia no hay base donde guardarlo
-3) saca el filtro de Pendientes y actuales, que queden solo: Todos, favoritos, no leidos
-
-Seccion: clientes
-1) la informacion que se muestra esta bien, pero si se presiona en un cliente deberian aparecer mas datos como tipo de plan, dias y tipo de entrenamiento, fechas y cantidad de pago y mas cosas que creas que pueden servir
-2) que funcione la opcion de editar informacion, deberia abrir una ventana para abrir los datos del cliente

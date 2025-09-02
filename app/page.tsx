@@ -1,6 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import jsPDF from "jspdf"
+import html2canvas from "html2canvas"
+import * as XLSX from "xlsx"
+import { saveAs } from "file-saver"
 import {
   BarChart3,
   Users,
@@ -52,6 +56,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu"
 import {
   Dialog,
@@ -142,6 +149,21 @@ type RoutineFolder = {
   templates: RoutineTemplate[]
 }
 
+// Calendar Event types
+type CalendarEvent = {
+  id: number
+  title: string
+  description: string
+  date: string
+  time: string
+  type: "training" | "routine_send" | "payment" | "custom"
+  clientId?: number
+  clientName?: string
+  isPresential?: boolean
+  status: "pending" | "completed" | "cancelled"
+  color: string
+}
+
 export default function TrainerDashboard() {
   const [activeTab, setActiveTab] = useState<string>("dashboard")
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false)
@@ -171,6 +193,40 @@ export default function TrainerDashboard() {
   const [isNewChatDialogOpen, setIsNewChatDialogOpen] = useState<boolean>(false)
   const [newChatSearchTerm, setNewChatSearchTerm] = useState<string>("")
   const [showArchived, setShowArchived] = useState<boolean>(false)
+  const [isAddEventDialogOpen, setIsAddEventDialogOpen] = useState<boolean>(false)
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+  const [isEventDetailsOpen, setIsEventDetailsOpen] = useState<boolean>(false)
+  const [isCreateExerciseDialogOpen, setIsCreateExerciseDialogOpen] = useState<boolean>(false)
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([
+    { id: 1, title: "Entrenamiento con María González", description: "Sesión presencial de fuerza y cardio", date: "2024-01-15", time: "09:00", type: "training", clientId: 1, clientName: "María González", isPresential: true, status: "pending", color: "bg-blue-500" },
+    { id: 2, title: "Enviar rutina a Carlos Ruiz", description: "Nueva rutina de hipertrofia", date: "2024-01-15", time: "14:00", type: "routine_send", clientId: 2, clientName: "Carlos Ruiz", status: "pending", color: "bg-green-500" },
+    { id: 3, title: "Pago mensual - Ana López", description: "Renovación de plan mensual", date: "2024-01-16", time: "10:00", type: "payment", clientId: 3, clientName: "Ana López", status: "pending", color: "bg-orange-500" },
+    { id: 4, title: "Entrenamiento con Carlos Ruiz", description: "Sesión de cardio por su cuenta", date: "2024-01-16", time: "16:00", type: "training", clientId: 2, clientName: "Carlos Ruiz", isPresential: false, status: "pending", color: "bg-purple-500" }
+  ])
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth())
+  const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear())
+  
+  // Form state for new event
+  const [newEventForm, setNewEventForm] = useState({
+    title: '',
+    description: '',
+    date: '',
+    time: '',
+    type: 'training' as CalendarEvent['type'],
+    clientId: undefined as number | undefined,
+    isPresential: undefined as boolean | undefined,
+    status: 'pending' as CalendarEvent['status'],
+    color: '#3b82f6'
+  })
+
+  // Form state for new exercise
+  const [newExerciseForm, setNewExerciseForm] = useState({
+    name: '',
+    category: 'Tren superior' as Exercise['category'],
+    equipment: 'Sin elementos' as Exercise['equipment'],
+    description: ''
+  })
 
   const normalizeText = (text: string) => {
     return text
@@ -312,7 +368,7 @@ export default function TrainerDashboard() {
   }
 
   const handleDeleteClient = (clientId: number) => {
-    if (confirm("¿Estás seguro de que quieres eliminar este cliente?")) {
+    if (confirm("¿Estás seguro de que quieres eliminar este alumno?")) {
       console.log("[v0] Deleting client:", clientId)
       // Here you would implement the actual delete logic
     }
@@ -328,20 +384,17 @@ export default function TrainerDashboard() {
     // Here you would implement navigation to client history
   }
 
-  const handleScheduleSession = (clientId: number) => {
-    console.log("[v0] Scheduling session for client:", clientId)
-    // Here you would implement session scheduling logic
-  }
+
 
   const stats = [
-    { title: "Clientes Activos", value: "24", change: "+3", icon: Users, color: "text-primary" },
+    { title: "Alumnos Activos", value: "24", change: "+3", icon: Users, color: "text-primary" },
     { title: "Sesiones Hoy", value: "8", change: "+2", icon: Calendar, color: "text-primary" },
     { title: "Ingresos Mes", value: "$4,250", change: "+12%", icon: DollarSign, color: "text-primary" },
     { title: "Progreso Promedio", value: "82%", change: "+5%", icon: TrendingUp, color: "text-primary" },
   ]
 
   // Mock exercises catalog
-  const exercisesCatalog: Exercise[] = [
+  const [exercisesCatalog, setExercisesCatalog] = useState<Exercise[]>([
     { id: 1, name: "Press banca", category: "Tren superior", equipment: "Pesas" },
     { id: 2, name: "Dominadas", category: "Tren superior", equipment: "Sin elementos" },
     { id: 3, name: "Sentadillas", category: "Tren inferior", equipment: "Pesas" },
@@ -351,7 +404,7 @@ export default function TrainerDashboard() {
     { id: 7, name: "Cinta trote", category: "Cardio", equipment: "Máquinas" },
     { id: 8, name: "Remo con mancuerna", category: "Tren superior", equipment: "Pesas" },
     { id: 9, name: "Estocadas", category: "Tren inferior", equipment: "Pesas" },
-  ]
+  ])
 
   // Mock routine folders and templates
   const [routineFolders, setRoutineFolders] = useState<RoutineFolder[]>([
@@ -463,6 +516,8 @@ export default function TrainerDashboard() {
   const [selectedBlockId, setSelectedBlockId] = useState<number | null>(null)
   const [exerciseSearchTerm, setExerciseSearchTerm] = useState("")
   const [expandedBlocks, setExpandedBlocks] = useState<Set<number>>(new Set())
+  const [viewingRoutine, setViewingRoutine] = useState<RoutineTemplate | null>(null)
+  const [isRoutineViewerOpen, setIsRoutineViewerOpen] = useState(false)
 
   const currentFolder = routineFolders.find((f) => f.id === selectedFolderId) || routineFolders[0]
   const filteredTemplates = (currentFolder?.templates || []).filter((t) => t.name.toLowerCase().includes(routineSearch.toLowerCase()))
@@ -471,6 +526,37 @@ export default function TrainerDashboard() {
     const name = prompt("Nombre de la carpeta")
     if (!name) return
     setRoutineFolders((prev) => [...prev, { id: Date.now(), name, templates: [] }])
+  }
+
+  const handleDeleteTemplate = (templateId: number) => {
+    if (!currentFolder) return
+    const confirmDelete = confirm("¿Eliminar esta rutina?")
+    if (!confirmDelete) return
+    setRoutineFolders(prev => prev.map(folder =>
+      folder.id === currentFolder.id
+        ? { ...folder, templates: folder.templates.filter(t => t.id !== templateId) }
+        : folder
+    ))
+  }
+
+  const handleMoveTemplate = (templateId: number, targetFolderId: number) => {
+    if (!currentFolder || currentFolder.id === targetFolderId) return
+    setRoutineFolders(prev => {
+      const sourceFolder = prev.find(f => f.id === currentFolder.id)
+      const targetFolder = prev.find(f => f.id === targetFolderId)
+      if (!sourceFolder || !targetFolder) return prev
+      const templateToMove = sourceFolder.templates.find(t => t.id === templateId)
+      if (!templateToMove) return prev
+      return prev.map(f => {
+        if (f.id === sourceFolder.id) {
+          return { ...f, templates: f.templates.filter(t => t.id !== templateId) }
+        }
+        if (f.id === targetFolder.id) {
+          return { ...f, templates: [templateToMove, ...f.templates] }
+        }
+        return f
+      })
+    })
   }
 
   const handleCreateTemplate = () => {
@@ -947,7 +1033,19 @@ export default function TrainerDashboard() {
   }
 
   const handleAddSession = () => {
-    alert("Funcionalidad de agendar sesión estará disponible cuando implementemos la sección de agenda")
+    // Open the add event dialog for scheduling a session
+    setNewEventForm({
+      title: '',
+      description: '',
+      date: '',
+      time: '',
+      type: 'training',
+      clientId: undefined,
+      isPresential: true,
+      status: 'pending',
+      color: '#3b82f6'
+    })
+    setIsAddEventDialogOpen(true)
   }
 
   const handleNewClient = () => {
@@ -955,15 +1053,485 @@ export default function TrainerDashboard() {
   }
 
   const handleCreateRoutine = () => {
-    alert("Funcionalidad de crear rutina estará disponible cuando implementemos la sección de rutinas")
+    // Navigate to routines tab and create a new routine
+    setActiveTab("routines")
+    // Trigger the create routine function
+    setTimeout(() => {
+      const name = prompt("Nombre de la nueva rutina")
+      if (!name || !currentFolder) return
+      const newTemplate: RoutineTemplate = { id: Date.now(), name, blocks: [] }
+      setRoutineFolders((prev) => prev.map((f) => (f.id === currentFolder.id ? { ...f, templates: [newTemplate, ...f.templates] } : f)))
+    }, 100)
   }
 
   const handleScheduleAppointment = () => {
-    alert("Funcionalidad de agendar cita estará disponible cuando implementemos la sección de agenda")
+    // Open the add event dialog for scheduling an appointment
+    setNewEventForm({
+      title: '',
+      description: '',
+      date: '',
+      time: '',
+      type: 'custom',
+      clientId: undefined,
+      isPresential: undefined,
+      status: 'pending',
+      color: '#3b82f6'
+    })
+    setIsAddEventDialogOpen(true)
+  }
+
+  const handleScheduleSession = (clientId: number) => {
+    const client = allClients.find(c => c.id === clientId)
+    if (!client) return
+    
+    // Pre-fill the form with client information
+    setNewEventForm({
+      title: `Entrenamiento con ${client.name}`,
+      description: `Sesión de entrenamiento con ${client.name}`,
+      date: '',
+      time: '',
+      type: 'training',
+      clientId: clientId,
+      isPresential: true,
+      status: 'pending',
+      color: '#3b82f6'
+    })
+    
+    setIsAddEventDialogOpen(true)
   }
 
   const handleRegisterPayment = () => {
     alert("Funcionalidad de registrar pago estará disponible cuando implementemos la sección de pagos")
+  }
+
+  // Calendar/Agenda handlers
+  const handleAddEvent = () => {
+    setIsAddEventDialogOpen(true)
+  }
+
+  const handleCreateEvent = (eventData: {
+    title: string
+    description: string
+    date: string
+    time: string
+    type: CalendarEvent['type']
+    clientId?: number
+    clientName?: string
+    isPresential?: boolean
+    status: CalendarEvent['status']
+    color: string
+  }) => {
+    const newEvent: CalendarEvent = {
+      ...eventData,
+      id: Date.now()
+    }
+    setCalendarEvents(prev => [...prev, newEvent])
+    setIsAddEventDialogOpen(false)
+  }
+
+  const handleCreateExercise = () => {
+    if (!newExerciseForm.name.trim()) {
+      alert("Por favor ingresa el nombre del ejercicio")
+      return
+    }
+
+    const newExercise: Exercise = {
+      id: Date.now(),
+      name: newExerciseForm.name.trim(),
+      category: newExerciseForm.category,
+      equipment: newExerciseForm.equipment,
+      description: newExerciseForm.description.trim() || undefined
+    }
+
+    setExercisesCatalog(prev => [...prev, newExercise])
+    
+    // Reset form
+    setNewExerciseForm({
+      name: '',
+      category: 'Tren superior',
+      equipment: 'Sin elementos',
+      description: ''
+    })
+    
+    setIsCreateExerciseDialogOpen(false)
+    alert(`Ejercicio "${newExercise.name}" creado exitosamente`)
+  }
+
+  const handleExportRoutineToPDF = async (template: RoutineTemplate) => {
+    try {
+      // Create a temporary div to render the routine content
+      const tempDiv = document.createElement('div')
+      tempDiv.style.position = 'absolute'
+      tempDiv.style.left = '-9999px'
+      tempDiv.style.top = '0'
+      tempDiv.style.width = '800px'
+      tempDiv.style.padding = '40px'
+      tempDiv.style.backgroundColor = 'white'
+      tempDiv.style.color = 'black'
+      tempDiv.style.fontFamily = 'Arial, sans-serif'
+      tempDiv.style.fontSize = '14px'
+      tempDiv.style.lineHeight = '1.6'
+      
+      // Build the routine content with better formatting
+      let content = `
+        <div style="text-align: center; margin-bottom: 40px; border-bottom: 3px solid #f97316; padding-bottom: 20px;">
+          <h1 style="color: #f97316; font-size: 32px; margin: 0; font-weight: bold;">RUTINA DE ENTRENAMIENTO</h1>
+          <h2 style="color: #333; font-size: 24px; margin: 10px 0;">${template.name}</h2>
+          ${template.description ? `<p style="color: #666; font-size: 16px; margin: 10px 0; font-style: italic;">${template.description}</p>` : ''}
+        </div>
+      `
+      
+      template.blocks.forEach((block, blockIndex) => {
+        content += `
+          <div style="margin-bottom: 30px; page-break-inside: avoid;">
+            <h3 style="color: #333; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #f97316; padding-bottom: 8px; background-color: #f8f9fa; padding: 15px; border-radius: 5px;">
+              BLOQUE ${blockIndex + 1}: ${block.name}
+            </h3>
+            <p style="color: #666; margin-bottom: 20px; font-weight: bold; font-size: 16px;">
+              Repeticiones del bloque: ${block.repetitions}
+            </p>
+        `
+        
+        block.exercises.forEach((exercise, exerciseIndex) => {
+          const exerciseData = exercisesCatalog.find(ex => ex.id === exercise.exerciseId)
+          if (exerciseData) {
+            content += `
+              <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #fafafa;">
+                <h4 style="color: #333; font-size: 18px; margin: 0 0 10px 0; font-weight: bold;">
+                  ${exerciseIndex + 1}. ${exerciseData.name}
+                </h4>
+                <div style="display: flex; gap: 20px; margin-bottom: 8px; flex-wrap: wrap;">
+                  <span style="background-color: #e3f2fd; padding: 4px 8px; border-radius: 4px; font-weight: bold;">
+                    Series: ${exercise.sets}
+                  </span>
+                  <span style="background-color: #f3e5f5; padding: 4px 8px; border-radius: 4px; font-weight: bold;">
+                    Repeticiones: ${exercise.reps}
+                  </span>
+                  <span style="background-color: #e8f5e8; padding: 4px 8px; border-radius: 4px; font-weight: bold;">
+                    Descanso: ${exercise.restSec}s
+                  </span>
+                </div>
+                <div style="color: #666; font-size: 14px; margin-top: 8px;">
+                  <strong>Categoría:</strong> ${exerciseData.category} | 
+                  <strong>Equipamiento:</strong> ${exerciseData.equipment}
+                  ${exerciseData.description ? `<br><strong>Descripción:</strong> ${exerciseData.description}` : ''}
+                </div>
+              </div>
+            `
+          }
+        })
+        
+        content += `</div>`
+      })
+      
+      tempDiv.innerHTML = content
+      document.body.appendChild(tempDiv)
+      
+      // Generate PDF using html2canvas and jsPDF
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        width: 800,
+        height: tempDiv.scrollHeight
+      })
+      
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const imgWidth = 210
+      const pageHeight = 295
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+      
+      let position = 0
+      
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+      
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+      }
+      
+      // Clean up
+      document.body.removeChild(tempDiv)
+      
+      // Download the PDF
+      const fileName = `${template.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_rutina.pdf`
+      pdf.save(fileName)
+      
+      alert('Rutina exportada como PDF exitosamente')
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      alert('Error al generar el PDF. Inténtalo de nuevo.')
+    }
+  }
+
+  const handleExportRoutineToExcel = (template: RoutineTemplate) => {
+    try {
+      // Create a proper Excel file using XLSX library
+      const workbook = XLSX.utils.book_new()
+      
+      // Create main routine sheet with better formatting
+      const routineData = [
+        ['RUTINA DE ENTRENAMIENTO'],
+        [''],
+        ['Nombre de la Rutina:', template.name],
+        ['Descripción:', template.description || 'Sin descripción'],
+        ['Fecha de Creación:', new Date().toLocaleDateString('es-ES')],
+        [''],
+        ['RESUMEN DE BLOQUES'],
+        [''],
+        ['Bloque', 'Nombre del Bloque', 'Repeticiones', 'Número de Ejercicios']
+      ]
+      
+      template.blocks.forEach((block, blockIndex) => {
+        routineData.push([
+          `Bloque ${blockIndex + 1}`,
+          block.name,
+          String(block.repetitions),
+          String(block.exercises.length)
+        ])
+      })
+      
+      // Add empty rows for better formatting
+      routineData.push([''])
+      routineData.push(['DETALLE COMPLETO DE EJERCICIOS'])
+      routineData.push([''])
+      routineData.push([
+        'Bloque',
+        'Nombre del Ejercicio',
+        'Categoría',
+        'Equipamiento',
+        'Series',
+        'Repeticiones',
+        'Descanso (segundos)',
+        'Descripción del Ejercicio'
+      ])
+      
+      template.blocks.forEach((block, blockIndex) => {
+        block.exercises.forEach((exercise) => {
+          const exerciseData = exercisesCatalog.find(ex => ex.id === exercise.exerciseId)
+          if (exerciseData) {
+            routineData.push([
+              `Bloque ${blockIndex + 1}: ${block.name}`,
+              exerciseData.name,
+              exerciseData.category,
+              exerciseData.equipment,
+              String(exercise.sets),
+              String(exercise.reps),
+              String(exercise.restSec),
+              exerciseData.description || 'Sin descripción'
+            ])
+          }
+        })
+      })
+      
+      // Create the worksheet
+      const worksheet = XLSX.utils.aoa_to_sheet(routineData)
+      
+      // Set column widths for better formatting
+      const columnWidths = [
+        { wch: 25 }, // Bloque
+        { wch: 30 }, // Nombre del Ejercicio
+        { wch: 15 }, // Categoría
+        { wch: 15 }, // Equipamiento
+        { wch: 8 },  // Series
+        { wch: 12 }, // Repeticiones
+        { wch: 15 }, // Descanso
+        { wch: 40 }  // Descripción
+      ]
+      worksheet['!cols'] = columnWidths
+      
+      // Add the worksheet to the workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Rutina Completa')
+      
+      // Create a separate sheet for just the exercise list
+      const exerciseListData = [
+        ['LISTA DE EJERCICIOS'],
+        [''],
+        ['Ejercicio', 'Categoría', 'Equipamiento', 'Descripción']
+      ]
+      
+      // Get unique exercises from the routine
+      const uniqueExercises = new Map()
+      template.blocks.forEach((block) => {
+        block.exercises.forEach((exercise) => {
+          const exerciseData = exercisesCatalog.find(ex => ex.id === exercise.exerciseId)
+          if (exerciseData && !uniqueExercises.has(exerciseData.id)) {
+            uniqueExercises.set(exerciseData.id, exerciseData)
+          }
+        })
+      })
+      
+      uniqueExercises.forEach((exerciseData) => {
+        exerciseListData.push([
+          exerciseData.name,
+          exerciseData.category,
+          exerciseData.equipment,
+          exerciseData.description || 'Sin descripción'
+        ])
+      })
+      
+      const exerciseListSheet = XLSX.utils.aoa_to_sheet(exerciseListData)
+      exerciseListSheet['!cols'] = [
+        { wch: 30 }, // Ejercicio
+        { wch: 15 }, // Categoría
+        { wch: 15 }, // Equipamiento
+        { wch: 40 }  // Descripción
+      ]
+      
+      XLSX.utils.book_append_sheet(workbook, exerciseListSheet, 'Lista de Ejercicios')
+      
+      // Save the file
+      const fileName = `${template.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_rutina.xlsx`
+      XLSX.writeFile(workbook, fileName)
+      
+      alert('Rutina exportada como archivo CSV exitosamente')
+    } catch (error) {
+      console.error('Error exporting routine:', error)
+      alert('Error al exportar la rutina. Inténtalo de nuevo.')
+    }
+  }
+
+  const handleEventClick = (event: CalendarEvent) => {
+    setSelectedEvent(event)
+    setIsEventDetailsOpen(true)
+    
+    // Si es un evento de enviar rutina, mostrar opción para ir a rutinas
+    if (event.type === 'routine_send' && event.clientName) {
+      const goToRoutines = confirm(`¿Quieres ir a la sección de rutinas para enviar una rutina a ${event.clientName}?`)
+      if (goToRoutines) {
+        handleGoToRoutines(event.clientName)
+      }
+    }
+  }
+
+  const handleEditEvent = (event: CalendarEvent) => {
+    setSelectedEvent(event)
+    setNewEventForm({
+      title: event.title,
+      description: event.description,
+      date: event.date,
+      time: event.time,
+      type: event.type,
+      clientId: event.clientId,
+      isPresential: event.isPresential,
+      status: event.status,
+      color: event.color.replace('bg-', '#').replace('-500', '')
+    })
+    setIsEventDetailsOpen(false)
+    setIsAddEventDialogOpen(true)
+  }
+
+  const handleDeleteEvent = (eventId: number) => {
+    if (confirm('¿Estás seguro de que quieres eliminar este evento?')) {
+      setCalendarEvents(prev => prev.filter(e => e.id !== eventId))
+      setIsEventDetailsOpen(false)
+    }
+  }
+
+  const handleUpdateEvent = (eventData: {
+    title: string 
+    description: string
+    date: string
+    time: string
+    type: CalendarEvent['type']
+    clientId?: number
+    clientName?: string
+    isPresential?: boolean
+    status: CalendarEvent['status']
+    color: string
+  }) => {
+    if (selectedEvent) {
+      const updatedEvent: CalendarEvent = {
+        ...selectedEvent,
+        ...eventData,
+        color: `bg-[${eventData.color}]`
+      }
+      setCalendarEvents(prev => prev.map(e => e.id === selectedEvent.id ? updatedEvent : e))
+      setIsAddEventDialogOpen(false)
+      setSelectedEvent(null)
+    }
+  }
+
+  const handleCompleteEvent = (eventId: number) => {
+    setCalendarEvents(prev => prev.map(event => 
+      event.id === eventId ? { ...event, status: 'completed' as const } : event
+    ))
+    setIsEventDetailsOpen(false)
+  }
+
+
+
+  const handleGoToRoutines = (clientName: string) => {
+    setActiveTab("routines")
+    // Here you could also set a filter to show the specific client's routines
+    alert(`Redirigiendo a rutinas para ${clientName}`)
+  }
+
+  const getEventsForDate = (date: string) => {
+    return calendarEvents.filter(event => event.date === date)
+  }
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      if (currentMonth === 0) {
+        setCurrentMonth(11)
+        setCurrentYear(prev => prev - 1)
+      } else {
+        setCurrentMonth(prev => prev - 1)
+      }
+    } else {
+      if (currentMonth === 11) {
+        setCurrentMonth(0)
+        setCurrentYear(prev => prev + 1)
+      } else {
+        setCurrentMonth(prev => prev + 1)
+      }
+    }
+  }
+
+  const getDaysInMonth = (month: number, year: number) => {
+    return new Date(year, month + 1, 0).getDate()
+  }
+
+  const getFirstDayOfMonth = (month: number, year: number) => {
+    return new Date(year, month, 1).getDay()
+  }
+
+  const formatDate = (day: number, month: number, year: number) => {
+    return new Date(year, month, day).toISOString().split('T')[0]
+  }
+
+  const getMonthName = (month: number) => {
+    const months = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ]
+    return months[month]
+  }
+
+  const getEventTypeLabel = (type: CalendarEvent['type']) => {
+    switch (type) {
+      case 'training': return 'Entrenamiento'
+      case 'routine_send': return 'Enviar Rutina'
+      case 'payment': return 'Pago'
+      case 'custom': return 'Personalizado'
+      default: return type
+    }
+  }
+
+  const getEventTypeIcon = (type: CalendarEvent['type']) => {
+    switch (type) {
+      case 'training': return '🏋️'
+      case 'routine_send': return '📤'
+      case 'payment': return '💰'
+      case 'custom': return '📝'
+      default: return '📅'
+    }
   }
 
   return (
@@ -1001,7 +1569,7 @@ export default function TrainerDashboard() {
         <nav className="p-4 space-y-2">
           {[
             { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-            { id: "clients", label: "Clientes", icon: Users },
+            { id: "clients", label: "Alumnos", icon: Users },
             { id: "schedule", label: "Agenda", icon: Calendar },
             { id: "routines", label: "Rutinas", icon: Activity },
             { id: "payments", label: "Pagos", icon: DollarSign },
@@ -1032,7 +1600,7 @@ export default function TrainerDashboard() {
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-bold text-foreground">
               {activeTab === "dashboard" && "Dashboard"}
-              {activeTab === "clients" && "Gestión de Clientes"}
+              {activeTab === "clients" && "Gestión de Alumnos"}
               {activeTab === "schedule" && "Agenda"}
               {activeTab === "routines" && "Rutinas"}
               {activeTab === "payments" && "Pagos"}
@@ -1118,7 +1686,7 @@ export default function TrainerDashboard() {
                       </div>
                     </div>
                   ))}
-                  <Button className="w-full bg-transparent hover:bg-orange-500 hover:text-white transition-colors" variant="outline" onClick={handleAddSession}>
+                  <Button className="w-full bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors" variant="outline" onClick={handleAddSession}>
                     <Plus className="w-4 h-4 mr-2" />
                     Agendar Sesión
                   </Button>
@@ -1128,8 +1696,8 @@ export default function TrainerDashboard() {
               {/* Recent Clients */}
               <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="text-card-foreground">Clientes Recientes</CardTitle>
-                  <CardDescription>Actividad y progreso de tus clientes</CardDescription>
+                  <CardTitle className="text-card-foreground">Alumnos Recientes</CardTitle>
+                  <CardDescription>Actividad y progreso de tus alumnos</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {recentClients.map((client) => (
@@ -1153,8 +1721,8 @@ export default function TrainerDashboard() {
                       </div>
                     </div>
                   ))}
-                  <Button className="w-full bg-transparent hover:bg-orange-500 hover:text-white transition-colors" variant="outline" onClick={handleViewAllClients}>
-                    Ver Todos los Clientes
+                  <Button className="w-full bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors" variant="outline" onClick={handleViewAllClients}>
+                    Ver Todos los Alumnos
                     <ChevronRight className="w-4 h-4 ml-2" />
                   </Button>
                 </CardContent>
@@ -1169,12 +1737,12 @@ export default function TrainerDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <Button className="h-20 flex-col gap-2 bg-transparent hover:bg-orange-500 hover:text-white transition-colors" variant="outline" onClick={handleNewClient}>
+                  <Button className="h-20 flex-col gap-2 bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors" variant="outline" onClick={handleNewClient}>
                     <Users className="w-6 h-6" />
-                    <span className="text-sm">Nuevo Cliente</span>
+                    <span className="text-sm">Nuevo Alumno</span>
                   </Button>
                   <Button
-                    className="h-20 flex-col gap-2 bg-transparent hover:bg-orange-500 hover:text-white transition-colors"
+                    className="h-20 flex-col gap-2 bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors"
                     variant="outline"
                     onClick={handleCreateRoutine}
                   >
@@ -1182,7 +1750,7 @@ export default function TrainerDashboard() {
                     <span className="text-sm">Crear Rutina</span>
                   </Button>
                   <Button
-                    className="h-20 flex-col gap-2 bg-transparent hover:bg-orange-500 hover:text-white transition-colors"
+                    className="h-20 flex-col gap-2 bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors"
                     variant="outline"
                     onClick={handleScheduleAppointment}
                   >
@@ -1190,7 +1758,7 @@ export default function TrainerDashboard() {
                     <span className="text-sm">Agendar Cita</span>
                   </Button>
                   <Button
-                    className="h-20 flex-col gap-2 bg-transparent hover:bg-orange-500 hover:text-white transition-colors"
+                    className="h-20 flex-col gap-2 bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors"
                     variant="outline"
                     onClick={handleRegisterPayment}
                   >
@@ -1205,252 +1773,148 @@ export default function TrainerDashboard() {
 
         {/* Clients Content */}
         {activeTab === "clients" && (
-          <main className="p-6 space-y-6">
-            {/* Clients Header with Actions */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-              <div>
-                <h2 className="text-2xl font-bold text-foreground">Mis Clientes</h2>
-                <p className="text-muted-foreground">Gestiona y supervisa el progreso de tus clientes</p>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleNewClient} className="hover:bg-orange-500 transition-colors">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nuevo Cliente
-                </Button>
-              </div>
-            </div>
-
-            {/* Search and Filters */}
-            <Card className="bg-card border-border">
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input
-                      placeholder="Buscar clientes..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant={clientFilter === "all" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setClientFilter("all")}
-                    >
-                      Todos ({allClients.length})
-                    </Button>
-                    <Button
-                      variant={clientFilter === "active" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setClientFilter("active")}
-                    >
-                      Activos ({allClients.filter((c) => c.status === "Activo").length})
-                    </Button>
-                    <Button
-                      variant={clientFilter === "pending" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setClientFilter("pending")}
-                    >
-                      Pendientes ({allClients.filter((c) => c.status === "Pendiente").length})
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Clients Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="bg-card border-border">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Clientes</p>
-                      <p className="text-2xl font-bold text-card-foreground">{allClients.length}</p>
-                    </div>
-                    <Users className="w-8 h-8 text-primary" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-card border-border">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Clientes Activos</p>
-                      <p className="text-2xl font-bold text-card-foreground">
-                        {allClients.filter((c) => c.status === "Activo").length}
-                      </p>
-                    </div>
-                    <UserCheck className="w-8 h-8 text-green-500" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-card border-border">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Progreso Promedio</p>
-                      <p className="text-2xl font-bold text-card-foreground">
-                        {Math.round(allClients.reduce((acc, client) => acc + client.progress, 0) / allClients.length)}%
-                      </p>
-                    </div>
-                    <Activity className="w-8 h-8 text-primary" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Clients Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  <main className="p-6 space-y-6">
+    <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">Listado de Alumnos</h2>
+        <p className="text-muted-foreground">Visualiza y gestiona todos tus alumnos en una sola vista</p>
+      </div>
+      <div className="flex gap-2">
+        <Button onClick={handleNewClient} className="hover:bg-accent hover:text-accent-foreground transition-colors">
+          <Plus className="w-4 h-4 mr-2" />
+          Nuevo Alumno
+        </Button>
+      </div>
+    </div>
+    <Card className="bg-card border-border">
+      <CardContent className="p-4">
+        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Buscar alumnos por nombre, email o teléfono..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant={clientFilter === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setClientFilter("all")}
+              className="hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
+              Todos ({allClients.length})
+            </Button>
+            <Button
+              variant={clientFilter === "active" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setClientFilter("active")}
+              className="hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
+              Activos ({allClients.filter((c) => c.status === "Activo").length})
+            </Button>
+            <Button
+              variant={clientFilter === "pending" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setClientFilter("pending")}
+              className="hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
+              Pendientes ({allClients.filter((c) => c.status === "Pendiente").length})
+            </Button>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="bg-muted/40 text-muted-foreground">
+                <th className="px-3 py-2 text-left">Nombre</th>
+                <th className="px-3 py-2 text-left">Email</th>
+                <th className="px-3 py-2 text-left">Teléfono</th>
+                <th className="px-3 py-2 text-left">Estado</th>
+                <th className="px-3 py-2 text-left">Progreso</th>
+                <th className="px-3 py-2 text-left">Próxima sesión</th>
+                <th className="w-12"></th>
+              </tr>
+            </thead>
+            <tbody>
               {filteredClients.map((client) => (
-                <Card key={client.id} className="bg-card border-border">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={client.avatar || "/placeholder.svg"} />
-                          <AvatarFallback>
-                            {client.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="font-semibold text-card-foreground">{client.name}</h3>
-                          <p className="text-sm text-muted-foreground">{client.goal}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant={
-                            client.status === "Activo"
-                              ? "default"
-                              : client.status === "Pendiente"
-                                ? "secondary"
-                                : "destructive"
-                          }
-                        >
-                          {client.status}
-                        </Badge>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={() => handleEditClient(client)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Editar información
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleViewHistory(client.id)}>
-                              <FileText className="w-4 h-4 mr-2" />
-                              Ver historial
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleScheduleSession(client.id)}>
-                              <CalendarIcon className="w-4 h-4 mr-2" />
-                              Agendar sesión
-                            </DropdownMenuItem>
-                            {client.status !== "Activo" && (
-                              <DropdownMenuItem onClick={() => handleMarkAsActive(client.id)}>
-                                <UserCheck className="w-4 h-4 mr-2" />
-                                Marcar como activo
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteClient(client.id)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Eliminar cliente
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-
-                    <button
-                      className="w-full text-left p-3 rounded bg-muted/40 hover:bg-muted/60 transition-colors"
-                      onClick={() => {
-                        setExpandedClientIds((prev) => {
-                          const copy = new Set(prev)
-                          if (copy.has(client.id)) copy.delete(client.id)
-                          else copy.add(client.id)
-                          return copy
-                        })
-                      }}
+                <tr key={client.id} className="border-b border-border hover:bg-muted/30 transition-colors items-center">
+                  <td className="px-3 py-2 font-medium flex items-center gap-2">
+                    <Avatar className="w-14 h-14">
+                      <AvatarImage src={client.avatar || "/placeholder.svg"} />
+                      <AvatarFallback>
+                        {client.name.split(" ").map((n) => n[0]).join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                    {client.name}
+                  </td>
+                  <td className="px-3 py-2">{client.email}</td>
+                  <td className="px-3 py-2">{client.phone}</td>
+                  <td className="px-3 py-2">
+                    <Badge
+                      variant={
+                        client.status === "Activo"
+                          ? "default"
+                          : client.status === "Pendiente"
+                          ? "secondary"
+                          : "destructive"
+                      }
                     >
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Plan</p>
-                          <p className="text-card-foreground">{client.plan}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Próxima sesión</p>
-                          <p className="text-card-foreground">{client.nextSession}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Sesiones completadas</p>
-                          <p className="text-card-foreground">{client.sessionsCompleted}/{client.totalSessions}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Progreso</p>
-                          <p className="text-card-foreground">{client.progress}%</p>
-                        </div>
-                      </div>
-                      {expandedClientIds.has(client.id) && (
-                        <div className="mt-3 border-t border-border pt-3 grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <p className="text-muted-foreground">Email</p>
-                            <p className="text-card-foreground">{client.email}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Teléfono</p>
-                            <p className="text-card-foreground">{client.phone}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Alta</p>
-                            <p className="text-card-foreground">{client.joinDate}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Última sesión</p>
-                            <p className="text-card-foreground">{client.lastSession}</p>
-                          </div>
-                          <div className="col-span-2">
-                            <p className="text-muted-foreground">Tipo de entrenamiento</p>
-                            <p className="text-card-foreground">{client.goal} + Fuerza (3x semana)</p>
-                          </div>
-                          <div className="col-span-2">
-                            <p className="text-muted-foreground">Pagos</p>
-                            <p className="text-card-foreground">$50.000/mes - Último pago hace 10 días</p>
-                          </div>
-                        </div>
-                      )}
-                    </button>
-
-                    <div className="mt-4 pt-4 border-t border-border flex gap-2">
-                      <Button size="sm" className="flex-1" onClick={() => handleChatFromClient(client.name)}>
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Chat
-                      </Button>
-                                                  <Button size="sm" variant="outline" className="flex-1 bg-transparent hover:bg-orange-500 hover:text-white transition-colors">
-                              <Calendar className="w-4 h-4 mr-2" />
-                              Agendar
-                            </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                      {client.status}
+                    </Badge>
+                  </td>
+                  <td className="px-3 py-2 text-left align-middle">{client.progress}%</td>
+                  <td className="px-3 py-2">{client.nextSession}</td>
+                  <td className="w-12 px-1 py-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="w-5 h-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleChatFromClient(client.name)}>
+                          <MessageSquare className="w-4 h-4 mr-2" />
+                          Chat
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditClient(client)}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleScheduleSession(client.id)}>
+                          <Calendar className="w-4 h-4 mr-2" />
+                          Agendar sesión
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleDeleteClient(client.id)} className="text-destructive focus:text-destructive">
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Eliminar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                </tr>
               ))}
-            </div>
+              {filteredClients.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                    No se encontraron alumnos con los filtros aplicados.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
 
             {/* Edit Client Dialog */}
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
               <DialogContent className="sm:max-w-[520px]">
                 <DialogHeader>
-                  <DialogTitle>Editar información del cliente</DialogTitle>
+                  <DialogTitle>Editar información del alumno</DialogTitle>
                   <DialogDescription>Actualiza los datos y guarda los cambios.</DialogDescription>
                 </DialogHeader>
                 {editingClient && (
@@ -1496,11 +1960,210 @@ export default function TrainerDashboard() {
                   </div>
                 )}
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="hover:bg-orange-500 hover:text-white transition-colors">Cancelar</Button>
+                  <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="hover:bg-accent hover:text-accent-foreground transition-colors">Cancelar</Button>
                   <Button onClick={() => { alert("Datos guardados (temporal, sin base de datos)"); setIsEditDialogOpen(false) }}>Guardar</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+          </main>
+        )}
+
+        {/* Schedule/Agenda Content */}
+        {activeTab === "schedule" && (
+          <main className="p-6 space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Agenda</h2>
+                <p className="text-muted-foreground">Gestiona tu calendario de entrenamientos y eventos</p>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleAddEvent} className="hover:bg-orange-500 transition-colors">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Agregar Evento
+                </Button>
+              </div>
+            </div>
+
+            {/* Calendar Grid */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-card-foreground">Calendario</CardTitle>
+                    <CardDescription>Selecciona una fecha para ver los eventos</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigateMonth('prev')}
+                      className="hover:bg-accent hover:text-accent-foreground transition-colors"
+                    >
+                      ←
+                    </Button>
+                    <div className="text-center min-w-[120px]">
+                      <div className="font-medium text-card-foreground">
+                        {getMonthName(currentMonth)} {currentYear}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigateMonth('next')}
+                      className="hover:bg-accent hover:text-accent-foreground transition-colors"
+                    >
+                      →
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-7 gap-1 mb-4">
+                  {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day) => (
+                    <div key={day} className="p-2 text-center text-sm font-medium text-muted-foreground">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="grid grid-cols-7 gap-1">
+                  {(() => {
+                    const daysInMonth = getDaysInMonth(currentMonth, currentYear)
+                    const firstDay = getFirstDayOfMonth(currentMonth, currentYear)
+                    const days = []
+                    
+                    // Add empty cells for days before the first day of the month
+                    for (let i = 0; i < firstDay; i++) {
+                      days.push(
+                        <div key={`empty-${i}`} className="min-h-[80px] p-1 border border-border bg-muted/30">
+                        </div>
+                      )
+                    }
+                    
+                    // Add days of the current month
+                    for (let day = 1; day <= daysInMonth; day++) {
+                      const dateString = formatDate(day, currentMonth, currentYear)
+                      const isToday = dateString === new Date().toISOString().split('T')[0]
+                      const isSelected = dateString === selectedDate
+                      const events = getEventsForDate(dateString)
+                      
+                      days.push(
+                        <div
+                          key={day}
+                          className={`min-h-[80px] p-1 border border-border cursor-pointer hover:bg-accent/50 transition-colors ${
+                            isToday ? 'ring-2 ring-primary' : ''
+                          } ${isSelected ? 'bg-primary/20' : 'bg-card'}`}
+                          onClick={() => setSelectedDate(dateString)}
+                        >
+                          <div className="text-xs text-muted-foreground mb-1">
+                            {day}
+                          </div>
+                          <div className="space-y-1">
+                            {events.slice(0, 2).map((event) => (
+                              <div
+                                key={event.id}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEventClick(event)
+                                }}
+                                className={`text-xs p-1 rounded cursor-pointer transition-colors hover:opacity-80 ${event.color}`}
+                                title={`${event.title} - ${event.time}`}
+                              >
+                                <div className="truncate font-medium text-white">
+                                  {getEventTypeIcon(event.type)} {event.title.substring(0, 15)}
+                                </div>
+                                <div className="text-white/80 text-[10px]">
+                                  {event.time}
+                                </div>
+                              </div>
+                            ))}
+                            {events.length > 2 && (
+                              <div className="text-xs text-muted-foreground text-center">
+                                +{events.length - 2} más
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    }
+                    
+                    return days
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Selected Date Events */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-card-foreground">
+                  Eventos del {new Date(selectedDate).toLocaleDateString('es-ES', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </CardTitle>
+                <CardDescription>Detalles de los eventos programados</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {getEventsForDate(selectedDate).length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No hay eventos programados para este día</p>
+                  </div>
+                ) : (
+                  getEventsForDate(selectedDate).map((event) => (
+                    <div
+                      key={event.id}
+                      onClick={() => handleEventClick(event)}
+                      className="p-4 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted/70 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`inline-block w-3 h-3 rounded-full ${event.color}`}></span>
+                            <h4 className="font-medium text-card-foreground">{event.title}</h4>
+                            <Badge variant="outline" className="text-xs">
+                              {getEventTypeLabel(event.type)}
+                            </Badge>
+                            <Badge 
+                              variant={event.status === 'completed' ? 'default' : event.status === 'cancelled' ? 'destructive' : 'secondary'}
+                              className="text-xs"
+                            >
+                              {event.status === 'completed' ? 'Completado' : event.status === 'cancelled' ? 'Cancelado' : 'Pendiente'}
+                            </Badge>
+                          </div>
+                          {event.description && (
+                            <p className="text-sm text-muted-foreground mb-2">{event.description}</p>
+                          )}
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span>🕐 {event.time}</span>
+                            {event.clientName && <span>👤 {event.clientName}</span>}
+                            {event.type === 'training' && event.isPresential !== undefined && (
+                              <Badge variant="outline" className="text-xs">
+                                {event.isPresential ? 'Presencial' : 'Por su cuenta'}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleEventClick(event)
+                          }}
+                          className="hover:bg-accent hover:text-accent-foreground transition-colors"
+                        >
+                          Ver Detalles
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
           </main>
         )}
 
@@ -1513,7 +2176,7 @@ export default function TrainerDashboard() {
                 <p className="text-muted-foreground">Carpetas y plantillas para asignar a alumnos</p>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={handleCreateFolder} className="bg-transparent hover:bg-orange-500 hover:text-white transition-colors">
+                <Button variant="outline" onClick={handleCreateFolder} className="bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors">
                   <Plus className="w-4 h-4 mr-2" />
                   Nueva carpeta
                 </Button>
@@ -1596,10 +2259,10 @@ export default function TrainerDashboard() {
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
-                                  className="w-full hover:bg-orange-500 hover:text-white transition-colors"
+                                  className="w-full hover:bg-accent hover:text-accent-foreground transition-colors"
                                   onClick={() => {
-                                    setEditingRoutine(tpl)
-                                    setIsRoutineEditorOpen(true)
+                                    setViewingRoutine(tpl)
+                                    setIsRoutineViewerOpen(true)
                                   }}
                                 >
                                   Ver rutina completa
@@ -1607,7 +2270,7 @@ export default function TrainerDashboard() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex flex-col gap-2 min-w-[180px]">
+                          <div className="flex flex-col gap-2 min-w-[220px]">
                             <Select onValueChange={(clientId) => {
                               const client = allClients.find((c) => String(c.id) === clientId)
                               if (client) handleAssignTemplateToClient(tpl, client)
@@ -1621,8 +2284,37 @@ export default function TrainerDashboard() {
                                 ))}
                               </SelectContent>
                             </Select>
-                            <Button variant="outline" className="bg-transparent" onClick={() => handleEditRoutine(tpl)}>Editar</Button>
-                            <Button>Enviar ahora</Button>
+                            <div className="flex items-center gap-2">
+                              <Button variant="outline" className="bg-transparent flex-1" onClick={() => handleEditRoutine(tpl)}>Editar</Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreVertical className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56">
+                                  <DropdownMenuItem onClick={() => handleExportRoutineToExcel(tpl)}>
+                                    <FileText className="w-4 h-4 mr-2 text-green-500" />
+                                    Exportar como CSV
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  {routineFolders
+                                    .filter(f => f.id !== currentFolder?.id)
+                                    .map(folder => (
+                                      <DropdownMenuItem key={folder.id} onClick={() => handleMoveTemplate(tpl.id, folder.id)}>
+                                        <ChevronRight className="w-4 h-4 mr-2" />
+                                        Mover a: {folder.name}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  {routineFolders.filter(f => f.id !== currentFolder?.id).length > 0 && <DropdownMenuSeparator />}
+                                  <DropdownMenuItem onClick={() => handleDeleteTemplate(tpl.id)} variant="destructive">
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Eliminar rutina
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                            <Button className="hover:bg-orange-500 transition-colors">Enviar ahora</Button>
                           </div>
                         </div>
                       </div>
@@ -1643,7 +2335,10 @@ export default function TrainerDashboard() {
                     <CardTitle className="text-card-foreground">Catálogo de ejercicios</CardTitle>
                     <CardDescription>Gestiona tu biblioteca de ejercicios</CardDescription>
                   </div>
-                  <Button onClick={() => alert("Funcionalidad de crear ejercicio estará disponible próximamente")} className="hover:bg-orange-500 transition-colors">
+                  <Button onClick={() => {
+                    setIsExerciseSelectorOpen(false)
+                    setIsCreateExerciseDialogOpen(true)
+                  }} className="hover:bg-orange-500 transition-colors">
                     <Plus className="w-4 h-4 mr-2" />
                     Nuevo ejercicio
                   </Button>
@@ -1663,7 +2358,7 @@ export default function TrainerDashboard() {
                         <SelectValue placeholder="Categoría" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">TODOS</SelectItem>
+                        <SelectItem value="all">Todos</SelectItem>
                         <SelectItem value="Tren superior">Tren superior</SelectItem>
                         <SelectItem value="Tren inferior">Tren inferior</SelectItem>
                         <SelectItem value="Core">Core</SelectItem>
@@ -1683,7 +2378,7 @@ export default function TrainerDashboard() {
                         <SelectValue placeholder="Equipamiento" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">TODOS</SelectItem>
+                        <SelectItem value="all">Todos</SelectItem>
                         <SelectItem value="Máquinas">Máquinas</SelectItem>
                         <SelectItem value="Pesas">Pesas</SelectItem>
                         <SelectItem value="Bandas">Bandas</SelectItem>
@@ -1890,15 +2585,15 @@ export default function TrainerDashboard() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button variant="outline" size="icon" onClick={() => alert("Iniciando llamada...")} className="hover:bg-orange-500 hover:text-white transition-colors">
+                          <Button variant="outline" size="icon" onClick={() => alert("Iniciando llamada...")} className="hover:bg-accent hover:text-accent-foreground transition-colors">
                             <Phone className="w-4 h-4" />
                           </Button>
-                          <Button variant="outline" size="icon" onClick={() => alert("Iniciando videollamada...")} className="hover:bg-orange-500 hover:text-white transition-colors">
+                          <Button variant="outline" size="icon" onClick={() => alert("Iniciando videollamada...")} className="hover:bg-accent hover:text-accent-foreground transition-colors">
                             <Video className="w-4 h-4" />
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                                        <Button variant="outline" size="icon" className="hover:bg-orange-500 hover:text-white transition-colors">
+                                                        <Button variant="outline" size="icon" className="hover:bg-accent hover:text-accent-foreground transition-colors">
                             <MoreVertical className="w-4 h-4" />
                           </Button>
                             </DropdownMenuTrigger>
@@ -1934,7 +2629,7 @@ export default function TrainerDashboard() {
                                 }}
                               >
                                 <User className="w-4 h-4 mr-2" />
-                                Ver perfil del cliente
+                                Ver perfil del alumno
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => {
@@ -2015,13 +2710,13 @@ export default function TrainerDashboard() {
                           />
                         </div>
                         <div className="flex items-center gap-1">
-                          <Button variant="outline" size="icon" onClick={handleFileAttachment} title="Adjuntar archivo" className="hover:bg-orange-500 hover:text-white transition-colors">
+                          <Button variant="outline" size="icon" onClick={handleFileAttachment} title="Adjuntar archivo" className="hover:bg-accent hover:text-accent-foreground transition-colors">
                             <Paperclip className="w-4 h-4" />
                           </Button>
-                          <Button variant="outline" size="icon" onClick={handleImageAttachment} title="Adjuntar imagen" className="hover:bg-orange-500 hover:text-white transition-colors">
+                          <Button variant="outline" size="icon" onClick={handleImageAttachment} title="Adjuntar imagen" className="hover:bg-accent hover:text-accent-foreground transition-colors">
                             <ImageIcon className="w-4 h-4" />
                           </Button>
-                          <Button variant="outline" size="icon" onClick={handleEmojiPicker} title="Agregar emoji" className="hover:bg-orange-500 hover:text-white transition-colors">
+                          <Button variant="outline" size="icon" onClick={handleEmojiPicker} title="Agregar emoji" className="hover:bg-accent hover:text-accent-foreground transition-colors">
                             <Smile className="w-4 h-4" />
                           </Button>
                           <Button
@@ -2029,7 +2724,7 @@ export default function TrainerDashboard() {
                             size="icon"
                             onClick={() => alert("Grabando audio...")}
                             title="Grabar audio"
-                            className="hover:bg-orange-500 hover:text-white transition-colors"
+                            className="hover:bg-accent hover:text-accent-foreground transition-colors"
                           >
                             <Mic className="w-4 h-4" />
                           </Button>
@@ -2045,7 +2740,7 @@ export default function TrainerDashboard() {
                     <div className="text-center">
                       <MessageSquare className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                       <h3 className="text-lg font-semibold text-card-foreground mb-2">Selecciona una conversación</h3>
-                      <p className="text-muted-foreground">Elige un cliente de la lista para comenzar a chatear</p>
+                      <p className="text-muted-foreground">Elige un alumno de la lista para comenzar a chatear</p>
                     </div>
                   </Card>
                 )}
@@ -2055,7 +2750,7 @@ export default function TrainerDashboard() {
         )}
 
         {/* Other tabs content placeholders */}
-        {activeTab !== "dashboard" && activeTab !== "clients" && activeTab !== "chat" && (
+        {activeTab !== "dashboard" && activeTab !== "clients" && activeTab !== "chat" && activeTab !== "schedule" && (
           <main className="p-6">
             <Card className="bg-card border-border">
               <CardContent className="p-12 text-center">
@@ -2073,9 +2768,9 @@ export default function TrainerDashboard() {
       <Dialog open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Agregar Nuevo Cliente</DialogTitle>
+            <DialogTitle>Agregar Nuevo Alumno</DialogTitle>
             <DialogDescription>
-              Completa la información del nuevo cliente. Los campos marcados con * son obligatorios.
+              Completa la información del nuevo alumno. Los campos marcados con * son obligatorios.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -2132,17 +2827,17 @@ export default function TrainerDashboard() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsNewClientDialogOpen(false)} className="hover:bg-orange-500 hover:text-white transition-colors">
+            <Button variant="outline" onClick={() => setIsNewClientDialogOpen(false)} className="hover:bg-accent hover:text-accent-foreground transition-colors">
               Cancelar
             </Button>
             <Button
               onClick={() => {
-                alert("Cliente agregado correctamente (funcionalidad completa disponible con base de datos)")
+                alert("Alumno agregado correctamente (funcionalidad completa disponible con base de datos)")
                 setIsNewClientDialogOpen(false)
               }}
               className="hover:bg-orange-500 transition-colors"
             >
-              Agregar Cliente
+              Agregar Alumno
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2152,13 +2847,13 @@ export default function TrainerDashboard() {
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
             <DialogTitle>Nueva conversación</DialogTitle>
-            <DialogDescription>Elige un cliente para iniciar un chat o busca uno existente.</DialogDescription>
+            <DialogDescription>Elige un alumno para iniciar un chat o busca uno existente.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar cliente..."
+                placeholder="Buscar alumno..."
                 value={newChatSearchTerm}
                 onChange={(e) => setNewChatSearchTerm(e.target.value)}
                 className="pl-10"
@@ -2188,7 +2883,7 @@ export default function TrainerDashboard() {
                       </div>
                     </div>
                     {existing ? (
-                      <Button variant="outline" onClick={() => { setSelectedChat(existing); setActiveTab("chat"); setIsNewChatDialogOpen(false) }} className="hover:bg-orange-500 hover:text-white transition-colors">Ir al chat</Button>
+                      <Button variant="outline" onClick={() => { setSelectedChat(existing); setActiveTab("chat"); setIsNewChatDialogOpen(false) }} className="hover:bg-accent hover:text-accent-foreground transition-colors">Ir al chat</Button>
                     ) : (
                                               <Button onClick={() => handleStartChat(client)} className="hover:bg-orange-500 transition-colors">Iniciar chat</Button>
                     )}
@@ -2196,7 +2891,7 @@ export default function TrainerDashboard() {
                 )
               })}
               {dedupedNewChatResults.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-6">No se encontraron clientes.</p>
+                <p className="text-sm text-muted-foreground text-center py-6">No se encontraron alumnos.</p>
               )}
             </div>
           </div>
@@ -2240,7 +2935,7 @@ export default function TrainerDashboard() {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xl font-semibold">Bloques de la rutina</h3>
-                  <Button onClick={handleAddBlock} variant="outline" className="hover:bg-orange-500 hover:text-white transition-colors">
+                  <Button onClick={handleAddBlock} variant="outline" className="hover:bg-accent hover:text-accent-foreground transition-colors">
                     <Plus className="w-4 h-4 mr-2" />
                     Agregar bloque
                   </Button>
@@ -2272,7 +2967,7 @@ export default function TrainerDashboard() {
                           variant="outline" 
                           size="sm"
                           onClick={() => handleAddExerciseToBlock(block.id)}
-                          className="hover:bg-orange-500 hover:text-white transition-colors"
+                          className="hover:bg-accent hover:text-accent-foreground transition-colors"
                         >
                           <Plus className="w-4 h-4 mr-2" />
                           Agregar ejercicio
@@ -2281,7 +2976,7 @@ export default function TrainerDashboard() {
                           variant="outline" 
                           size="sm"
                           onClick={() => handleAddRest(block.id)}
-                          className="hover:bg-orange-500 hover:text-white transition-colors"
+                          className="hover:bg-accent hover:text-accent-foreground transition-colors"
                         >
                           <Plus className="w-4 h-4 mr-2" />
                           Agregar descanso
@@ -2349,7 +3044,7 @@ export default function TrainerDashboard() {
                         variant="outline" 
                         size="sm"
                         onClick={() => toggleBlockExpansion(block.id)}
-                        className="w-12 h-12 rounded-full hover:bg-orange-500 hover:text-white transition-colors"
+                        className="w-12 h-12 rounded-full hover:bg-accent hover:text-accent-foreground transition-colors"
                       >
                         <ChevronDown className={`w-5 h-5 transition-transform ${expandedBlocks.has(block.id) ? 'rotate-180' : ''}`} />
                       </Button>
@@ -2423,7 +3118,7 @@ export default function TrainerDashboard() {
           )}
 
           <DialogFooter className="border-t pt-6">
-            <Button variant="outline" onClick={() => setIsRoutineEditorOpen(false)} className="hover:bg-orange-500 hover:text-white transition-colors">
+            <Button variant="outline" onClick={() => setIsRoutineEditorOpen(false)} className="hover:bg-accent hover:text-accent-foreground transition-colors">
               Cancelar
             </Button>
             <Button onClick={handleSaveRoutine} className="hover:bg-orange-500 transition-colors">
@@ -2432,6 +3127,67 @@ export default function TrainerDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Visor de Rutina (solo lectura) */}
+      <Dialog open={isRoutineViewerOpen} onOpenChange={setIsRoutineViewerOpen}>
+        <DialogContent className="w-[96vw] sm:max-w-none md:max-w-[1000px] max-h-[92vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Rutina: {viewingRoutine?.name}</DialogTitle>
+            {viewingRoutine?.description ? (
+              <DialogDescription>{viewingRoutine.description}</DialogDescription>
+            ) : (
+              <DialogDescription>Vista de solo lectura para el alumno</DialogDescription>
+            )}
+          </DialogHeader>
+
+          {viewingRoutine && (
+            <div className="space-y-6">
+              {viewingRoutine.blocks.map((block) => (
+                <div key={block.id} className="rounded-2xl border p-4">
+                  <div className="flex items-center justify-between mb-2 gap-3">
+                    <h3 className="text-lg font-semibold">{block.name}</h3>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="secondary">Repeticiones: {block.repetitions}</Badge>
+                      <Badge variant="secondary">Descanso entre repeticiones: {block.restBetweenRepetitions}s</Badge>
+                      <Badge variant="secondary">Descanso post bloque: {block.restAfterBlock}s</Badge>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left border-b">
+                          <th className="py-2 pr-3">Ejercicio</th>
+                          <th className="py-2 pr-3">Series</th>
+                          <th className="py-2 pr-3">Reps</th>
+                          <th className="py-2 pr-3">Descanso</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {block.exercises.map((ex, idx) => {
+                          const isRest = ex.exerciseId === -1;
+                          const exData = exercisesCatalog.find(e => e.id === ex.exerciseId); // mapea id->nombre
+                          return (
+                            <tr key={idx} className="border-b last:border-0">
+                              <td className="py-2 pr-3">
+                                {isRest ? "Descanso" : (exData?.name ?? `Ejercicio ${ex.exerciseId}`)}
+                              </td>
+                              <td className="py-2 pr-3">{isRest ? "—" : ex.sets}</td>
+                              <td className="py-2 pr-3">{isRest ? "—" : ex.reps}</td>
+                              <td className="py-2 pr-3">{ex.restSec ? `${ex.restSec}s` : "—"}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
 
       {/* Selector de Ejercicios */}
       <Dialog open={isExerciseSelectorOpen} onOpenChange={setIsExerciseSelectorOpen}>
@@ -2457,7 +3213,7 @@ export default function TrainerDashboard() {
                     <SelectValue placeholder="Categoría" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">TODOS</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="Tren superior">Tren superior</SelectItem>
                     <SelectItem value="Tren inferior">Tren inferior</SelectItem>
                     <SelectItem value="Core">Core</SelectItem>
@@ -2523,7 +3279,7 @@ export default function TrainerDashboard() {
                         <p className="font-medium">{ex.name}</p>
                         <p className="text-sm text-muted-foreground">{ex.category} • {ex.equipment}</p>
                       </div>
-                      <Button variant="outline" size="sm" className="hover:bg-orange-500 hover:text-white transition-colors">
+                      <Button variant="outline" size="sm" className="hover:bg-accent hover:text-accent-foreground transition-colors">
                         Seleccionar
                       </Button>
                     </div>
@@ -2545,7 +3301,462 @@ export default function TrainerDashboard() {
                 </div>
               )}
             </div>
+
+            {/* Botón para crear nuevo ejercicio */}
+            <div className="flex justify-center pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsExerciseSelectorOpen(false)
+                  setIsCreateExerciseDialogOpen(true)
+                }}
+                className="hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Crear Nuevo Ejercicio
+              </Button>
+            </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para crear nuevo ejercicio */}
+      <Dialog open={isCreateExerciseDialogOpen} onOpenChange={(open) => {
+        setIsCreateExerciseDialogOpen(open)
+        if (!open) {
+          // Reset form when dialog closes
+          setNewExerciseForm({
+            name: '',
+            category: 'Tren superior',
+            equipment: 'Sin elementos',
+            description: ''
+          })
+        }
+      }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Crear Nuevo Ejercicio</DialogTitle>
+            <DialogDescription>
+              Completa la información del ejercicio. Los campos marcados con * son obligatorios.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="exerciseName" className="text-right">
+                Nombre *
+              </Label>
+              <Input 
+                id="exerciseName" 
+                placeholder="Nombre del ejercicio" 
+                className="col-span-3"
+                value={newExerciseForm.name}
+                onChange={(e) => setNewExerciseForm(prev => ({ ...prev, name: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="exerciseCategory" className="text-right">
+                Categoría *
+              </Label>
+              <Select 
+                value={newExerciseForm.category} 
+                onValueChange={(value) => setNewExerciseForm(prev => ({ ...prev, category: value as Exercise['category'] }))}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Seleccionar categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Tren superior">Tren superior</SelectItem>
+                  <SelectItem value="Tren inferior">Tren inferior</SelectItem>
+                  <SelectItem value="Core">Core</SelectItem>
+                  <SelectItem value="Cardio">Cardio</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="exerciseEquipment" className="text-right">
+                Equipamiento *
+              </Label>
+              <Select 
+                value={newExerciseForm.equipment} 
+                onValueChange={(value) => setNewExerciseForm(prev => ({ ...prev, equipment: value as Exercise['equipment'] }))}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Seleccionar equipamiento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Máquinas">Máquinas</SelectItem>
+                  <SelectItem value="Pesas">Pesas</SelectItem>
+                  <SelectItem value="Bandas">Bandas</SelectItem>
+                  <SelectItem value="Sin elementos">Sin elementos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="exerciseDescription" className="text-right">
+                Descripción
+              </Label>
+              <Textarea 
+                id="exerciseDescription" 
+                placeholder="Descripción del ejercicio (opcional)" 
+                className="col-span-3"
+                value={newExerciseForm.description}
+                onChange={(e) => setNewExerciseForm(prev => ({ ...prev, description: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateExerciseDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateExercise} className="hover:bg-orange-500 transition-colors">
+              Crear Ejercicio
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddEventDialogOpen} onOpenChange={(open) => {
+        setIsAddEventDialogOpen(open)
+        if (!open) {
+          // Reset form and selected event when dialog closes
+          setNewEventForm({
+            title: '',
+            description: '',
+            date: '',
+            time: '',
+            type: 'training',
+            clientId: undefined,
+            isPresential: undefined,
+            status: 'pending',
+            color: '#3b82f6'
+          })
+          setSelectedEvent(null)
+        }
+      }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{selectedEvent ? 'Editar Evento' : 'Agregar Evento'}</DialogTitle>
+            <DialogDescription>
+              Completa la información del evento. Los campos marcados con * son obligatorios.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+                         <div className="grid grid-cols-4 items-center gap-4">
+               <Label htmlFor="title" className="text-right">
+                 Título *
+               </Label>
+               <Input 
+                 id="title" 
+                 placeholder="Título del evento" 
+                 className="col-span-3"
+                 value={newEventForm.title}
+                 onChange={(e) => setNewEventForm(prev => ({ ...prev, title: e.target.value }))}
+               />
+             </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+               <Label htmlFor="description" className="text-right">
+                 Descripción
+               </Label>
+               <Textarea 
+                 id="description" 
+                 placeholder="Descripción del evento" 
+                 className="col-span-3"
+                 value={newEventForm.description}
+                 onChange={(e) => setNewEventForm(prev => ({ ...prev, description: e.target.value }))}
+               />
+             </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+               <Label htmlFor="date" className="text-right">
+                 Fecha *
+               </Label>
+               <Input 
+                 id="date" 
+                 type="date" 
+                 placeholder="Fecha del evento" 
+                 className="col-span-3"
+                 value={newEventForm.date}
+                 onChange={(e) => setNewEventForm(prev => ({ ...prev, date: e.target.value }))}
+               />
+             </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+               <Label htmlFor="time" className="text-right">
+                 Hora *
+               </Label>
+               <Input 
+                 id="time" 
+                 type="time" 
+                 placeholder="Hora del evento" 
+                 className="col-span-3"
+                 value={newEventForm.time}
+                 onChange={(e) => setNewEventForm(prev => ({ ...prev, time: e.target.value }))}
+               />
+             </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+               <Label htmlFor="type" className="text-right">
+                 Tipo *
+               </Label>
+               <Select value={newEventForm.type} onValueChange={(value) => setNewEventForm(prev => ({ ...prev, type: value as CalendarEvent['type'] }))}>
+                 <SelectTrigger className="col-span-3">
+                   <SelectValue placeholder="Seleccionar tipo" />
+                 </SelectTrigger>
+                 <SelectContent>
+                   <SelectItem value="training">Entrenamiento</SelectItem>
+                   <SelectItem value="routine_send">Enviar Rutina</SelectItem>
+                   <SelectItem value="payment">Pago</SelectItem>
+                   <SelectItem value="custom">Personalizado</SelectItem>
+                 </SelectContent>
+               </Select>
+             </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+               <Label htmlFor="clientId" className="text-right">
+                 Alumno
+               </Label>
+               <Select value={newEventForm.clientId ? String(newEventForm.clientId) : ''} onValueChange={(value) => setNewEventForm(prev => ({ ...prev, clientId: value ? Number(value) : undefined }))}>
+                 <SelectTrigger className="col-span-3">
+                   <SelectValue placeholder="Seleccionar alumno" />
+                 </SelectTrigger>
+                 <SelectContent>
+                   {allClients.map((client) => (
+                     <SelectItem key={client.id} value={String(client.id)}>{client.name}</SelectItem>
+                   ))}
+                 </SelectContent>
+               </Select>
+             </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+               <Label htmlFor="isPresential" className="text-right">
+                 Presencial
+               </Label>
+               <Select value={newEventForm.isPresential !== undefined ? String(newEventForm.isPresential) : ''} onValueChange={(value) => setNewEventForm(prev => ({ ...prev, isPresential: value === 'true' }))}>
+                 <SelectTrigger className="col-span-3">
+                   <SelectValue placeholder="Seleccionar si" />
+                 </SelectTrigger>
+                 <SelectContent>
+                   <SelectItem value="true">Sí</SelectItem>
+                   <SelectItem value="false">No</SelectItem>
+                 </SelectContent>
+               </Select>
+             </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+               <Label htmlFor="status" className="text-right">
+                 Estado *
+               </Label>
+               <Select value={newEventForm.status} onValueChange={(value) => setNewEventForm(prev => ({ ...prev, status: value as CalendarEvent['status'] }))}>
+                 <SelectTrigger className="col-span-3">
+                   <SelectValue placeholder="Seleccionar estado" />
+                 </SelectTrigger>
+                 <SelectContent>
+                   <SelectItem value="pending">Pendiente</SelectItem>
+                   <SelectItem value="completed">Completado</SelectItem>
+                   <SelectItem value="cancelled">Cancelado</SelectItem>
+                 </SelectContent>
+               </Select>
+             </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+               <Label htmlFor="color" className="text-right">
+                 Color *
+               </Label>
+               <Input 
+                 id="color" 
+                 type="color" 
+                 placeholder="Seleccionar color" 
+                 className="col-span-3"
+                 value={newEventForm.color}
+                 onChange={(e) => setNewEventForm(prev => ({ ...prev, color: e.target.value }))}
+               />
+             </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddEventDialogOpen(false)} className="hover:bg-accent hover:text-accent-foreground transition-colors">
+              Cancelar
+            </Button>
+                         <Button
+               onClick={() => {
+                 // Validate required fields
+                 const errors = []
+                 if (!newEventForm.title?.trim()) errors.push("Título")
+                 if (!newEventForm.date?.trim()) errors.push("Fecha")
+                 if (!newEventForm.time?.trim()) errors.push("Hora")
+                 
+                 if (errors.length > 0) {
+                   alert(`Por favor completa los siguientes campos obligatorios: ${errors.join(", ")}`)
+                   return
+                 }
+                 
+                 const clientName = newEventForm.clientId ? allClients.find(c => c.id === newEventForm.clientId)?.name : undefined
+                 
+                 if (selectedEvent) {
+                   // Update existing event
+                   handleUpdateEvent({
+                     title: newEventForm.title,
+                     description: newEventForm.description,
+                     date: newEventForm.date,
+                     time: newEventForm.time,
+                     type: newEventForm.type,
+                     clientId: newEventForm.clientId,
+                     clientName: clientName,
+                     isPresential: newEventForm.isPresential,
+                     status: newEventForm.status,
+                     color: newEventForm.color
+                   })
+                   alert("Evento actualizado correctamente")
+                 } else {
+                   // Create new event
+                   handleCreateEvent({
+                     title: newEventForm.title,
+                     description: newEventForm.description,
+                     date: newEventForm.date,
+                     time: newEventForm.time,
+                     type: newEventForm.type,
+                     clientId: newEventForm.clientId,
+                     clientName: clientName,
+                     isPresential: newEventForm.isPresential,
+                     status: newEventForm.status,
+                     color: `bg-[${newEventForm.color}]`
+                   })
+                   alert("Evento agregado correctamente")
+                 }
+                 
+                 // Reset form
+                 setNewEventForm({
+                   title: '',
+                   description: '',
+                   date: '',
+                   time: '',
+                   type: 'training',
+                   clientId: undefined,
+                   isPresential: undefined,
+                   status: 'pending',
+                   color: '#3b82f6'
+                 })
+                 
+                 setSelectedEvent(null)
+               }}
+               className="hover:bg-orange-500 transition-colors"
+             >
+               {selectedEvent ? 'Actualizar Evento' : 'Agregar Evento'}
+             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEventDetailsOpen} onOpenChange={setIsEventDetailsOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Detalles del Evento</DialogTitle>
+            <DialogDescription>
+              Aquí puedes ver los detalles del evento seleccionado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="event-title" className="text-right">
+                Título
+              </Label>
+              <p id="event-title" className="col-span-3">{selectedEvent?.title}</p>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="event-description" className="text-right">
+                Descripción
+              </Label>
+              <p id="event-description" className="col-span-3">{selectedEvent?.description}</p>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="event-date" className="text-right">
+                Fecha
+              </Label>
+              <p id="event-date" className="col-span-3">{selectedEvent?.date}</p>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="event-time" className="text-right">
+                Hora
+              </Label>
+              <p id="event-time" className="col-span-3">{selectedEvent?.time}</p>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="event-type" className="text-right">
+                Tipo
+              </Label>
+              <p id="event-type" className="col-span-3">{selectedEvent?.type ? getEventTypeLabel(selectedEvent.type) : ''}</p>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="event-client" className="text-right">
+                Alumno
+              </Label>
+              <p id="event-client" className="col-span-3">{selectedEvent?.clientName}</p>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="event-isPresential" className="text-right">
+                Presential
+              </Label>
+              <p id="event-isPresential" className="col-span-3">{selectedEvent?.isPresential ? "Sí" : "No"}</p>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="event-status" className="text-right">
+                Estado
+              </Label>
+              <p id="event-status" className="col-span-3">{selectedEvent?.status}</p>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="event-color" className="text-right">
+                Color
+              </Label>
+              <div id="event-color" className="col-span-3" style={{ backgroundColor: selectedEvent?.color }}></div>
+            </div>
+          </div>
+                     <DialogFooter>
+             <Button variant="outline" onClick={() => setIsEventDetailsOpen(false)} className="hover:bg-accent hover:text-accent-foreground transition-colors">
+               Cerrar
+             </Button>
+             
+             <Button
+               onClick={() => {
+                 if (selectedEvent) {
+                   handleEditEvent(selectedEvent)
+                 }
+               }}
+               className="hover:bg-blue-500 transition-colors"
+             >
+               <Edit className="w-4 h-4 mr-2" />
+               Editar
+             </Button>
+             
+             {/* Botón especial para eventos de rutina */}
+             {selectedEvent?.type === 'routine_send' && selectedEvent.clientName && (
+               <Button
+                 onClick={() => {
+                   handleGoToRoutines(selectedEvent.clientName!)
+                   setIsEventDetailsOpen(false)
+                 }}
+                 className="hover:bg-orange-500 transition-colors"
+               >
+                 Ir a Rutinas
+               </Button>
+             )}
+             
+             <Button
+               onClick={() => {
+                 if (selectedEvent?.id) {
+                   handleCompleteEvent(selectedEvent.id)
+                   alert("Evento marcado como completado")
+                   setIsEventDetailsOpen(false)
+                 }
+               }}
+               className="hover:bg-green-500 transition-colors"
+             >
+               Marcar como Completado
+             </Button>
+             <Button
+               onClick={() => {
+                 if (selectedEvent?.id) {
+                   handleDeleteEvent(selectedEvent.id)
+                 }
+               }}
+               className="hover:bg-red-500 transition-colors"
+             >
+               <Trash2 className="w-4 h-4 mr-2" />
+               Eliminar
+             </Button>
+           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

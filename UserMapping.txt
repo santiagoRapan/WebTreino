@@ -93,7 +93,8 @@ Consultas según estadísticas
 
 
 
-Siguientes cambios:
-3 puntitos en cada rutina al lado de asignar alumno que permita eliminar o mover la rutina de carpetas
-botones blancos en tema claro se pintan de un naranja muy fuerte, no todos. al pasar con el mouse
-botones negros en tema oscuro no se pintan de naranja
+problemas de agenda:
+1) no me deja agregar un evento, me dice que complete los campos obligatporios, pero esta todo completo.
+2) la agenda debe ser un calendario. Tengo que poder moverme para ver el resto de los meses o incluso otros años. 
+3) agrega la posibilida de poder ver por mes entero o por semana
+4) al presionar sobre un dia se debe abrir una ventana que muestre los eventos del mismo. A su vez cada evento en esta ventana debe ser presionable con un menu que permita editarlos, eliminarlos, marcar como hechos o redirigir a la seccion correspondiente
