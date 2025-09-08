@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { supabase } from "@/lib/supabaseClient"
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
 import * as XLSX from "xlsx"
@@ -45,6 +46,7 @@ import {
   Target,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { toast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -115,18 +117,20 @@ type Chat = {
 
 // Routines types
 type Exercise = {
-  id: number
+  id: string
   name: string
-  category: "Tren superior" | "Tren inferior" | "Core" | "Cardio"
-  equipment: "Máquinas" | "Pesas" | "Bandas" | "Sin elementos"
-  description?: string
+  gif_URL?: string
+  target_muscles: string[]
+  body_parts: string[]
+  equipments: string[]
+  secondary_muscles: string[]
 }
 
 type RoutineBlock = {
   id: number
   name: string
   exercises: {
-    exerciseId: number
+    exerciseId: string
     sets: number
     reps: number
     restSec: number
@@ -223,9 +227,11 @@ export default function TrainerDashboard() {
   // Form state for new exercise
   const [newExerciseForm, setNewExerciseForm] = useState({
     name: '',
-    category: 'Tren superior' as Exercise['category'],
-    equipment: 'Sin elementos' as Exercise['equipment'],
-    description: ''
+    gif_URL: '',
+    target_muscles: [] as string[],
+    body_parts: [] as string[],
+    equipments: [] as string[],
+    secondary_muscles: [] as string[]
   })
 
   const normalizeText = (text: string) => {
@@ -393,18 +399,27 @@ export default function TrainerDashboard() {
     { title: "Progreso Promedio", value: "82%", change: "+5%", icon: TrendingUp, color: "text-primary" },
   ]
 
-  // Mock exercises catalog
-  const [exercisesCatalog, setExercisesCatalog] = useState<Exercise[]>([
-    { id: 1, name: "Press banca", category: "Tren superior", equipment: "Pesas" },
-    { id: 2, name: "Dominadas", category: "Tren superior", equipment: "Sin elementos" },
-    { id: 3, name: "Sentadillas", category: "Tren inferior", equipment: "Pesas" },
-    { id: 4, name: "Prensa de piernas", category: "Tren inferior", equipment: "Máquinas" },
-    { id: 5, name: "Plancha", category: "Core", equipment: "Sin elementos" },
-    { id: 6, name: "Crunches", category: "Core", equipment: "Sin elementos" },
-    { id: 7, name: "Cinta trote", category: "Cardio", equipment: "Máquinas" },
-    { id: 8, name: "Remo con mancuerna", category: "Tren superior", equipment: "Pesas" },
-    { id: 9, name: "Estocadas", category: "Tren inferior", equipment: "Pesas" },
-  ])
+  // Exercises catalog from Supabase
+  const [exercisesCatalog, setExercisesCatalog] = useState<Exercise[]>([])
+  const [loadingExercises, setLoadingExercises] = useState<boolean>(true)
+
+  // Fetch exercises from Supabase on mount
+  useEffect(() => {
+    const fetchExercises = async () => {
+      setLoadingExercises(true)
+      const { data, error } = await supabase
+        .from('Exercises')
+        .select('*')
+      if (error) {
+        console.error('Error fetching exercises:', error)
+        setExercisesCatalog([])
+      } else {
+        setExercisesCatalog(data || [])
+      }
+      setLoadingExercises(false)
+    }
+    fetchExercises()
+  }, [])
 
   // Mock routine folders and templates
   const [routineFolders, setRoutineFolders] = useState<RoutineFolder[]>([
@@ -420,7 +435,7 @@ export default function TrainerDashboard() {
             {
               id: 1011,
               name: "Press banca",
-              exercises: [{ exerciseId: 1, sets: 4, reps: 8, restSec: 120 }],
+              exercises: [{ exerciseId: "1", sets: 4, reps: 8, restSec: 120 }],
               repetitions: 3,
               restBetweenRepetitions: 60,
               restAfterBlock: 90,
@@ -428,7 +443,7 @@ export default function TrainerDashboard() {
             {
               id: 1012,
               name: "Dominadas",
-              exercises: [{ exerciseId: 2, sets: 4, reps: 10, restSec: 90 }],
+              exercises: [{ exerciseId: "2", sets: 4, reps: 10, restSec: 90 }],
               repetitions: 3,
               restBetweenRepetitions: 60,
               restAfterBlock: 90,
@@ -436,7 +451,7 @@ export default function TrainerDashboard() {
             {
               id: 1013,
               name: "Plancha",
-              exercises: [{ exerciseId: 5, sets: 3, reps: 45, restSec: 60 }],
+              exercises: [{ exerciseId: "5", sets: 3, reps: 45, restSec: 60 }],
               repetitions: 3,
               restBetweenRepetitions: 60,
               restAfterBlock: 90,
@@ -450,7 +465,7 @@ export default function TrainerDashboard() {
             {
               id: 1021,
               name: "Entrada en calor",
-              exercises: [{ exerciseId: 3, sets: 5, reps: 5, restSec: 150 }],
+              exercises: [{ exerciseId: "3", sets: 5, reps: 5, restSec: 150 }],
               repetitions: 3,
               restBetweenRepetitions: 60,
               restAfterBlock: 90,
@@ -458,7 +473,7 @@ export default function TrainerDashboard() {
             {
               id: 1022,
               name: "Bloque 1",
-              exercises: [{ exerciseId: 4, sets: 4, reps: 12, restSec: 120 }],
+              exercises: [{ exerciseId: "4", sets: 4, reps: 12, restSec: 120 }],
               repetitions: 3,
               restBetweenRepetitions: 60,
               restAfterBlock: 90,
@@ -478,7 +493,7 @@ export default function TrainerDashboard() {
             {
               id: 2011,
               name: "Entrada en calor",
-              exercises: [{ exerciseId: 2, sets: 3, reps: 6, restSec: 90 }],
+              exercises: [{ exerciseId: "2", sets: 3, reps: 6, restSec: 90 }],
               repetitions: 3,
               restBetweenRepetitions: 60,
               restAfterBlock: 90,
@@ -486,7 +501,7 @@ export default function TrainerDashboard() {
             {
               id: 2012,
               name: "Bloque 1",
-              exercises: [{ exerciseId: 9, sets: 3, reps: 12, restSec: 60 }],
+              exercises: [{ exerciseId: "9", sets: 3, reps: 12, restSec: 60 }],
               repetitions: 3,
               restBetweenRepetitions: 60,
               restAfterBlock: 90,
@@ -494,7 +509,7 @@ export default function TrainerDashboard() {
             {
               id: 2013,
               name: "Bloque 2",
-              exercises: [{ exerciseId: 6, sets: 3, reps: 20, restSec: 45 }],
+              exercises: [{ exerciseId: "6", sets: 3, reps: 20, restSec: 45 }],
               repetitions: 3,
               restBetweenRepetitions: 60,
               restAfterBlock: 90,
@@ -507,7 +522,7 @@ export default function TrainerDashboard() {
 
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(1)
   const [routineSearch, setRoutineSearch] = useState("")
-  const [exerciseFilter, setExerciseFilter] = useState<{ category?: Exercise["category"]; equipment?: Exercise["equipment"] }>({} as { category?: Exercise["category"]; equipment?: Exercise["equipment"] })
+  const [exerciseFilter, setExerciseFilter] = useState<{ body_parts?: string[]; equipments?: string[] }>({} as { body_parts?: string[]; equipments?: string[] })
   
   // Editor de rutinas
   const [editingRoutine, setEditingRoutine] = useState<RoutineTemplate | null>(null)
@@ -522,11 +537,21 @@ export default function TrainerDashboard() {
   const currentFolder = routineFolders.find((f) => f.id === selectedFolderId) || routineFolders[0]
   const filteredTemplates = (currentFolder?.templates || []).filter((t) => t.name.toLowerCase().includes(routineSearch.toLowerCase()))
 
+  const [showNewFolderInput, setShowNewFolderInput] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  // Para agregar descanso
+  const [restInput, setRestInput] = useState("");
+  const [restBlockId, setRestBlockId] = useState<number | null>(null);
+  // Para agregar ejercicio
+  const [exerciseInputs, setExerciseInputs] = useState({ sets: "", reps: "", restSec: "" });
+  // pendingExercise ahora es solo para saber a qué bloque se está agregando el ejercicio
+  const [pendingExercise, setPendingExercise] = useState<{ blockId: number } | null>(null);
   const handleCreateFolder = () => {
-    const name = prompt("Nombre de la carpeta")
-    if (!name) return
-    setRoutineFolders((prev) => [...prev, { id: Date.now(), name, templates: [] }])
-  }
+    if (!newFolderName.trim()) return;
+    setRoutineFolders((prev) => [...prev, { id: Date.now(), name: newFolderName.trim(), templates: [] }]);
+    setNewFolderName("");
+    setShowNewFolderInput(false);
+  };
 
   const handleDeleteTemplate = (templateId: number) => {
     if (!currentFolder) return
@@ -559,15 +584,18 @@ export default function TrainerDashboard() {
     })
   }
 
+  const [showNewRoutineInput, setShowNewRoutineInput] = useState(false);
+  const [newRoutineName, setNewRoutineName] = useState("");
   const handleCreateTemplate = () => {
-    const name = prompt("Nombre de la rutina")
-    if (!name || !currentFolder) return
-    const newTemplate: RoutineTemplate = { id: Date.now(), name, blocks: [] }
-    setRoutineFolders((prev) => prev.map((f) => (f.id === currentFolder.id ? { ...f, templates: [newTemplate, ...f.templates] } : f)))
-  }
+    if (!newRoutineName.trim() || !currentFolder) return;
+    const newTemplate: RoutineTemplate = { id: Date.now(), name: newRoutineName.trim(), blocks: [] };
+    setRoutineFolders((prev) => prev.map((f) => (f.id === currentFolder.id ? { ...f, templates: [newTemplate, ...f.templates] } : f)));
+    setNewRoutineName("");
+    setShowNewRoutineInput(false);
+  };
 
   const handleAssignTemplateToClient = (template: RoutineTemplate, client: Client) => {
-    alert(`Asignada la rutina "${template.name}" a ${client.name} (mock)`) // scheduling UI vendrá luego
+  toast({ title: `Asignada la rutina "${template.name}" a ${client.name} (mock)` }) // scheduling UI vendrá luego
   }
 
   const handleEditRoutine = (template: RoutineTemplate) => {
@@ -575,83 +603,105 @@ export default function TrainerDashboard() {
     setIsRoutineEditorOpen(true)
   }
 
+  const [newBlockName, setNewBlockName] = useState("");
   const handleAddBlock = () => {
-    if (!editingRoutine) return
-    const blockName = prompt("Nombre del bloque (ej: Entrada en calor, Bloque 1)")
-    if (!blockName) return
-    
+    if (!editingRoutine) return;
+    if (!newBlockName.trim()) return;
     const newBlock: RoutineBlock = {
       id: Date.now(),
-      name: blockName,
+      name: newBlockName.trim(),
       exercises: [],
       repetitions: 1,
       restBetweenRepetitions: 60,
       restAfterBlock: 90,
-    }
-    
+    };
     setEditingRoutine({
       ...editingRoutine,
-      blocks: [...editingRoutine.blocks, newBlock]
-    })
-  }
+      blocks: [...editingRoutine.blocks, newBlock],
+    });
+    setNewBlockName("");
+  };
 
   const handleAddExerciseToBlock = (blockId: number) => {
-    setSelectedBlockId(blockId)
-    setIsExerciseSelectorOpen(true)
+    setSelectedBlockId(blockId);
+    setIsExerciseSelectorOpen(true);
+    setPendingExercise(null);
+    setExerciseInputs({ sets: "", reps: "", restSec: "" });
   }
 
   const handleAddRest = (blockId: number) => {
-    if (!editingRoutine) return
-    const restTime = prompt("Tiempo de descanso en segundos")
-    if (!restTime || isNaN(Number(restTime))) return
-    
-    // Agregar descanso como un ejercicio especial
-    const newRestExercise = {
-      exerciseId: -1, // ID especial para descanso
-      sets: 1,
-      reps: Number(restTime),
-      restSec: 0,
-    }
-    
-    setEditingRoutine({
-      ...editingRoutine,
-      blocks: editingRoutine.blocks.map(block => 
-        block.id === blockId 
-          ? { ...block, exercises: [...block.exercises, newRestExercise] }
-          : block
-      )
-    })
-  }
+      setRestBlockId(blockId);
+  };
 
+  const confirmAddRest = () => {
+  if (!editingRoutine || restBlockId === null) return;
+  if (!restInput || isNaN(Number(restInput))) return;
+  const newRestExercise = {
+    exerciseId: "rest",
+    sets: 1,
+    reps: Number(restInput),
+    restSec: 0,
+  };
+  setEditingRoutine({
+    ...editingRoutine,
+    blocks: editingRoutine.blocks.map(block =>
+      block.id === restBlockId
+        ? { ...block, exercises: [...block.exercises, newRestExercise] }
+        : block
+    ),
+  });
+  setRestInput("");
+  setRestBlockId(null);
+  };
   const handleSelectExercise = (exercise: Exercise) => {
-    if (!editingRoutine || !selectedBlockId) return
-    
-    const sets = prompt("Número de series")
-    const reps = prompt("Repeticiones por serie")
-    const rest = prompt("Tiempo de descanso entre series (segundos)")
-    
-    if (!sets || !reps || !rest || isNaN(Number(sets)) || isNaN(Number(reps)) || isNaN(Number(rest))) return
-    
-    const newExercise = {
-      exerciseId: exercise.id,
-      sets: Number(sets),
-      reps: Number(reps),
-      restSec: Number(rest),
-    }
-    
-    setEditingRoutine({
-      ...editingRoutine,
-      blocks: editingRoutine.blocks.map(block => 
-        block.id === selectedBlockId 
-          ? { ...block, exercises: [...block.exercises, newExercise] }
-          : block
-      )
+    // Agrega el ejercicio seleccionado al bloque activo de la rutina
+    if (!editingRoutine || selectedBlockId == null) return;
+    const updatedBlocks = editingRoutine.blocks.map(block => {
+      if (block.id === selectedBlockId) {
+        return {
+          ...block,
+          exercises: [
+            ...block.exercises,
+            { exerciseId: exercise.id, sets: 3, reps: 10, restSec: 60 } // valores por defecto
+          ]
+        }
+      }
+      return block
     })
-    
+    setEditingRoutine({ ...editingRoutine, blocks: updatedBlocks })
     setIsExerciseSelectorOpen(false)
-    setSelectedBlockId(null)
-  }
+    setPendingExercise(null)
+  };
+// Confirmar y agregar ejercicio
+const confirmAddExercise = () => {
+  if (!editingRoutine || !pendingExercise) return;
+  const { sets, reps, restSec } = exerciseInputs;
+  if (!sets || !reps || !restSec || isNaN(Number(sets)) || isNaN(Number(reps)) || isNaN(Number(restSec))) return;
+  const newExercise = {
+  exerciseId: "", // Ajusta aquí si necesitas un id de ejercicio real
+    sets: Number(sets),
+    reps: Number(reps),
+  restSec: Number(restSec),
+  };
+  setEditingRoutine({
+    ...editingRoutine,
+    blocks: editingRoutine.blocks.map(block =>
+      block.id === selectedBlockId
+        ? { ...block, exercises: [...block.exercises, newExercise] }
+        : block
+    ),
+  });
+  setIsExerciseSelectorOpen(false);
+  setSelectedBlockId(null);
+  setPendingExercise(null);
+  setExerciseInputs({ sets: "", reps: "", restSec: "" });
+};
 
+  // Cancelar agregar ejercicio
+  const cancelAddExercise = () => {
+    setPendingExercise(null);
+  setExerciseInputs({ sets: "", reps: "", restSec: "" });
+  };
   const handleSaveRoutine = () => {
     if (!editingRoutine) return
     
@@ -1000,7 +1050,7 @@ export default function TrainerDashboard() {
       const target = e.target as HTMLInputElement | null
       const file = target?.files?.[0]
       if (file) {
-        alert(`Archivo "${file.name}" adjuntado correctamente`)
+  toast({ title: `Archivo "${file.name}" adjuntado correctamente` })
       }
     }
     input.click()
@@ -1014,7 +1064,7 @@ export default function TrainerDashboard() {
       const target = e.target as HTMLInputElement | null
       const file = target?.files?.[0]
       if (file) {
-        alert(`Imagen "${file.name}" adjuntada correctamente`)
+  toast({ title: `Imagen "${file.name}" adjuntada correctamente` })
       }
     }
     input.click()
@@ -1101,7 +1151,7 @@ export default function TrainerDashboard() {
   }
 
   const handleRegisterPayment = () => {
-    alert("Funcionalidad de registrar pago estará disponible cuando implementemos la sección de pagos")
+  toast({ title: "Funcionalidad de registrar pago estará disponible cuando implementemos la sección de pagos" })
   }
 
   // Calendar/Agenda handlers
@@ -1131,16 +1181,18 @@ export default function TrainerDashboard() {
 
   const handleCreateExercise = () => {
     if (!newExerciseForm.name.trim()) {
-      alert("Por favor ingresa el nombre del ejercicio")
+  toast({ title: "Por favor ingresa el nombre del ejercicio" })
       return
     }
 
     const newExercise: Exercise = {
-      id: Date.now(),
+      id: Date.now().toString(),
       name: newExerciseForm.name.trim(),
-      category: newExerciseForm.category,
-      equipment: newExerciseForm.equipment,
-      description: newExerciseForm.description.trim() || undefined
+      gif_URL: newExerciseForm.gif_URL.trim() || undefined,
+      target_muscles: newExerciseForm.target_muscles,
+      body_parts: newExerciseForm.body_parts,
+      equipments: newExerciseForm.equipments,
+      secondary_muscles: newExerciseForm.secondary_muscles
     }
 
     setExercisesCatalog(prev => [...prev, newExercise])
@@ -1148,13 +1200,15 @@ export default function TrainerDashboard() {
     // Reset form
     setNewExerciseForm({
       name: '',
-      category: 'Tren superior',
-      equipment: 'Sin elementos',
-      description: ''
+      gif_URL: '',
+      target_muscles: [],
+      body_parts: [],
+      equipments: [],
+      secondary_muscles: []
     })
     
     setIsCreateExerciseDialogOpen(false)
-    alert(`Ejercicio "${newExercise.name}" creado exitosamente`)
+  toast({ title: `Ejercicio "${newExercise.name}" creado exitosamente` })
   }
 
   const handleExportRoutineToPDF = async (template: RoutineTemplate) => {
@@ -1212,9 +1266,9 @@ export default function TrainerDashboard() {
                   </span>
                 </div>
                 <div style="color: #666; font-size: 14px; margin-top: 8px;">
-                  <strong>Categoría:</strong> ${exerciseData.category} | 
-                  <strong>Equipamiento:</strong> ${exerciseData.equipment}
-                  ${exerciseData.description ? `<br><strong>Descripción:</strong> ${exerciseData.description}` : ''}
+                  <strong>Músculos objetivo:</strong> ${exerciseData.target_muscles.join(', ')} |
+                  <strong>Equipamiento:</strong> ${exerciseData.equipments.join(', ')}
+                  ${exerciseData.gif_URL ? `<br><strong>GIF URL:</strong> ${exerciseData.gif_URL}` : ''}
                 </div>
               </div>
             `
@@ -1262,10 +1316,10 @@ export default function TrainerDashboard() {
       const fileName = `${template.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_rutina.pdf`
       pdf.save(fileName)
       
-      alert('Rutina exportada como PDF exitosamente')
+  toast({ title: 'Rutina exportada como PDF exitosamente' })
     } catch (error) {
       console.error('Error generating PDF:', error)
-      alert('Error al generar el PDF. Inténtalo de nuevo.')
+  toast({ title: 'Error al generar el PDF. Inténtalo de nuevo.', variant: 'destructive' })
     }
   }
 
@@ -1303,12 +1357,12 @@ export default function TrainerDashboard() {
       routineData.push([
         'Bloque',
         'Nombre del Ejercicio',
-        'Categoría',
+        'Músculos objetivo',
         'Equipamiento',
         'Series',
         'Repeticiones',
         'Descanso (segundos)',
-        'Descripción del Ejercicio'
+        'GIF URL'
       ])
       
       template.blocks.forEach((block, blockIndex) => {
@@ -1318,12 +1372,12 @@ export default function TrainerDashboard() {
             routineData.push([
               `Bloque ${blockIndex + 1}: ${block.name}`,
               exerciseData.name,
-              exerciseData.category,
-              exerciseData.equipment,
+              exerciseData.target_muscles.join(', '),
+              exerciseData.equipments.join(', '),
               String(exercise.sets),
               String(exercise.reps),
               String(exercise.restSec),
-              exerciseData.description || 'Sin descripción'
+              exerciseData.gif_URL || 'Sin URL'
             ])
           }
         })
@@ -1389,10 +1443,10 @@ export default function TrainerDashboard() {
       const fileName = `${template.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_rutina.xlsx`
       XLSX.writeFile(workbook, fileName)
       
-      alert('Rutina exportada como archivo CSV exitosamente')
+  toast({ title: 'Rutina exportada como archivo CSV exitosamente' })
     } catch (error) {
       console.error('Error exporting routine:', error)
-      alert('Error al exportar la rutina. Inténtalo de nuevo.')
+  toast({ title: 'Error al exportar la rutina. Inténtalo de nuevo.', variant: 'destructive' })
     }
   }
 
@@ -1469,7 +1523,7 @@ export default function TrainerDashboard() {
   const handleGoToRoutines = (clientName: string) => {
     setActiveTab("routines")
     // Here you could also set a filter to show the specific client's routines
-    alert(`Redirigiendo a rutinas para ${clientName}`)
+  toast({ title: `Redirigiendo a rutinas para ${clientName}` })
   }
 
   const getEventsForDate = (date: string) => {
@@ -1550,14 +1604,6 @@ export default function TrainerDashboard() {
             >
               <Dumbbell className="w-5 h-5 text-primary-foreground" />
             </button>
-            {!sidebarCollapsed && (
-              <button
-                onClick={() => setSidebarCollapsed(true)}
-                className="text-xl font-bold text-sidebar-foreground hover:text-primary transition-colors"
-              >
-                Treino
-              </button>
-            )}
           </div>
           {sidebarCollapsed && (
             <button onClick={() => setSidebarCollapsed(false)} className="ml-2 p-1 hover:bg-sidebar-accent rounded">
@@ -1961,7 +2007,7 @@ export default function TrainerDashboard() {
                 )}
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="hover:bg-accent hover:text-accent-foreground transition-colors">Cancelar</Button>
-                  <Button onClick={() => { alert("Datos guardados (temporal, sin base de datos)"); setIsEditDialogOpen(false) }}>Guardar</Button>
+                  <Button onClick={() => { toast({ title: "Datos guardados (temporal, sin base de datos)" }); setIsEditDialogOpen(false) }}>Guardar</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -2176,14 +2222,52 @@ export default function TrainerDashboard() {
                 <p className="text-muted-foreground">Carpetas y plantillas para asignar a alumnos</p>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={handleCreateFolder} className="bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nueva carpeta
-                </Button>
-                <Button onClick={handleCreateTemplate} className="hover:bg-orange-500 transition-colors">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nueva rutina
-                </Button>
+                {showNewFolderInput ? (
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      type="text"
+                      placeholder="Nombre de la carpeta"
+                      value={newFolderName}
+                      onChange={e => setNewFolderName(e.target.value)}
+                      className="w-48"
+                      autoFocus
+                    />
+                    <Button variant="outline" onClick={handleCreateFolder} className="bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors" disabled={!newFolderName.trim()}>
+                      Crear
+                    </Button>
+                    <Button variant="outline" onClick={() => { setShowNewFolderInput(false); setNewFolderName(""); }}>
+                      Cancelar
+                    </Button>
+                  </div>
+                ) : (
+                  <Button variant="outline" onClick={() => setShowNewFolderInput(true)} className="bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nueva carpeta
+                  </Button>
+                )}
+                {showNewRoutineInput ? (
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      type="text"
+                      placeholder="Nombre de la rutina"
+                      value={newRoutineName}
+                      onChange={e => setNewRoutineName(e.target.value)}
+                      className="w-48"
+                      autoFocus
+                    />
+                    <Button onClick={handleCreateTemplate} className="hover:bg-orange-500 transition-colors" disabled={!newRoutineName.trim()}>
+                      Crear
+                    </Button>
+                    <Button variant="outline" onClick={() => { setShowNewRoutineInput(false); setNewRoutineName(""); }}>
+                      Cancelar
+                    </Button>
+                  </div>
+                ) : (
+                  <Button onClick={() => setShowNewRoutineInput(true)} className="hover:bg-orange-500 transition-colors">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nueva rutina
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -2348,54 +2432,39 @@ export default function TrainerDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="md:col-span-1">
                     <Select 
-                      value={exerciseFilter.category || "all"} 
-                      onValueChange={(v) => setExerciseFilter(prev => ({ 
-                        ...prev, 
-                        category: v === "all" ? undefined : v as Exercise["category"] 
-                      }))}
+                      value="all" 
+                      onValueChange={(v) => setExerciseFilter({})}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Categoría" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="Tren superior">Tren superior</SelectItem>
-                        <SelectItem value="Tren inferior">Tren inferior</SelectItem>
-                        <SelectItem value="Core">Core</SelectItem>
-                        <SelectItem value="Cardio">Cardio</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="md:col-span-1">
                     <Select 
-                      value={exerciseFilter.equipment || "all"} 
-                      onValueChange={(v) => setExerciseFilter(prev => ({ 
-                        ...prev, 
-                        equipment: v === "all" ? undefined : v as Exercise["equipment"] 
-                      }))}
+                      value="all" 
+                      onValueChange={(v) => setExerciseFilter({})}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Equipamiento" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="Máquinas">Máquinas</SelectItem>
-                        <SelectItem value="Pesas">Pesas</SelectItem>
-                        <SelectItem value="Bandas">Bandas</SelectItem>
-                        <SelectItem value="Sin elementos">Sin elementos</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="space-y-2">
                   {exercisesCatalog
-                    .filter((e) => !exerciseFilter.category || e.category === exerciseFilter.category)
-                    .filter((e) => !exerciseFilter.equipment || e.equipment === exerciseFilter.equipment)
+                    .filter((e) => e.name.toLowerCase().includes(exerciseSearchTerm.toLowerCase()))
                     .map((ex) => (
                       <div key={ex.id} className="p-3 rounded bg-muted/50 flex items-center justify-between">
                         <div>
                           <p className="font-medium text-card-foreground">{ex.name}</p>
-                          <p className="text-xs text-muted-foreground">{ex.category} • {ex.equipment}</p>
+                          <p className="text-xs text-muted-foreground">{ex.target_muscles.join(', ')} • {ex.equipments.join(', ')}</p>
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -2404,12 +2473,12 @@ export default function TrainerDashboard() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => alert("Funcionalidad de editar ejercicio estará disponible próximamente")}>
+                            <DropdownMenuItem onClick={() => toast({ title: "Funcionalidad de editar ejercicio estará disponible próximamente" })}>
                               <Edit className="w-4 h-4 mr-2" />
                               Editar
                             </DropdownMenuItem>
                             <DropdownMenuItem 
-                              onClick={() => alert("Funcionalidad de eliminar ejercicio estará disponible próximamente")}
+                              onClick={() => toast({ title: "Funcionalidad de eliminar ejercicio estará disponible próximamente" })}
                               className="text-destructive focus:text-destructive"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
@@ -2585,10 +2654,10 @@ export default function TrainerDashboard() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button variant="outline" size="icon" onClick={() => alert("Iniciando llamada...")} className="hover:bg-accent hover:text-accent-foreground transition-colors">
+                          <Button variant="outline" size="icon" onClick={() => toast({ title: "Iniciando llamada..." })} className="hover:bg-accent hover:text-accent-foreground transition-colors">
                             <Phone className="w-4 h-4" />
                           </Button>
-                          <Button variant="outline" size="icon" onClick={() => alert("Iniciando videollamada...")} className="hover:bg-accent hover:text-accent-foreground transition-colors">
+                          <Button variant="outline" size="icon" onClick={() => toast({ title: "Iniciando videollamada..." })} className="hover:bg-accent hover:text-accent-foreground transition-colors">
                             <Video className="w-4 h-4" />
                           </Button>
                           <DropdownMenu>
@@ -2598,23 +2667,23 @@ export default function TrainerDashboard() {
                           </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuItem onClick={() => alert("Marcado como favorito")}>
+                              <DropdownMenuItem onClick={() => toast({ title: "Marcado como favorito" })}>
                                 <Star className="w-4 h-4 mr-2" />
                                 Marcar como favorito
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => {
                                 if (!selectedChat) return
                                 setChatConversations((prev) => prev.map((c) => c.id === selectedChat.id ? { ...c, isFavorite: !c.isFavorite } : c))
-                                alert("Favoritos actualizado")
+                                toast({ title: "Favoritos actualizado" })
                               }}>
                                 <Star className="w-4 h-4 mr-2" />
                                 {selectedChat?.isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => alert("Chat silenciado por 1 hora")}>
+                              <DropdownMenuItem onClick={() => toast({ title: "Chat silenciado por 1 hora" })}>
                                 <VolumeX className="w-4 h-4 mr-2" />
                                 Silenciar por 1 hora
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => alert("Chat silenciado por 8 horas")}>
+                              <DropdownMenuItem onClick={() => toast({ title: "Chat silenciado por 8 horas" })}>
                                 <VolumeX className="w-4 h-4 mr-2" />
                                 Silenciar por 8 horas
                               </DropdownMenuItem>
@@ -2624,7 +2693,7 @@ export default function TrainerDashboard() {
                                   if (client) {
                                     setActiveTab("clients")
                                     // Scroll to client would be implemented here
-                                    alert(`Navegando al perfil de ${selectedChat.clientName}`)
+                                    toast({ title: `Navegando al perfil de ${selectedChat.clientName}` })
                                   }
                                 }}
                               >
@@ -2933,12 +3002,21 @@ export default function TrainerDashboard() {
 
               {/* Bloques */}
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                   <h3 className="text-xl font-semibold">Bloques de la rutina</h3>
-                  <Button onClick={handleAddBlock} variant="outline" className="hover:bg-accent hover:text-accent-foreground transition-colors">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Agregar bloque
-                  </Button>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      type="text"
+                      placeholder="Nombre del bloque (ej: Entrada en calor, Bloque 1)"
+                      value={newBlockName}
+                      onChange={e => setNewBlockName(e.target.value)}
+                      className="w-64"
+                    />
+                    <Button onClick={handleAddBlock} variant="outline" className="hover:bg-accent hover:text-accent-foreground transition-colors">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Agregar bloque
+                    </Button>
+                  </div>
                 </div>
 
                 {editingRoutine.blocks.map((block, blockIndex) => (
@@ -2991,7 +3069,82 @@ export default function TrainerDashboard() {
                         </Button>
                       </div>
                     </div>
-
+                    {restBlockId === block.id && (
+                      <div className="flex gap-2 items-center mt-2">
+                        <Input
+                          type="number"
+                          placeholder="Segundos de descanso"
+                          value={restInput}
+                          onChange={e => setRestInput(e.target.value)}
+                          className="w-32"
+                          min="1"
+                          autoFocus
+                        />
+                        <Button
+                          size="sm"
+                          onClick={confirmAddRest}
+                          className="hover:bg-green-500 transition-colors"
+                        >
+                          Confirmar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setRestInput("")
+                            setRestBlockId(null)
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    )}
+                    {pendingExercise && pendingExercise.blockId === block.id && (
+                    <div className="flex gap-2 items-center mt-2">
+                      <Input
+                        type="number"
+                        placeholder="Series"
+                        value={exerciseInputs.sets}
+                        onChange={e => setExerciseInputs({ ...exerciseInputs, sets: e.target.value })}
+                        className="w-20"
+                        min="1"
+                        autoFocus
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Reps"
+                        value={exerciseInputs.reps}
+                        onChange={e => setExerciseInputs({ ...exerciseInputs, reps: e.target.value })}
+                        className="w-20"
+                        min="1"
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Descanso (s)"
+                        value={exerciseInputs.restSec}
+                        onChange={e => setExerciseInputs({ ...exerciseInputs, restSec: e.target.value })}
+                        className="w-28"
+                        min="0"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={confirmAddExercise}
+                        className="hover:bg-green-500 transition-colors"
+                      >
+                        Confirmar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setPendingExercise(null)
+                          setExerciseInputs({ sets: "", reps: "", restSec: "" })
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  )}
                     {/* Configuración del bloque */}
                     <div className="grid grid-cols-3 gap-6 p-4 bg-muted/20 rounded-lg">
                       <div>
@@ -3056,7 +3209,7 @@ export default function TrainerDashboard() {
                       <h4 className="text-lg font-semibold text-primary">Ejercicios del bloque:</h4>
                       {block.exercises.map((exercise, exerciseIndex) => {
                         const ex = exercisesCatalog.find(e => e.id === exercise.exerciseId)
-                        const isRest = exercise.exerciseId === -1
+                        const isRest = exercise.exerciseId === "rest"
                         
                         return (
                           <div key={exerciseIndex} className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
@@ -3165,7 +3318,7 @@ export default function TrainerDashboard() {
                       </thead>
                       <tbody>
                         {block.exercises.map((ex, idx) => {
-                          const isRest = ex.exerciseId === -1;
+                          const isRest = ex.exerciseId === "rest";
                           const exData = exercisesCatalog.find(e => e.id === ex.exerciseId); // mapea id->nombre
                           return (
                             <tr key={idx} className="border-b last:border-0">
@@ -3203,42 +3356,28 @@ export default function TrainerDashboard() {
               <div>
                 <Label className="text-sm font-medium">Categoría</Label>
                 <Select 
-                  value={exerciseFilter.category || "all"} 
-                  onValueChange={(v) => setExerciseFilter(prev => ({ 
-                    ...prev, 
-                    category: v === "all" ? undefined : v as Exercise["category"] 
-                  }))}
+                  value="all" 
+                  onValueChange={(v) => setExerciseFilter({})}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Categoría" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="Tren superior">Tren superior</SelectItem>
-                    <SelectItem value="Tren inferior">Tren inferior</SelectItem>
-                    <SelectItem value="Core">Core</SelectItem>
-                    <SelectItem value="Cardio">Cardio</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label className="text-sm font-medium">Equipamiento</Label>
                 <Select 
-                  value={exerciseFilter.equipment || "all"} 
-                  onValueChange={(v) => setExerciseFilter(prev => ({ 
-                    ...prev, 
-                    equipment: v === "all" ? undefined : v as Exercise["equipment"] 
-                  }))}
+                  value="all" 
+                  onValueChange={(v) => setExerciseFilter({})}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Equipamiento" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">TODOS</SelectItem>
-                    <SelectItem value="Máquinas">Máquinas</SelectItem>
-                    <SelectItem value="Pesas">Pesas</SelectItem>
-                    <SelectItem value="Bandas">Bandas</SelectItem>
-                    <SelectItem value="Sin elementos">Sin elementos</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -3260,12 +3399,8 @@ export default function TrainerDashboard() {
             <div className="max-h-96 overflow-y-auto space-y-2 border rounded-lg p-2">
               {exercisesCatalog
                 .filter(ex => 
-                  (!exerciseFilter.category || ex.category === exerciseFilter.category) &&
-                  (!exerciseFilter.equipment || ex.equipment === exerciseFilter.equipment) &&
                   (exerciseSearchTerm === "" || 
-                    ex.name.toLowerCase().includes(exerciseSearchTerm.toLowerCase()) ||
-                    ex.category.toLowerCase().includes(exerciseSearchTerm.toLowerCase()) ||
-                    ex.equipment.toLowerCase().includes(exerciseSearchTerm.toLowerCase())
+                    ex.name.toLowerCase().includes(exerciseSearchTerm.toLowerCase())
                   )
                 )
                 .map(ex => (
@@ -3277,7 +3412,7 @@ export default function TrainerDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium">{ex.name}</p>
-                        <p className="text-sm text-muted-foreground">{ex.category} • {ex.equipment}</p>
+                        <p className="text-sm text-muted-foreground">{Array.isArray(ex.target_muscles) ? ex.target_muscles.join(', ') : ex.target_muscles} • {Array.isArray(ex.equipments) ? ex.equipments.join(', ') : ex.equipments}</p>
                       </div>
                       <Button variant="outline" size="sm" className="hover:bg-accent hover:text-accent-foreground transition-colors">
                         Seleccionar
@@ -3287,12 +3422,8 @@ export default function TrainerDashboard() {
                 ))}
               
               {exercisesCatalog.filter(ex => 
-                (!exerciseFilter.category || ex.category === exerciseFilter.category) &&
-                (!exerciseFilter.equipment || ex.equipment === exerciseFilter.equipment) &&
                 (exerciseSearchTerm === "" || 
-                  ex.name.toLowerCase().includes(exerciseSearchTerm.toLowerCase()) ||
-                  ex.category.toLowerCase().includes(exerciseSearchTerm.toLowerCase()) ||
-                  ex.equipment.toLowerCase().includes(exerciseSearchTerm.toLowerCase())
+                  ex.name.toLowerCase().includes(exerciseSearchTerm.toLowerCase())
                 )
               ).length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
@@ -3327,9 +3458,11 @@ export default function TrainerDashboard() {
           // Reset form when dialog closes
           setNewExerciseForm({
             name: '',
-            category: 'Tren superior',
-            equipment: 'Sin elementos',
-            description: ''
+            gif_URL: '',
+            target_muscles: [],
+            body_parts: [],
+            equipments: [],
+            secondary_muscles: []
           })
         }
       }}>
@@ -3354,53 +3487,15 @@ export default function TrainerDashboard() {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="exerciseCategory" className="text-right">
-                Categoría *
+              <Label htmlFor="exerciseGifUrl" className="text-right">
+                URL del GIF
               </Label>
-              <Select 
-                value={newExerciseForm.category} 
-                onValueChange={(value) => setNewExerciseForm(prev => ({ ...prev, category: value as Exercise['category'] }))}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Seleccionar categoría" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Tren superior">Tren superior</SelectItem>
-                  <SelectItem value="Tren inferior">Tren inferior</SelectItem>
-                  <SelectItem value="Core">Core</SelectItem>
-                  <SelectItem value="Cardio">Cardio</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="exerciseEquipment" className="text-right">
-                Equipamiento *
-              </Label>
-              <Select 
-                value={newExerciseForm.equipment} 
-                onValueChange={(value) => setNewExerciseForm(prev => ({ ...prev, equipment: value as Exercise['equipment'] }))}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Seleccionar equipamiento" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Máquinas">Máquinas</SelectItem>
-                  <SelectItem value="Pesas">Pesas</SelectItem>
-                  <SelectItem value="Bandas">Bandas</SelectItem>
-                  <SelectItem value="Sin elementos">Sin elementos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="exerciseDescription" className="text-right">
-                Descripción
-              </Label>
-              <Textarea 
-                id="exerciseDescription" 
-                placeholder="Descripción del ejercicio (opcional)" 
+              <Input 
+                id="exerciseGifUrl" 
+                placeholder="URL del GIF del ejercicio (opcional)" 
                 className="col-span-3"
-                value={newExerciseForm.description}
-                onChange={(e) => setNewExerciseForm(prev => ({ ...prev, description: e.target.value }))}
+                value={newExerciseForm.gif_URL}
+                onChange={(e) => setNewExerciseForm(prev => ({ ...prev, gif_URL: e.target.value }))}
               />
             </div>
           </div>
@@ -3762,3 +3857,4 @@ export default function TrainerDashboard() {
     </div>
   )
 }
+
