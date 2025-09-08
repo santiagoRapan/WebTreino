@@ -399,33 +399,25 @@ export default function TrainerDashboard() {
     { title: "Progreso Promedio", value: "82%", change: "+5%", icon: TrendingUp, color: "text-primary" },
   ]
 
-  // Mock exercises catalog
+  // Exercises catalog from Supabase
   const [exercisesCatalog, setExercisesCatalog] = useState<Exercise[]>([])
   const [loadingExercises, setLoadingExercises] = useState<boolean>(true)
-  
-  // Function to fetch exercises from Supabase
-  const fetchExercises = async () => {
-    try {
+
+  // Fetch exercises from Supabase on mount
+  useEffect(() => {
+    const fetchExercises = async () => {
       setLoadingExercises(true)
       const { data, error } = await supabase
         .from('Exercises')
         .select('*')
-      
       if (error) {
         console.error('Error fetching exercises:', error)
-        return
+        setExercisesCatalog([])
+      } else {
+        setExercisesCatalog(data || [])
       }
-      
-      setExercisesCatalog(data || [])
-    } catch (error) {
-      console.error('Error fetching exercises:', error)
-    } finally {
       setLoadingExercises(false)
     }
-  }
-  
-  // Load exercises on component mount
-  useEffect(() => {
     fetchExercises()
   }, [])
 
@@ -545,11 +537,21 @@ export default function TrainerDashboard() {
   const currentFolder = routineFolders.find((f) => f.id === selectedFolderId) || routineFolders[0]
   const filteredTemplates = (currentFolder?.templates || []).filter((t) => t.name.toLowerCase().includes(routineSearch.toLowerCase()))
 
+  const [showNewFolderInput, setShowNewFolderInput] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  // Para agregar descanso
+  const [restInput, setRestInput] = useState("");
+  const [restBlockId, setRestBlockId] = useState<number | null>(null);
+  // Para agregar ejercicio
+  const [exerciseInputs, setExerciseInputs] = useState({ sets: "", reps: "", restSec: "" });
+  // pendingExercise ahora es solo para saber a qué bloque se está agregando el ejercicio
+  const [pendingExercise, setPendingExercise] = useState<{ blockId: number } | null>(null);
   const handleCreateFolder = () => {
-    const name = prompt("Nombre de la carpeta")
-    if (!name) return
-    setRoutineFolders((prev) => [...prev, { id: Date.now(), name, templates: [] }])
-  }
+    if (!newFolderName.trim()) return;
+    setRoutineFolders((prev) => [...prev, { id: Date.now(), name: newFolderName.trim(), templates: [] }]);
+    setNewFolderName("");
+    setShowNewFolderInput(false);
+  };
 
   const handleDeleteTemplate = (templateId: number) => {
     if (!currentFolder) return
@@ -582,12 +584,15 @@ export default function TrainerDashboard() {
     })
   }
 
+  const [showNewRoutineInput, setShowNewRoutineInput] = useState(false);
+  const [newRoutineName, setNewRoutineName] = useState("");
   const handleCreateTemplate = () => {
-    const name = prompt("Nombre de la rutina")
-    if (!name || !currentFolder) return
-    const newTemplate: RoutineTemplate = { id: Date.now(), name, blocks: [] }
-    setRoutineFolders((prev) => prev.map((f) => (f.id === currentFolder.id ? { ...f, templates: [newTemplate, ...f.templates] } : f)))
-  }
+    if (!newRoutineName.trim() || !currentFolder) return;
+    const newTemplate: RoutineTemplate = { id: Date.now(), name: newRoutineName.trim(), blocks: [] };
+    setRoutineFolders((prev) => prev.map((f) => (f.id === currentFolder.id ? { ...f, templates: [newTemplate, ...f.templates] } : f)));
+    setNewRoutineName("");
+    setShowNewRoutineInput(false);
+  };
 
   const handleAssignTemplateToClient = (template: RoutineTemplate, client: Client) => {
   toast({ title: `Asignada la rutina "${template.name}" a ${client.name} (mock)` }) // scheduling UI vendrá luego
@@ -598,83 +603,105 @@ export default function TrainerDashboard() {
     setIsRoutineEditorOpen(true)
   }
 
+  const [newBlockName, setNewBlockName] = useState("");
   const handleAddBlock = () => {
-    if (!editingRoutine) return
-    const blockName = prompt("Nombre del bloque (ej: Entrada en calor, Bloque 1)")
-    if (!blockName) return
-    
+    if (!editingRoutine) return;
+    if (!newBlockName.trim()) return;
     const newBlock: RoutineBlock = {
       id: Date.now(),
-      name: blockName,
+      name: newBlockName.trim(),
       exercises: [],
       repetitions: 1,
       restBetweenRepetitions: 60,
       restAfterBlock: 90,
-    }
-    
+    };
     setEditingRoutine({
       ...editingRoutine,
-      blocks: [...editingRoutine.blocks, newBlock]
-    })
-  }
+      blocks: [...editingRoutine.blocks, newBlock],
+    });
+    setNewBlockName("");
+  };
 
   const handleAddExerciseToBlock = (blockId: number) => {
-    setSelectedBlockId(blockId)
-    setIsExerciseSelectorOpen(true)
+    setSelectedBlockId(blockId);
+    setIsExerciseSelectorOpen(true);
+    setPendingExercise(null);
+    setExerciseInputs({ sets: "", reps: "", restSec: "" });
   }
 
   const handleAddRest = (blockId: number) => {
-    if (!editingRoutine) return
-    const restTime = prompt("Tiempo de descanso en segundos")
-    if (!restTime || isNaN(Number(restTime))) return
-    
-    // Agregar descanso como un ejercicio especial
-    const newRestExercise = {
-      exerciseId: "rest", // ID especial para descanso
-      sets: 1,
-      reps: Number(restTime),
-      restSec: 0,
-    }
-    
-    setEditingRoutine({
-      ...editingRoutine,
-      blocks: editingRoutine.blocks.map(block => 
-        block.id === blockId 
-          ? { ...block, exercises: [...block.exercises, newRestExercise] }
-          : block
-      )
-    })
-  }
+      setRestBlockId(blockId);
+  };
 
+  const confirmAddRest = () => {
+  if (!editingRoutine || restBlockId === null) return;
+  if (!restInput || isNaN(Number(restInput))) return;
+  const newRestExercise = {
+    exerciseId: "rest",
+    sets: 1,
+    reps: Number(restInput),
+    restSec: 0,
+  };
+  setEditingRoutine({
+    ...editingRoutine,
+    blocks: editingRoutine.blocks.map(block =>
+      block.id === restBlockId
+        ? { ...block, exercises: [...block.exercises, newRestExercise] }
+        : block
+    ),
+  });
+  setRestInput("");
+  setRestBlockId(null);
+  };
   const handleSelectExercise = (exercise: Exercise) => {
-    if (!editingRoutine || !selectedBlockId) return
-    
-    const sets = prompt("Número de series")
-    const reps = prompt("Repeticiones por serie")
-    const rest = prompt("Tiempo de descanso entre series (segundos)")
-    
-    if (!sets || !reps || !rest || isNaN(Number(sets)) || isNaN(Number(reps)) || isNaN(Number(rest))) return
-    
-    const newExercise = {
-      exerciseId: exercise.id,
-      sets: Number(sets),
-      reps: Number(reps),
-      restSec: Number(rest),
-    }
-    
-    setEditingRoutine({
-      ...editingRoutine,
-      blocks: editingRoutine.blocks.map(block => 
-        block.id === selectedBlockId 
-          ? { ...block, exercises: [...block.exercises, newExercise] }
-          : block
-      )
+    // Agrega el ejercicio seleccionado al bloque activo de la rutina
+    if (!editingRoutine || selectedBlockId == null) return;
+    const updatedBlocks = editingRoutine.blocks.map(block => {
+      if (block.id === selectedBlockId) {
+        return {
+          ...block,
+          exercises: [
+            ...block.exercises,
+            { exerciseId: exercise.id, sets: 3, reps: 10, restSec: 60 } // valores por defecto
+          ]
+        }
+      }
+      return block
     })
-    
+    setEditingRoutine({ ...editingRoutine, blocks: updatedBlocks })
     setIsExerciseSelectorOpen(false)
-    setSelectedBlockId(null)
-  }
+    setPendingExercise(null)
+  };
+// Confirmar y agregar ejercicio
+const confirmAddExercise = () => {
+  if (!editingRoutine || !pendingExercise) return;
+  const { sets, reps, restSec } = exerciseInputs;
+  if (!sets || !reps || !restSec || isNaN(Number(sets)) || isNaN(Number(reps)) || isNaN(Number(restSec))) return;
+  const newExercise = {
+  exerciseId: "", // Ajusta aquí si necesitas un id de ejercicio real
+    sets: Number(sets),
+    reps: Number(reps),
+  restSec: Number(restSec),
+  };
+  setEditingRoutine({
+    ...editingRoutine,
+    blocks: editingRoutine.blocks.map(block =>
+      block.id === selectedBlockId
+        ? { ...block, exercises: [...block.exercises, newExercise] }
+        : block
+    ),
+  });
+  setIsExerciseSelectorOpen(false);
+  setSelectedBlockId(null);
+  setPendingExercise(null);
+  setExerciseInputs({ sets: "", reps: "", restSec: "" });
+};
 
+  // Cancelar agregar ejercicio
+  const cancelAddExercise = () => {
+    setPendingExercise(null);
+  setExerciseInputs({ sets: "", reps: "", restSec: "" });
+  };
   const handleSaveRoutine = () => {
     if (!editingRoutine) return
     
@@ -1577,14 +1604,6 @@ export default function TrainerDashboard() {
             >
               <Dumbbell className="w-5 h-5 text-primary-foreground" />
             </button>
-            {!sidebarCollapsed && (
-              <button
-                onClick={() => setSidebarCollapsed(true)}
-                className="text-xl font-bold text-sidebar-foreground hover:text-primary transition-colors"
-              >
-                Treino
-              </button>
-            )}
           </div>
           {sidebarCollapsed && (
             <button onClick={() => setSidebarCollapsed(false)} className="ml-2 p-1 hover:bg-sidebar-accent rounded">
@@ -2203,14 +2222,52 @@ export default function TrainerDashboard() {
                 <p className="text-muted-foreground">Carpetas y plantillas para asignar a alumnos</p>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={handleCreateFolder} className="bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nueva carpeta
-                </Button>
-                <Button onClick={handleCreateTemplate} className="hover:bg-orange-500 transition-colors">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nueva rutina
-                </Button>
+                {showNewFolderInput ? (
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      type="text"
+                      placeholder="Nombre de la carpeta"
+                      value={newFolderName}
+                      onChange={e => setNewFolderName(e.target.value)}
+                      className="w-48"
+                      autoFocus
+                    />
+                    <Button variant="outline" onClick={handleCreateFolder} className="bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors" disabled={!newFolderName.trim()}>
+                      Crear
+                    </Button>
+                    <Button variant="outline" onClick={() => { setShowNewFolderInput(false); setNewFolderName(""); }}>
+                      Cancelar
+                    </Button>
+                  </div>
+                ) : (
+                  <Button variant="outline" onClick={() => setShowNewFolderInput(true)} className="bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nueva carpeta
+                  </Button>
+                )}
+                {showNewRoutineInput ? (
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      type="text"
+                      placeholder="Nombre de la rutina"
+                      value={newRoutineName}
+                      onChange={e => setNewRoutineName(e.target.value)}
+                      className="w-48"
+                      autoFocus
+                    />
+                    <Button onClick={handleCreateTemplate} className="hover:bg-orange-500 transition-colors" disabled={!newRoutineName.trim()}>
+                      Crear
+                    </Button>
+                    <Button variant="outline" onClick={() => { setShowNewRoutineInput(false); setNewRoutineName(""); }}>
+                      Cancelar
+                    </Button>
+                  </div>
+                ) : (
+                  <Button onClick={() => setShowNewRoutineInput(true)} className="hover:bg-orange-500 transition-colors">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nueva rutina
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -2945,12 +3002,21 @@ export default function TrainerDashboard() {
 
               {/* Bloques */}
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                   <h3 className="text-xl font-semibold">Bloques de la rutina</h3>
-                  <Button onClick={handleAddBlock} variant="outline" className="hover:bg-accent hover:text-accent-foreground transition-colors">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Agregar bloque
-                  </Button>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      type="text"
+                      placeholder="Nombre del bloque (ej: Entrada en calor, Bloque 1)"
+                      value={newBlockName}
+                      onChange={e => setNewBlockName(e.target.value)}
+                      className="w-64"
+                    />
+                    <Button onClick={handleAddBlock} variant="outline" className="hover:bg-accent hover:text-accent-foreground transition-colors">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Agregar bloque
+                    </Button>
+                  </div>
                 </div>
 
                 {editingRoutine.blocks.map((block, blockIndex) => (
@@ -3003,7 +3069,82 @@ export default function TrainerDashboard() {
                         </Button>
                       </div>
                     </div>
-
+                    {restBlockId === block.id && (
+                      <div className="flex gap-2 items-center mt-2">
+                        <Input
+                          type="number"
+                          placeholder="Segundos de descanso"
+                          value={restInput}
+                          onChange={e => setRestInput(e.target.value)}
+                          className="w-32"
+                          min="1"
+                          autoFocus
+                        />
+                        <Button
+                          size="sm"
+                          onClick={confirmAddRest}
+                          className="hover:bg-green-500 transition-colors"
+                        >
+                          Confirmar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setRestInput("")
+                            setRestBlockId(null)
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    )}
+                    {pendingExercise && pendingExercise.blockId === block.id && (
+                    <div className="flex gap-2 items-center mt-2">
+                      <Input
+                        type="number"
+                        placeholder="Series"
+                        value={exerciseInputs.sets}
+                        onChange={e => setExerciseInputs({ ...exerciseInputs, sets: e.target.value })}
+                        className="w-20"
+                        min="1"
+                        autoFocus
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Reps"
+                        value={exerciseInputs.reps}
+                        onChange={e => setExerciseInputs({ ...exerciseInputs, reps: e.target.value })}
+                        className="w-20"
+                        min="1"
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Descanso (s)"
+                        value={exerciseInputs.restSec}
+                        onChange={e => setExerciseInputs({ ...exerciseInputs, restSec: e.target.value })}
+                        className="w-28"
+                        min="0"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={confirmAddExercise}
+                        className="hover:bg-green-500 transition-colors"
+                      >
+                        Confirmar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setPendingExercise(null)
+                          setExerciseInputs({ sets: "", reps: "", restSec: "" })
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  )}
                     {/* Configuración del bloque */}
                     <div className="grid grid-cols-3 gap-6 p-4 bg-muted/20 rounded-lg">
                       <div>
@@ -3271,7 +3412,7 @@ export default function TrainerDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium">{ex.name}</p>
-                        <p className="text-sm text-muted-foreground">{ex.target_muscles.join(', ')} • {ex.equipments.join(', ')}</p>
+                        <p className="text-sm text-muted-foreground">{Array.isArray(ex.target_muscles) ? ex.target_muscles.join(', ') : ex.target_muscles} • {Array.isArray(ex.equipments) ? ex.equipments.join(', ') : ex.equipments}</p>
                       </div>
                       <Button variant="outline" size="sm" className="hover:bg-accent hover:text-accent-foreground transition-colors">
                         Seleccionar
@@ -3716,3 +3857,4 @@ export default function TrainerDashboard() {
     </div>
   )
 }
+
