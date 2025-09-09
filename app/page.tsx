@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabaseClient"
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
-import * as XLSX from "xlsx"
+import ExcelJS from "exceljs"
 import { saveAs } from "file-saver"
 import {
   BarChart3,
@@ -123,6 +123,9 @@ type Exercise = {
   target_muscles: string[]
   body_parts: string[]
   equipments: string[]
+  // Campos extendidos
+  description?: string
+  category?: string
   secondary_muscles: string[]
 }
 
@@ -403,6 +406,19 @@ export default function TrainerDashboard() {
   const [exercisesCatalog, setExercisesCatalog] = useState<Exercise[]>([])
   const [loadingExercises, setLoadingExercises] = useState<boolean>(true)
 
+  // Derivados para filtros
+  const uniqueCategories = Array.from(new Set(
+    exercisesCatalog
+      .map(e => (e.category || e.body_parts?.[0] || '').trim())
+      .filter(Boolean)
+  ))
+  const uniqueEquipments = Array.from(new Set(
+    exercisesCatalog
+      .flatMap(e => e.equipments || [])
+      .map(s => s.trim())
+      .filter(Boolean)
+  ))
+
   // Fetch exercises from Supabase on mount
   useEffect(() => {
     const fetchExercises = async () => {
@@ -421,108 +437,13 @@ export default function TrainerDashboard() {
     fetchExercises()
   }, [])
 
-  // Mock routine folders and templates
-  const [routineFolders, setRoutineFolders] = useState<RoutineFolder[]>([
-    {
-      id: 1,
-      name: "Hipertrofia",
-      templates: [
-        {
-          id: 101,
-          name: "Pecho-Espalda A",
-          description: "Enfasis en básicos",
-          blocks: [
-            {
-              id: 1011,
-              name: "Press banca",
-              exercises: [{ exerciseId: "1", sets: 4, reps: 8, restSec: 120 }],
-              repetitions: 3,
-              restBetweenRepetitions: 60,
-              restAfterBlock: 90,
-            },
-            {
-              id: 1012,
-              name: "Dominadas",
-              exercises: [{ exerciseId: "2", sets: 4, reps: 10, restSec: 90 }],
-              repetitions: 3,
-              restBetweenRepetitions: 60,
-              restAfterBlock: 90,
-            },
-            {
-              id: 1013,
-              name: "Plancha",
-              exercises: [{ exerciseId: "5", sets: 3, reps: 45, restSec: 60 }],
-              repetitions: 3,
-              restBetweenRepetitions: 60,
-              restAfterBlock: 90,
-            },
-          ],
-        },
-        {
-          id: 102,
-          name: "Piernas Base",
-          blocks: [
-            {
-              id: 1021,
-              name: "Entrada en calor",
-              exercises: [{ exerciseId: "3", sets: 5, reps: 5, restSec: 150 }],
-              repetitions: 3,
-              restBetweenRepetitions: 60,
-              restAfterBlock: 90,
-            },
-            {
-              id: 1022,
-              name: "Bloque 1",
-              exercises: [{ exerciseId: "4", sets: 4, reps: 12, restSec: 120 }],
-              repetitions: 3,
-              restBetweenRepetitions: 60,
-              restAfterBlock: 90,
-            },
-          ],
-        },
-      ],
-    },
-    {
-      id: 2,
-      name: "Funcional",
-      templates: [
-        {
-          id: 201,
-          name: "Fullbody 30min",
-          blocks: [
-            {
-              id: 2011,
-              name: "Entrada en calor",
-              exercises: [{ exerciseId: "2", sets: 3, reps: 6, restSec: 90 }],
-              repetitions: 3,
-              restBetweenRepetitions: 60,
-              restAfterBlock: 90,
-            },
-            {
-              id: 2012,
-              name: "Bloque 1",
-              exercises: [{ exerciseId: "9", sets: 3, reps: 12, restSec: 60 }],
-              repetitions: 3,
-              restBetweenRepetitions: 60,
-              restAfterBlock: 90,
-            },
-            {
-              id: 2013,
-              name: "Bloque 2",
-              exercises: [{ exerciseId: "6", sets: 3, reps: 20, restSec: 45 }],
-              repetitions: 3,
-              restBetweenRepetitions: 60,
-              restAfterBlock: 90,
-            },
-          ],
-        },
-      ],
-    },
-  ])
+  // Routine folders and templates (initialized after loading catalog to ensure exercise IDs exist)
+  const [routineFolders, setRoutineFolders] = useState<RoutineFolder[]>([])
 
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(1)
   const [routineSearch, setRoutineSearch] = useState("")
-  const [exerciseFilter, setExerciseFilter] = useState<{ body_parts?: string[]; equipments?: string[] }>({} as { body_parts?: string[]; equipments?: string[] })
+  // Unificar tipo de filtros
+  const [exerciseFilter, setExerciseFilter] = useState<{ category?: string; equipment?: string }>({})
   
   // Editor de rutinas
   const [editingRoutine, setEditingRoutine] = useState<RoutineTemplate | null>(null)
@@ -539,6 +460,77 @@ export default function TrainerDashboard() {
 
   const [showNewFolderInput, setShowNewFolderInput] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  // Mostrar/Ocultar catálogo de ejercicios
+  const [showExerciseCatalog, setShowExerciseCatalog] = useState(false)
+  const [catalogSearch, setCatalogSearch] = useState("")
+
+  // Initialize default routines using existing exercises
+  useEffect(() => {
+    if (routineFolders.length === 0 && exercisesCatalog.length >= 4) {
+      const ids = exercisesCatalog.map(e => e.id)
+      const safeId = (idx: number) => ids[Math.min(idx, ids.length - 1)]
+      const newFolders: RoutineFolder[] = [
+        {
+          id: 1,
+          name: 'Hipertrofia',
+          templates: [
+            {
+              id: 101,
+              name: 'Pecho-Espalda A',
+              description: 'Énfasis en básicos',
+              blocks: [
+                {
+                  id: 1011,
+                  name: exercisesCatalog[0]?.name || 'Bloque 1',
+                  exercises: [{ exerciseId: safeId(0), sets: 4, reps: 8, restSec: 120 }],
+                  repetitions: 3,
+                  restBetweenRepetitions: 60,
+                  restAfterBlock: 90,
+                },
+                {
+                  id: 1012,
+                  name: exercisesCatalog[1]?.name || 'Bloque 2',
+                  exercises: [{ exerciseId: safeId(1), sets: 4, reps: 10, restSec: 90 }],
+                  repetitions: 3,
+                  restBetweenRepetitions: 60,
+                  restAfterBlock: 90,
+                },
+              ],
+            },
+          ],
+        },
+        {
+          id: 2,
+          name: 'Funcional',
+          templates: [
+            {
+              id: 201,
+              name: 'Fullbody 30min',
+              blocks: [
+                {
+                  id: 2011,
+                  name: exercisesCatalog[2]?.name || 'Entrada en calor',
+                  exercises: [{ exerciseId: safeId(2), sets: 3, reps: 12, restSec: 60 }],
+                  repetitions: 3,
+                  restBetweenRepetitions: 60,
+                  restAfterBlock: 90,
+                },
+                {
+                  id: 2012,
+                  name: exercisesCatalog[3]?.name || 'Bloque 2',
+                  exercises: [{ exerciseId: safeId(3), sets: 3, reps: 15, restSec: 60 }],
+                  repetitions: 3,
+                  restBetweenRepetitions: 60,
+                  restAfterBlock: 90,
+                },
+              ],
+            },
+          ],
+        },
+      ]
+      setRoutineFolders(newFolders)
+    }
+  }, [exercisesCatalog])
   // Para agregar descanso
   const [restInput, setRestInput] = useState("");
   const [restBlockId, setRestBlockId] = useState<number | null>(null);
@@ -1192,7 +1184,9 @@ const confirmAddExercise = () => {
       target_muscles: newExerciseForm.target_muscles,
       body_parts: newExerciseForm.body_parts,
       equipments: newExerciseForm.equipments,
-      secondary_muscles: newExerciseForm.secondary_muscles
+      secondary_muscles: newExerciseForm.secondary_muscles,
+      description: (newExerciseForm as any).description?.trim() || undefined,
+      category: (newExerciseForm as any).category || undefined
     }
 
     setExercisesCatalog(prev => [...prev, newExercise])
@@ -1323,38 +1317,72 @@ const confirmAddExercise = () => {
     }
   }
 
-  const handleExportRoutineToExcel = (template: RoutineTemplate) => {
+  const handleExportRoutineToExcel = async (template: RoutineTemplate) => {
     try {
-      // Create a proper Excel file using XLSX library
-      const workbook = XLSX.utils.book_new()
-      
-      // Create main routine sheet with better formatting
-      const routineData = [
-        ['RUTINA DE ENTRENAMIENTO'],
-        [''],
+      const workbook = new ExcelJS.Workbook()
+      workbook.creator = 'Traino'
+      workbook.created = new Date()
+
+      // ========== Sheet 1: Rutina Completa ==========
+      const ws = workbook.addWorksheet('Rutina Completa', {
+        properties: { defaultRowHeight: 18 },
+        pageSetup: { fitToPage: true, fitToWidth: 1, orientation: 'landscape' },
+      })
+
+      // Title
+      ws.mergeCells('A1:H1')
+      const titleCell = ws.getCell('A1')
+      titleCell.value = 'RUTINA DE ENTRENAMIENTO'
+      titleCell.font = { bold: true, size: 16 }
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' }
+      titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7E6' } }
+
+      ws.addRow([])
+      // Metadata
+      const metaRows = [
         ['Nombre de la Rutina:', template.name],
         ['Descripción:', template.description || 'Sin descripción'],
         ['Fecha de Creación:', new Date().toLocaleDateString('es-ES')],
-        [''],
-        ['RESUMEN DE BLOQUES'],
-        [''],
-        ['Bloque', 'Nombre del Bloque', 'Repeticiones', 'Número de Ejercicios']
       ]
-      
+      metaRows.forEach(r => {
+        const row = ws.addRow(r)
+        const label = row.getCell(1)
+        label.font = { bold: true }
+      })
+
+      ws.addRow([])
+      // Resumen de bloques
+      const resumenHeader = ws.addRow(['RESUMEN DE BLOQUES'])
+      resumenHeader.getCell(1).font = { bold: true, underline: true }
+      ws.addRow([])
+
+      const resumenCols = ['Bloque', 'Nombre del Bloque', 'Repeticiones', 'Número de Ejercicios']
+      const resumenHeaderRow = ws.addRow(resumenCols)
+      resumenHeaderRow.eachCell(c => {
+        c.font = { bold: true }
+        c.alignment = { horizontal: 'center' }
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E8F5E9' } }
+        c.border = { top: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' }, bottom: { style: 'thin' } }
+      })
+
       template.blocks.forEach((block, blockIndex) => {
-        routineData.push([
+        const row = ws.addRow([
           `Bloque ${blockIndex + 1}`,
           block.name,
           String(block.repetitions),
-          String(block.exercises.length)
+          String(block.exercises.length),
         ])
+        row.eachCell(c => {
+          c.border = { top: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' }, bottom: { style: 'thin' } }
+        })
       })
-      
-      // Add empty rows for better formatting
-      routineData.push([''])
-      routineData.push(['DETALLE COMPLETO DE EJERCICIOS'])
-      routineData.push([''])
-      routineData.push([
+
+      ws.addRow([])
+      const detalleHeader = ws.addRow(['DETALLE COMPLETO DE EJERCICIOS'])
+      detalleHeader.getCell(1).font = { bold: true, underline: true }
+      ws.addRow([])
+
+      const detailCols = [
         'Bloque',
         'Nombre del Ejercicio',
         'Músculos objetivo',
@@ -1362,91 +1390,148 @@ const confirmAddExercise = () => {
         'Series',
         'Repeticiones',
         'Descanso (segundos)',
-        'GIF URL'
-      ])
-      
-      template.blocks.forEach((block, blockIndex) => {
-        block.exercises.forEach((exercise) => {
+        'GIF URL',
+      ]
+      const detailHeaderRowIdx = ws.rowCount + 1
+      const detailHeaderRow = ws.addRow(detailCols)
+      detailHeaderRow.eachCell(c => {
+        c.font = { bold: true }
+        c.alignment = { horizontal: 'center' }
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E3F2FD' } }
+        c.border = { top: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' }, bottom: { style: 'thin' } }
+      })
+
+      // (Imagenes deshabilitadas a pedido del usuario)
+
+      let stripe = false
+      for (let blockIndex = 0; blockIndex < template.blocks.length; blockIndex++) {
+        const block = template.blocks[blockIndex]
+        const blockStartRow = ws.rowCount + 1
+        for (let exerciseIndex = 0; exerciseIndex < block.exercises.length; exerciseIndex++) {
+          const exercise = block.exercises[exerciseIndex]
           const exerciseData = exercisesCatalog.find(ex => ex.id === exercise.exerciseId)
-          if (exerciseData) {
-            routineData.push([
-              `Bloque ${blockIndex + 1}: ${block.name}`,
-              exerciseData.name,
-              exerciseData.target_muscles.join(', '),
-              exerciseData.equipments.join(', '),
-              String(exercise.sets),
-              String(exercise.reps),
-              String(exercise.restSec),
-              exerciseData.gif_URL || 'Sin URL'
-            ])
+          if (!exerciseData) continue
+          stripe = !stripe
+          const row = ws.addRow([
+            '',
+            exerciseData.name,
+            exerciseData.target_muscles.join(', '),
+            exerciseData.equipments.join(', '),
+            String(exercise.sets),
+            String(exercise.reps),
+            String(exercise.restSec),
+            exerciseData.gif_URL ? 'Ver Ejercicio' : 'Sin URL',
+          ])
+          row.eachCell((c) => {
+            if (stripe) {
+              c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDFD' } }
+            }
+            c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+            c.border = { top: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' }, bottom: { style: 'thin' } }
+          })
+          if (exerciseData.gif_URL) {
+            const cell = row.getCell(8)
+            cell.value = { text: 'Ver Ejercicio', hyperlink: exerciseData.gif_URL }
+            cell.font = { color: { argb: '1E88E5' }, underline: true }
           }
+        }
+        const blockEndRow = ws.rowCount
+        if (blockEndRow >= blockStartRow) {
+          ws.mergeCells(blockStartRow, 1, blockEndRow, 1)
+          const mergedCell = ws.getCell(blockStartRow, 1)
+          mergedCell.value = `Bloque ${blockIndex + 1}: ${block.name}`
+          mergedCell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+          mergedCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' }, bottom: { style: 'thin' } }
+        }
+        ws.addRow([''])
+      }
+
+      // Column widths
+      ws.columns = [
+        { width: 26 },
+        { width: 30 },
+        { width: 24 },
+        { width: 20 },
+        { width: 10 },
+        { width: 14 },
+        { width: 18 },
+        { width: 22 },
+      ]
+
+      // Auto filter for detail table
+      ws.autoFilter = `A${detailHeaderRowIdx}:H${ws.rowCount}`
+
+      // Freeze panes: keep headers visible
+      ws.views = [{ state: 'frozen', xSplit: 0, ySplit: Number(detailHeaderRowIdx) }]
+
+      // Center align all cells on the main sheet
+      ws.eachRow(row => {
+        row.eachCell(cell => {
+          cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
         })
       })
-      
-      // Create the worksheet
-      const worksheet = XLSX.utils.aoa_to_sheet(routineData)
-      
-      // Set column widths for better formatting
-      const columnWidths = [
-        { wch: 25 }, // Bloque
-        { wch: 30 }, // Nombre del Ejercicio
-        { wch: 15 }, // Categoría
-        { wch: 15 }, // Equipamiento
-        { wch: 8 },  // Series
-        { wch: 12 }, // Repeticiones
-        { wch: 15 }, // Descanso
-        { wch: 40 }  // Descripción
-      ]
-      worksheet['!cols'] = columnWidths
-      
-      // Add the worksheet to the workbook
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Rutina Completa')
-      
-      // Create a separate sheet for just the exercise list
-      const exerciseListData = [
-        ['LISTA DE EJERCICIOS'],
-        [''],
-        ['Ejercicio', 'Categoría', 'Equipamiento', 'Descripción']
-      ]
-      
-      // Get unique exercises from the routine
-      const uniqueExercises = new Map()
-      template.blocks.forEach((block) => {
-        block.exercises.forEach((exercise) => {
-          const exerciseData = exercisesCatalog.find(ex => ex.id === exercise.exerciseId)
-          if (exerciseData && !uniqueExercises.has(exerciseData.id)) {
-            uniqueExercises.set(exerciseData.id, exerciseData)
-          }
+
+      // ========== Sheet 2: Lista de Ejercicios ==========
+      const ws2 = workbook.addWorksheet('Lista de Ejercicios', {
+        properties: { defaultRowHeight: 18 },
+      })
+      ws2.mergeCells('A1:D1')
+      const t2 = ws2.getCell('A1')
+      t2.value = 'LISTA DE EJERCICIOS'
+      t2.font = { bold: true, size: 14 }
+      t2.alignment = { horizontal: 'center' }
+      t2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'EDE7F6' } }
+
+      ws2.addRow([])
+      const listHeader = ws2.addRow(['Ejercicio', 'Categoría', 'Equipamiento', 'Descripción'])
+      listHeader.eachCell(c => {
+        c.font = { bold: true }
+        c.alignment = { horizontal: 'center' }
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDE7' } }
+        c.border = { top: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' }, bottom: { style: 'thin' } }
+      })
+
+      const uniqueExercises = new Map<string, Exercise>()
+      template.blocks.forEach(block => {
+        block.exercises.forEach(ex => {
+          const data = exercisesCatalog.find(e => e.id === ex.exerciseId)
+          if (data && !uniqueExercises.has(data.id)) uniqueExercises.set(data.id, data)
         })
       })
-      
-      uniqueExercises.forEach((exerciseData) => {
-        exerciseListData.push([
+      uniqueExercises.forEach(exerciseData => {
+        const row = ws2.addRow([
           exerciseData.name,
-          exerciseData.category,
-          exerciseData.equipment,
-          exerciseData.description || 'Sin descripción'
+          exerciseData.category || (exerciseData.body_parts?.[0] || ''),
+          (exerciseData.equipments || []).join(', '),
+          exerciseData.description || 'Sin descripción',
         ])
+        row.eachCell(c => {
+          c.border = { top: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' }, bottom: { style: 'thin' } }
+        })
       })
-      
-      const exerciseListSheet = XLSX.utils.aoa_to_sheet(exerciseListData)
-      exerciseListSheet['!cols'] = [
-        { wch: 30 }, // Ejercicio
-        { wch: 15 }, // Categoría
-        { wch: 15 }, // Equipamiento
-        { wch: 40 }  // Descripción
+      ws2.columns = [
+        { width: 32 },
+        { width: 18 },
+        { width: 20 },
+        { width: 60 },
       ]
-      
-      XLSX.utils.book_append_sheet(workbook, exerciseListSheet, 'Lista de Ejercicios')
-      
-      // Save the file
+
+      // Center align all cells on the list sheet
+      ws2.eachRow(row => {
+        row.eachCell(cell => {
+          cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+        })
+      })
+
+      // Save file (browser)
       const fileName = `${template.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_rutina.xlsx`
-      XLSX.writeFile(workbook, fileName)
-      
-  toast({ title: 'Rutina exportada como archivo CSV exitosamente' })
+      const buffer = await workbook.xlsx.writeBuffer()
+      saveAs(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), fileName)
+
+      toast({ title: 'Rutina exportada como archivo XLSX exitosamente' })
     } catch (error) {
       console.error('Error exporting routine:', error)
-  toast({ title: 'Error al exportar la rutina. Inténtalo de nuevo.', variant: 'destructive' })
+      toast({ title: 'Error al exportar la rutina. Inténtalo de nuevo.', variant: 'destructive' })
     }
   }
 
@@ -1597,13 +1682,16 @@ const confirmAddExercise = () => {
         className={`fixed inset-y-0 left-0 z-50 ${sidebarCollapsed ? "w-20" : "w-64"} bg-sidebar border-r border-sidebar-border transition-all duration-300`}
       >
         <div className="flex h-16 items-center px-6 border-b border-sidebar-border">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
               className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
             >
               <Dumbbell className="w-5 h-5 text-primary-foreground" />
             </button>
+            {!sidebarCollapsed && (
+              <span className="text-lg font-semibold text-sidebar-foreground">Treino</span>
+            )}
           </div>
           {sidebarCollapsed && (
             <button onClick={() => setSidebarCollapsed(false)} className="ml-2 p-1 hover:bg-sidebar-accent rounded">
@@ -2215,11 +2303,11 @@ const confirmAddExercise = () => {
 
         {/* Routines Content */}
         {activeTab === "routines" && (
-          <main className="p-6 space-y-6">
+          <main className="p-4 space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-foreground">Rutinas</h2>
-                <p className="text-muted-foreground">Carpetas y plantillas para asignar a alumnos</p>
+                <h2 className="text-xl font-semibold text-foreground">Rutinas</h2>
+                <p className="text-xs text-muted-foreground">Carpetas y plantillas para asignar a alumnos</p>
               </div>
               <div className="flex gap-2">
                 {showNewFolderInput ? (
@@ -2271,7 +2359,7 @@ const confirmAddExercise = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Folders list */}
               <Card className="bg-card border-border lg:col-span-1">
                 <CardHeader>
@@ -2304,7 +2392,7 @@ const confirmAddExercise = () => {
                   <CardTitle className="text-card-foreground">Plantillas: {currentFolder?.name}</CardTitle>
                   <CardDescription>Selecciona o edita una rutina base</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3">
                   <div className="flex flex-col sm:flex-row gap-3">
                     <div className="flex-1 relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -2317,20 +2405,20 @@ const confirmAddExercise = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {filteredTemplates.map((tpl) => (
-                      <div key={tpl.id} className="p-4 rounded-lg bg-muted/50">
+                      <div key={tpl.id} className="p-3 rounded-lg bg-muted/50">
                         <div className="flex items-start justify-between gap-4">
                           <div>
                             <h4 className="font-medium text-card-foreground">{tpl.name}</h4>
                             {tpl.description && (
-                              <p className="text-sm text-muted-foreground">{tpl.description}</p>
+                              <p className="text-xs text-muted-foreground">{tpl.description}</p>
                             )}
-                            <div className="mt-3 space-y-3">
-                              <div className="space-y-2">
+                            <div className="mt-2 space-y-2">
+                              <div className="space-y-1.5">
                                 {tpl.blocks.map((block, idx) => (
                                   <div key={idx} className="p-2 bg-muted/20 rounded border-l-2 border-primary/50">
-                                    <div className="font-medium text-xs text-card-foreground mb-1">
+                                    <div className="font-medium text-xs text-card-foreground mb-0.5">
                                       {block.name} ({block.repetitions} repeticiones)
                                     </div>
                                     <div className="text-xs text-muted-foreground">
@@ -2411,7 +2499,7 @@ const confirmAddExercise = () => {
               </Card>
             </div>
 
-            {/* Exercise catalog */}
+            {/* Exercise catalog (collapsible) */}
             <Card className="bg-card border-border">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -2419,47 +2507,66 @@ const confirmAddExercise = () => {
                     <CardTitle className="text-card-foreground">Catálogo de ejercicios</CardTitle>
                     <CardDescription>Gestiona tu biblioteca de ejercicios</CardDescription>
                   </div>
-                  <Button onClick={() => {
-                    setIsExerciseSelectorOpen(false)
-                    setIsCreateExerciseDialogOpen(true)
-                  }} className="hover:bg-orange-500 transition-colors">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nuevo ejercicio
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button onClick={() => {
+                      setIsExerciseSelectorOpen(false)
+                      setIsCreateExerciseDialogOpen(true)
+                    }} className="hover:bg-orange-500 transition-colors">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Nuevo ejercicio
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowExerciseCatalog(prev => !prev)}>
+                      {showExerciseCatalog ? 'Ocultar' : 'Mostrar'}
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
+              {showExerciseCatalog && (
               <CardContent className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar ejercicios..."
+                      value={catalogSearch}
+                      onChange={(e) => setCatalogSearch(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="md:col-span-1">
-                    <Select 
-                      value="all" 
-                      onValueChange={(v) => setExerciseFilter({})}
-                    >
+                    <Select value={exerciseFilter.category ?? 'all'} onValueChange={(v) => setExerciseFilter(prev => ({ ...prev, category: v === 'all' ? undefined : v }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Categoría" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
+                        {uniqueCategories.map(cat => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="md:col-span-1">
-                    <Select 
-                      value="all" 
-                      onValueChange={(v) => setExerciseFilter({})}
-                    >
+                    <Select value={exerciseFilter.equipment ?? 'all'} onValueChange={(v) => setExerciseFilter(prev => ({ ...prev, equipment: v === 'all' ? undefined : v }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Equipamiento" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
+                        {uniqueEquipments.map(eq => (
+                          <SelectItem key={eq} value={eq}>{eq}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="space-y-2">
                   {exercisesCatalog
-                    .filter((e) => e.name.toLowerCase().includes(exerciseSearchTerm.toLowerCase()))
+                    .filter(e => !catalogSearch || e.name.toLowerCase().includes(catalogSearch.toLowerCase()))
+                    .filter(e => !exerciseFilter.category || (e.category || e.body_parts?.[0] || '').toLowerCase() === exerciseFilter.category.toLowerCase())
+                    .filter(e => !exerciseFilter.equipment || (e.equipments || []).some(eq => eq.toLowerCase() === exerciseFilter.equipment!.toLowerCase()))
                     .map((ex) => (
                       <div key={ex.id} className="p-3 rounded bg-muted/50 flex items-center justify-between">
                         <div>
@@ -2490,6 +2597,7 @@ const confirmAddExercise = () => {
                     ))}
                 </div>
               </CardContent>
+              )}
             </Card>
           </main>
         )}
@@ -2818,20 +2926,7 @@ const confirmAddExercise = () => {
           </main>
         )}
 
-        {/* Other tabs content placeholders */}
-        {activeTab !== "dashboard" && activeTab !== "clients" && activeTab !== "chat" && activeTab !== "schedule" && (
-          <main className="p-6">
-            <Card className="bg-card border-border">
-              <CardContent className="p-12 text-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Target className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-card-foreground mb-2">Sección en Desarrollo</h3>
-                <p className="text-muted-foreground">Esta funcionalidad estará disponible próximamente.</p>
-              </CardContent>
-            </Card>
-          </main>
-        )}
+        {/* Se removió la sección en desarrollo debajo del catálogo */}
       </div>
 
       <Dialog open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
@@ -3221,7 +3316,24 @@ const confirmAddExercise = () => {
                                   </div>
                                   <div>
                                     <span className="font-semibold text-blue-600 dark:text-blue-400">Descanso</span>
-                                    <p className="text-sm text-muted-foreground">{exercise.reps} segundos</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        value={exercise.reps}
+                                        onChange={(e) => {
+                                          const value = Number(e.target.value)
+                                          const updatedBlocks = [...editingRoutine.blocks]
+                                          updatedBlocks[blockIndex] = {
+                                            ...block,
+                                            exercises: block.exercises.map((exItem, idx) => idx === exerciseIndex ? { ...exItem, reps: value } : exItem)
+                                          }
+                                          setEditingRoutine({ ...editingRoutine, blocks: updatedBlocks })
+                                        }}
+                                        className="w-24"
+                                      />
+                                      <span className="text-sm text-muted-foreground">segundos</span>
+                                    </div>
                                   </div>
                                 </div>
                               ) : (
@@ -3230,10 +3342,69 @@ const confirmAddExercise = () => {
                                     <span className="text-green-600 dark:text-green-400 text-lg font-bold">E</span>
                                   </div>
                                   <div>
-                                    <span className="font-semibold text-foreground">{ex?.name}</span>
-                                    <p className="text-sm text-muted-foreground">
-                                      {exercise.sets} series × {exercise.reps} repeticiones • {exercise.restSec}s descanso
-                                    </p>
+                                    <div className="flex items-center gap-3">
+                                      <span className="font-semibold text-foreground">{ex?.name}</span>
+                                      {ex?.gif_URL && (
+                                        <a href={ex.gif_URL} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">Ver GIF</a>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-3 mt-1">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-xs">Series</Label>
+                                        <Input
+                                          type="number"
+                                          min="1"
+                                          value={exercise.sets}
+                                          onChange={(e) => {
+                                            const value = Number(e.target.value)
+                                            const updatedBlocks = [...editingRoutine.blocks]
+                                            updatedBlocks[blockIndex] = {
+                                              ...block,
+                                              exercises: block.exercises.map((exItem, idx) => idx === exerciseIndex ? { ...exItem, sets: value } : exItem)
+                                            }
+                                            setEditingRoutine({ ...editingRoutine, blocks: updatedBlocks })
+                                          }}
+                                          className="w-20"
+                                        />
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-xs">Reps</Label>
+                                        <Input
+                                          type="number"
+                                          min="1"
+                                          value={exercise.reps}
+                                          onChange={(e) => {
+                                            const value = Number(e.target.value)
+                                            const updatedBlocks = [...editingRoutine.blocks]
+                                            updatedBlocks[blockIndex] = {
+                                              ...block,
+                                              exercises: block.exercises.map((exItem, idx) => idx === exerciseIndex ? { ...exItem, reps: value } : exItem)
+                                            }
+                                            setEditingRoutine({ ...editingRoutine, blocks: updatedBlocks })
+                                          }}
+                                          className="w-20"
+                                        />
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-xs">Descanso</Label>
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          value={exercise.restSec}
+                                          onChange={(e) => {
+                                            const value = Number(e.target.value)
+                                            const updatedBlocks = [...editingRoutine.blocks]
+                                            updatedBlocks[blockIndex] = {
+                                              ...block,
+                                              exercises: block.exercises.map((exItem, idx) => idx === exerciseIndex ? { ...exItem, restSec: value } : exItem)
+                                            }
+                                            setEditingRoutine({ ...editingRoutine, blocks: updatedBlocks })
+                                          }}
+                                          className="w-24"
+                                        />
+                                        <span className="text-xs text-muted-foreground">s</span>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               )}
@@ -3363,7 +3534,10 @@ const confirmAddExercise = () => {
                     <SelectValue placeholder="Categoría" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="all" onClick={() => setExerciseFilter(prev => ({ ...prev, category: undefined }))}>Todos</SelectItem>
+                    {uniqueCategories.map(cat => (
+                      <SelectItem key={cat} value={cat} onClick={() => setExerciseFilter(prev => ({ ...prev, category: cat }))}>{cat}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -3377,7 +3551,10 @@ const confirmAddExercise = () => {
                     <SelectValue placeholder="Equipamiento" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">TODOS</SelectItem>
+                    <SelectItem value="all" onClick={() => setExerciseFilter(prev => ({ ...prev, equipment: undefined }))}>Todos</SelectItem>
+                    {uniqueEquipments.map(eq => (
+                      <SelectItem key={eq} value={eq} onClick={() => setExerciseFilter(prev => ({ ...prev, equipment: eq }))}>{eq}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -3398,11 +3575,9 @@ const confirmAddExercise = () => {
             {/* Lista de ejercicios */}
             <div className="max-h-96 overflow-y-auto space-y-2 border rounded-lg p-2">
               {exercisesCatalog
-                .filter(ex => 
-                  (exerciseSearchTerm === "" || 
-                    ex.name.toLowerCase().includes(exerciseSearchTerm.toLowerCase())
-                  )
-                )
+                .filter(ex => (exerciseSearchTerm === "" || ex.name.toLowerCase().includes(exerciseSearchTerm.toLowerCase())))
+                .filter(ex => !exerciseFilter.category || ((ex.category || ex.body_parts?.[0] || '').toLowerCase() === exerciseFilter.category!.toLowerCase()))
+                .filter(ex => !exerciseFilter.equipment || ((ex.equipments || []).some(eq => eq.toLowerCase() === exerciseFilter.equipment!.toLowerCase())))
                 .map(ex => (
                   <div 
                     key={ex.id} 
@@ -3413,6 +3588,9 @@ const confirmAddExercise = () => {
                       <div>
                         <p className="font-medium">{ex.name}</p>
                         <p className="text-sm text-muted-foreground">{Array.isArray(ex.target_muscles) ? ex.target_muscles.join(', ') : ex.target_muscles} • {Array.isArray(ex.equipments) ? ex.equipments.join(', ') : ex.equipments}</p>
+                        {ex.gif_URL && (
+                          <a href={ex.gif_URL} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">Ver GIF</a>
+                        )}
                       </div>
                       <Button variant="outline" size="sm" className="hover:bg-accent hover:text-accent-foreground transition-colors">
                         Seleccionar
@@ -3421,11 +3599,11 @@ const confirmAddExercise = () => {
                   </div>
                 ))}
               
-              {exercisesCatalog.filter(ex => 
-                (exerciseSearchTerm === "" || 
-                  ex.name.toLowerCase().includes(exerciseSearchTerm.toLowerCase())
-                )
-              ).length === 0 && (
+              {exercisesCatalog
+                .filter(ex => (exerciseSearchTerm === "" || ex.name.toLowerCase().includes(exerciseSearchTerm.toLowerCase())))
+                .filter(ex => !exerciseFilter.category || ((ex.category || ex.body_parts?.[0] || '').toLowerCase() === exerciseFilter.category!.toLowerCase()))
+                .filter(ex => !exerciseFilter.equipment || ((ex.equipments || []).some(eq => eq.toLowerCase() === exerciseFilter.equipment!.toLowerCase())))
+                .length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>No se encontraron ejercicios con los filtros aplicados</p>
                   <p className="text-sm mt-1">Intenta cambiar los filtros o el término de búsqueda</p>
@@ -3497,6 +3675,55 @@ const confirmAddExercise = () => {
                 value={newExerciseForm.gif_URL}
                 onChange={(e) => setNewExerciseForm(prev => ({ ...prev, gif_URL: e.target.value }))}
               />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="exerciseDescription" className="text-right">
+                Descripción
+              </Label>
+              <Textarea 
+                id="exerciseDescription" 
+                placeholder="Descripción del ejercicio" 
+                className="col-span-3"
+                value={(newExerciseForm as any).description || ''}
+                onChange={(e) => setNewExerciseForm(prev => ({ ...prev, description: e.target.value } as any))}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Categoría</Label>
+              <Select onValueChange={(v) => setNewExerciseForm(prev => ({ ...prev, category: v } as any))}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Selecciona una categoría existente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {uniqueCategories.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label className="text-right pt-2">Equipamiento</Label>
+              <div className="col-span-3 grid grid-cols-2 gap-2 max-h-40 overflow-auto border rounded-md p-2">
+                {uniqueEquipments.map(eq => {
+                  const checked = newExerciseForm.equipments.includes(eq)
+                  return (
+                    <label key={eq} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          setNewExerciseForm(prev => {
+                            const next = new Set(prev.equipments)
+                            if (e.target.checked) next.add(eq); else next.delete(eq)
+                            return { ...prev, equipments: Array.from(next) }
+                          })
+                        }}
+                      />
+                      <span>{eq}</span>
+                    </label>
+                  )
+                })}
+              </div>
             </div>
           </div>
           <DialogFooter>
