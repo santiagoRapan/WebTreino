@@ -3857,4 +3857,3 @@ const confirmAddExercise = () => {
     </div>
   )
 }
-
