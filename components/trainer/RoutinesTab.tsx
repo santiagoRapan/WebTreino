@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { useTrainerDashboard } from "@/components/trainer/TrainerDashboardContext"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -48,6 +48,7 @@ export function RoutinesTab() {
       editingRoutine,
       isRoutineEditorOpen,
       isExerciseSelectorOpen,
+      isCreateExerciseDialogOpen,
       selectedBlockId,
       exerciseSearchTerm,
       expandedBlocks,
@@ -61,6 +62,7 @@ export function RoutinesTab() {
       pendingExercise,
       viewingRoutine,
       isRoutineViewerOpen,
+      newExerciseForm,
     },
     data: { allClients },
     actions: {
@@ -85,6 +87,8 @@ export function RoutinesTab() {
       setExerciseInputs,
       setPendingExercise,
       setIsRoutineViewerOpen,
+      setNewExerciseForm,
+      handleCreateExercise,
       handleCreateFolder,
       handleDeleteTemplate,
       handleMoveTemplate,
@@ -106,6 +110,10 @@ export function RoutinesTab() {
       handleStartChat,
     },
   } = useTrainerDashboard()
+
+  // Local state for expandable selectors
+  const [showMusclesSelector, setShowMusclesSelector] = useState(false)
+  const [showEquipmentSelector, setShowEquipmentSelector] = useState(false)
 
   const uniqueCategories = useMemo(
     () =>
@@ -509,6 +517,227 @@ export function RoutinesTab() {
           </CardContent>
         )}
       </Card>
+
+      {/* Create Exercise Dialog */}
+      <Dialog open={isCreateExerciseDialogOpen} onOpenChange={setIsCreateExerciseDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Crear Nuevo Ejercicio</DialogTitle>
+            <DialogDescription>
+              Agrega un nuevo ejercicio a tu catálogo. Completa todos los campos requeridos.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            {/* Exercise Name */}
+            <div className="space-y-2">
+              <Label htmlFor="exercise-name">Nombre del Ejercicio*</Label>
+              <Input
+                id="exercise-name"
+                placeholder="Ej: Press de banca con barra"
+                value={newExerciseForm.name}
+                onChange={(e) => setNewExerciseForm(prev => ({ ...prev, name: e.target.value }))}
+              />
+            </div>
+
+            {/* Target Muscles */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Músculos Objetivo*</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowMusclesSelector(!showMusclesSelector)}
+                >
+                  {showMusclesSelector ? "Ocultar" : "Seleccionar"}
+                  <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${showMusclesSelector ? "rotate-180" : ""}`} />
+                </Button>
+              </div>
+              
+              {/* Selected muscles display */}
+              {newExerciseForm.target_muscles.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {newExerciseForm.target_muscles.map((muscle) => (
+                    <Badge key={muscle} variant="secondary" className="text-xs">
+                      {muscle}
+                      <button
+                        type="button"
+                        onClick={() => setNewExerciseForm(prev => ({
+                          ...prev,
+                          target_muscles: prev.target_muscles.filter(m => m !== muscle)
+                        }))}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              
+              {showMusclesSelector && (
+                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded p-2">
+                  {["Pectorales", "Bíceps", "Tríceps", "Dorsales", "Deltoides", "Cuádriceps", "Isquiotibiales", "Glúteos", "Gemelos", "Abdominales", "Lumbares", "Trapecio", "Romboides", "Antebrazos"].map((muscle) => (
+                    <label key={muscle} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newExerciseForm.target_muscles.includes(muscle)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setNewExerciseForm(prev => ({
+                              ...prev,
+                              target_muscles: [...prev.target_muscles, muscle]
+                            }))
+                          } else {
+                            setNewExerciseForm(prev => ({
+                              ...prev,
+                              target_muscles: prev.target_muscles.filter(m => m !== muscle)
+                            }))
+                          }
+                        }}
+                        className="rounded border-border"
+                      />
+                      <span className="text-sm">{muscle}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Equipment */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Equipamiento*</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowEquipmentSelector(!showEquipmentSelector)}
+                >
+                  {showEquipmentSelector ? "Ocultar" : "Seleccionar"}
+                  <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${showEquipmentSelector ? "rotate-180" : ""}`} />
+                </Button>
+              </div>
+              
+              {/* Selected equipment display */}
+              {newExerciseForm.equipments.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {newExerciseForm.equipments.map((equipment) => (
+                    <Badge key={equipment} variant="secondary" className="text-xs">
+                      {equipment}
+                      <button
+                        type="button"
+                        onClick={() => setNewExerciseForm(prev => ({
+                          ...prev,
+                          equipments: prev.equipments.filter(eq => eq !== equipment)
+                        }))}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              
+              {showEquipmentSelector && (
+                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded p-2">
+                  {["Barra", "Mancuernas", "Máquina", "Cable", "Peso Corporal", "Kettlebell", "Banda Elástica", "TRX", "Pelota Medicinal", "Bosu", "Foam Roller", "Ninguno"].map((equipment) => (
+                    <label key={equipment} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newExerciseForm.equipments.includes(equipment)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setNewExerciseForm(prev => ({
+                              ...prev,
+                              equipments: [...prev.equipments, equipment]
+                            }))
+                          } else {
+                            setNewExerciseForm(prev => ({
+                              ...prev,
+                              equipments: prev.equipments.filter(eq => eq !== equipment)
+                            }))
+                          }
+                        }}
+                        className="rounded border-border"
+                      />
+                      <span className="text-sm">{equipment}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Category */}
+            <div className="space-y-2">
+              <Label htmlFor="exercise-category">Categoría</Label>
+              <Select
+                value={newExerciseForm.category || ""}
+                onValueChange={(value) => setNewExerciseForm(prev => ({ ...prev, category: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona una categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Fuerza">Fuerza</SelectItem>
+                  <SelectItem value="Cardio">Cardio</SelectItem>
+                  <SelectItem value="Flexibilidad">Flexibilidad</SelectItem>
+                  <SelectItem value="Funcional">Funcional</SelectItem>
+                  <SelectItem value="Rehabilitación">Rehabilitación</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="exercise-description">Descripción</Label>
+              <Textarea
+                id="exercise-description"
+                placeholder="Describe cómo realizar el ejercicio, la técnica correcta, consejos importantes..."
+                value={newExerciseForm.description || ""}
+                onChange={(e) => setNewExerciseForm(prev => ({ ...prev, description: e.target.value }))}
+                className="min-h-24"
+              />
+            </div>
+
+            {/* Level */}
+            <div className="space-y-2">
+              <Label htmlFor="exercise-level">Nivel de Dificultad</Label>
+              <Select
+                value={newExerciseForm.level || ""}
+                onValueChange={(value) => setNewExerciseForm(prev => ({ ...prev, level: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona el nivel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Principiante">Principiante</SelectItem>
+                  <SelectItem value="Intermedio">Intermedio</SelectItem>
+                  <SelectItem value="Avanzado">Avanzado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsCreateExerciseDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCreateExercise}
+              disabled={!newExerciseForm.name.trim() || newExerciseForm.target_muscles.length === 0 || newExerciseForm.equipments.length === 0}
+            >
+              Crear Ejercicio
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   )
 }
