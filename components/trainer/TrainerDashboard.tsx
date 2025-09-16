@@ -442,7 +442,7 @@ export default function TrainerDashboard() {
 
   // Initialize default routines using existing exercises
   useEffect(() => {
-    if (routineFolders.length === 0 && exercisesCatalog.length >= 4) {
+    if (routineFolders.length === 0 && exercisesCatalog.length > 0) {
       const ids = exercisesCatalog.map(e => e.id)
       const safeId = (idx: number) => ids[Math.min(idx, ids.length - 1)]
       const newFolders: RoutineFolder[] = [

@@ -509,8 +509,6 @@ export function RoutinesTab() {
           </CardContent>
         )}
       </Card>
-
-      {/* ...dialogs like editor, viewer, exercise selector remain to be wired here later... */}
     </main>
   )
 }

@@ -1,7 +1,5 @@
-"use client"
-
-import TrainerDashboard from "@/components/trainer/TrainerDashboard"
+import LandingPage from "@/components/LandingPage"
 
 export default function Page() {
-  return <TrainerDashboard />
+  return <LandingPage />
 }
