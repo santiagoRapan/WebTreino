@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, Dispatch, SetStateAction } from "react"
+import { useState, useEffect, Dispatch, SetStateAction } from "react"
+import { useStudents } from "@/hooks/useStudents"
 import type { Client } from "@/types/trainer"
 
 export interface UseClientStateReturn {
@@ -8,68 +9,87 @@ export interface UseClientStateReturn {
   editingClient: Client | null
   setEditingClient: Dispatch<SetStateAction<Client | null>>
   
-  // Client Data (this would typically come from a database)
+  // Client Data (loaded from database)
   clients: Client[]
   setClients: Dispatch<SetStateAction<Client[]>>
+  loadingClients: boolean
+  clientsError: string | null
+  refreshClients: () => Promise<void>
   
   // Computed helper for filtered clients
   getFilteredClients: (searchTerm: string, filter: "all" | "active" | "pending") => Client[]
 }
 
+// Fallback clients data if no students in database
+const FALLBACK_CLIENTS: Client[] = [
+  {
+    id: 1,
+    name: "María González",
+    email: "maria.gonzalez@email.com",
+    phone: "+34 612 345 678",
+    status: "Activo",
+    joinDate: "15 Ene 2024",
+    lastSession: "2 días",
+    nextSession: "Mañana 09:00",
+    progress: 85,
+    goal: "Pérdida de peso",
+    avatar: "/fit-woman-outdoors.png",
+    sessionsCompleted: 24,
+    totalSessions: 30,
+    plan: "Premium",
+  },
+  {
+    id: 2,
+    name: "Carlos Ruiz",
+    email: "carlos.ruiz@email.com",
+    phone: "+34 623 456 789",
+    status: "Activo",
+    joinDate: "20 Ene 2024",
+    lastSession: "1 día",
+    nextSession: "Hoy 16:00",
+    progress: 72,
+    goal: "Ganancia muscular",
+    avatar: "/fit-man-gym.png",
+    sessionsCompleted: 18,
+    totalSessions: 24,
+    plan: "Estándar",
+  },
+  {
+    id: 3,
+    name: "Ana López",
+    email: "ana.lopez@email.com",
+    phone: "+34 634 567 890",
+    status: "Pendiente",
+    joinDate: "25 Ene 2024",
+    lastSession: "5 días",
+    nextSession: "Pendiente",
+    progress: 45,
+    goal: "Tonificación",
+    avatar: "/woman-workout.png",
+    sessionsCompleted: 8,
+    totalSessions: 12,
+    plan: "Básico",
+  },
+]
+
 export function useClientState(): UseClientStateReturn {
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   
-  // Mock client data - in a real app, this would come from an API/database
-  const [clients, setClients] = useState<Client[]>([
-    {
-      id: 1,
-      name: "María González",
-      email: "maria.gonzalez@email.com",
-      phone: "+34 612 345 678",
-      status: "Activo",
-      joinDate: "15 Ene 2024",
-      lastSession: "2 días",
-      nextSession: "Mañana 09:00",
-      progress: 85,
-      goal: "Pérdida de peso",
-      avatar: "/fit-woman-outdoors.png",
-      sessionsCompleted: 24,
-      totalSessions: 30,
-      plan: "Premium",
-    },
-    {
-      id: 2,
-      name: "Carlos Ruiz",
-      email: "carlos.ruiz@email.com",
-      phone: "+34 623 456 789",
-      status: "Activo",
-      joinDate: "20 Ene 2024",
-      lastSession: "1 día",
-      nextSession: "Hoy 16:00",
-      progress: 72,
-      goal: "Ganancia muscular",
-      avatar: "/fit-man-gym.png",
-      sessionsCompleted: 18,
-      totalSessions: 24,
-      plan: "Estándar",
-    },
-    {
-      id: 3,
-      name: "Ana López",
-      email: "ana.lopez@email.com",
-      phone: "+34 634 567 890",
-      status: "Pendiente",
-      joinDate: "25 Ene 2024",
-      lastSession: "5 días",
-      nextSession: "Pendiente",
-      progress: 45,
-      goal: "Tonificación",
-      avatar: "/woman-workout.png",
-      sessionsCompleted: 8,
-      totalSessions: 12,
-      plan: "Básico",
-    },
-  ])
+  // Use real students data from database
+  const { students, loading: loadingClients, error: clientsError, refreshStudents } = useStudents()
+  const [clients, setClients] = useState<Client[]>([])
+
+  // Update clients when students are loaded
+  useEffect(() => {
+    if (students.length > 0) {
+      console.log('✅ Using real students from database:', students.length)
+      setClients(students)
+    } else if (!loadingClients && students.length === 0) {
+      console.log('📋 Using fallback client data')
+      // Fallback to mock data if no students in database
+      setClients(FALLBACK_CLIENTS)
+    }
+  }, [students, loadingClients])
 
   const getFilteredClients = (searchTerm: string, filter: "all" | "active" | "pending"): Client[] => {
     const normalizeText = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -94,6 +114,9 @@ export function useClientState(): UseClientStateReturn {
     setEditingClient,
     clients,
     setClients,
+    loadingClients,
+    clientsError,
+    refreshClients: refreshStudents,
     getFilteredClients,
   }
 }

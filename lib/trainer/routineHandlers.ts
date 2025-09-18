@@ -3,6 +3,7 @@ import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
 import ExcelJS from "exceljs"
 import { saveAs } from "file-saver"
+import { supabase } from "@/lib/supabaseClient"
 import type { Exercise, RoutineTemplate, RoutineFolder, Client } from "@/types/trainer"
 
 export interface RoutineHandlers {
@@ -13,6 +14,7 @@ export interface RoutineHandlers {
     handleMoveTemplate: (templateId: number | string, targetFolderId: number) => void
   handleCreateTemplate: () => void
   handleAssignTemplateToClient: (template: RoutineTemplate, client: Client) => void
+  assignRoutineToClient: (routineId: number | string, traineeId: number | string) => Promise<void>
   handleEditRoutine: (template: RoutineTemplate) => void
   handleAddBlock: () => void
   handleAddExerciseToBlock: (blockId: number) => void
@@ -193,6 +195,34 @@ export function createRoutineHandlers(
       })
     },
 
+    assignRoutineToClient: async (routineId: number | string, traineeId: number | string) => {
+      try {
+        console.log("Assigning routine:", routineId, "to trainee:", traineeId)
+        const { error } = await supabase
+          .from('trainee_routine')
+          .insert({
+            trainee_id: traineeId,
+            routine_id: routineId,
+            assigned_on: new Date().toISOString()
+          })
+
+        if (error) throw error
+
+        toast({
+          title: "Rutina asignada",
+          description: "La rutina ha sido asignada correctamente al alumno.",
+        })
+      }
+       catch (error) {
+        console.error('Error assigning routine:', error)
+        toast({
+          title: "Error",
+          description: "No se pudo asignar la rutina al alumno.",
+          variant: "destructive"
+        })
+      }
+    },
+
     handleEditRoutine: (template: RoutineTemplate) => {
       routineState.setEditingRoutine(template)
       routineState.setIsRoutineEditorOpen(true)
@@ -361,6 +391,12 @@ export function createRoutineHandlers(
         
         routineState.setIsRoutineEditorOpen(false)
         routineState.setEditingRoutine(null)
+        // Resetear estados adicionales para permitir crear/editar rutinas nuevamente
+        routineState.setNewBlockName("")
+        routineState.setExpandedBlocks(new Set())
+        routineState.setSelectedBlockId(null)
+        routineState.setExerciseInputs({ sets: '', reps: '', restSec: '' })
+        routineState.setPendingExercise(null)
         
       } catch (error) {
         console.error("Error saving routine:", error)

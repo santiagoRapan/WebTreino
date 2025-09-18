@@ -65,7 +65,7 @@ export function RoutinesTab() {
       newExerciseForm,
       newBlockName,
     },
-    data: { allClients },
+    data: { allClients, loadingClients, clientsError },
     actions: {
       setSelectedFolderId,
       setShowNewFolderInput,
@@ -95,6 +95,7 @@ export function RoutinesTab() {
       handleMoveTemplate,
       handleCreateTemplate,
       handleAssignTemplateToClient,
+      assignRoutineToClient,
       handleEditRoutine,
       handleAddBlock,
       handleAddExerciseToBlock,
@@ -116,6 +117,9 @@ export function RoutinesTab() {
   // Local state for expandable selectors
   const [showMusclesSelector, setShowMusclesSelector] = useState(false)
   const [showEquipmentSelector, setShowEquipmentSelector] = useState(false)
+  
+  // Estado para trackear asignaciones de clientes por rutina
+  const [routineAssignments, setRoutineAssignments] = useState<Record<string, string>>({})
 
   const uniqueCategories = useMemo(
     () =>
@@ -311,20 +315,59 @@ export function RoutinesTab() {
                     </div>
                     <div className="flex flex-col gap-2 min-w-[220px]">
                       <Select
+                        value={routineAssignments[String(tpl.id)] || ""}
                         onValueChange={(clientId) => {
+                          setRoutineAssignments(prev => ({
+                            ...prev,
+                            [String(tpl.id)]: clientId
+                          }))
                           const client = allClients.find((c) => String(c.id) === clientId)
-                          if (client) handleAssignTemplateToClient(tpl, client)
+                          if (client) {
+                            handleAssignTemplateToClient(tpl, client)
+                          }
                         }}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Asignar a alumno" />
+                        <SelectTrigger disabled={loadingClients}>
+                          <SelectValue 
+                            placeholder={
+                              loadingClients 
+                                ? "Cargando alumnos..." 
+                                : clientsError 
+                                  ? "Error al cargar alumnos" 
+                                  : allClients.length === 0
+                                    ? "Sin alumnos registrados"
+                                    : "Asignar a alumno"
+                            } 
+                          />
                         </SelectTrigger>
                         <SelectContent>
-                          {allClients.map((c) => (
-                            <SelectItem key={c.id} value={String(c.id)}>
-                              {c.name}
+                          {loadingClients ? (
+                            <SelectItem value="loading" disabled>
+                              Cargando alumnos...
                             </SelectItem>
-                          ))}
+                          ) : clientsError ? (
+                            <SelectItem value="error" disabled>
+                              Error: {clientsError}
+                            </SelectItem>
+                          ) : allClients.length === 0 ? (
+                            <SelectItem value="empty" disabled>
+                              No hay alumnos registrados
+                            </SelectItem>
+                          ) : (
+                            allClients.map((c) => (
+                              <SelectItem key={c.id} value={String(c.id)}>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
+                                    {c.name.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{c.name}</span>
+                                    <span className="text-xs text-muted-foreground">{c.email}</span>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       <div className="flex items-center gap-2">
@@ -369,7 +412,41 @@ export function RoutinesTab() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                      <Button className="hover:bg-orange-500 transition-colors">Enviar ahora</Button>
+                      <Button 
+                        className="hover:bg-orange-500 transition-colors"
+                        disabled={!routineAssignments[String(tpl.id)]}
+                        onClick={async () => {
+                          const selectedClientId = routineAssignments[String(tpl.id)]
+                          if (selectedClientId) {
+                            try {
+                              await assignRoutineToClient(tpl.id, selectedClientId)
+                              const selectedClient = allClients.find(c => String(c.id) === selectedClientId)
+                              toast({
+                                title: "Rutina enviada",
+                                description: `La rutina "${tpl.name}" ha sido enviada a ${selectedClient?.name}.`,
+                              })
+                              // Resetear la selección para permitir envío a otro usuario
+                              setRoutineAssignments(prev => ({
+                                ...prev,
+                                [String(tpl.id)]: ""
+                              }))
+                            } catch (error) {
+                              console.error('Error al enviar rutina:', error)
+                              toast({
+                                title: "Error",
+                                description: "No se pudo enviar la rutina. Inténtalo de nuevo.",
+                                variant: "destructive"
+                              })
+                            }
+                          }
+                        }}
+                      >
+                        {(() => {
+                          const selectedClientId = routineAssignments[String(tpl.id)]
+                          const selectedClient = selectedClientId ? allClients.find(c => String(c.id) === selectedClientId) : null
+                          return selectedClient ? `Enviar a ${selectedClient.name}` : "Selecciona un alumno"
+                        })()}
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -799,8 +876,16 @@ export function RoutinesTab() {
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center">
-                          <Activity className="w-6 h-6 text-muted-foreground" />
+                        <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center overflow-hidden">
+                          {exercise.gif_URL ? (
+                            <img 
+                              src={exercise.gif_URL} 
+                              alt={exercise.name}
+                              className="w-full h-full object-cover rounded-md"
+                            />
+                          ) : (
+                            <Activity className="w-6 h-6 text-muted-foreground" />
+                          )}
                         </div>
                         <div className="flex-1">
                           <h4 className="font-medium">{exercise.name}</h4>

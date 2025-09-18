@@ -178,6 +178,7 @@ export default function TrainerDashboard() {
       handleMoveTemplate: trainerData.handleMoveTemplate,
       handleCreateTemplate: trainerData.handleCreateTemplate,
       handleAssignTemplateToClient: trainerData.handleAssignTemplateToClient,
+      assignRoutineToClient: trainerData.assignRoutineToClient,
       handleEditRoutine: trainerData.handleEditRoutine,
       handleAddBlock: trainerData.handleAddBlock,
       handleAddExerciseToBlock: trainerData.handleAddExerciseToBlock,
@@ -204,6 +205,8 @@ export default function TrainerDashboard() {
       filteredClients: trainerData.filteredClients,
       filteredChats: trainerData.filteredChats,
       dedupedNewChatResults: trainerData.dedupedNewChatResults,
+      loadingClients: trainerData.loadingClients,
+      clientsError: trainerData.clientsError,
     },
   }
 

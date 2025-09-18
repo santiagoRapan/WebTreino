@@ -83,6 +83,8 @@ export interface TrainerDashboardData {
   filteredClients: Client[]
   filteredChats: Chat[]
   dedupedNewChatResults: Client[]
+  loadingClients: boolean
+  clientsError: string | null
 }
 
 export interface TrainerDashboardActions {
@@ -161,6 +163,7 @@ export interface TrainerDashboardActions {
   handleMoveTemplate: (templateId: number | string, targetFolderId: number) => void
   handleCreateTemplate: () => void
   handleAssignTemplateToClient: (template: RoutineTemplate, client: Client) => void
+  assignRoutineToClient: (routineId: number | string, traineeId: number | string) => Promise<void>
   handleEditRoutine: (template: RoutineTemplate) => void
   handleAddBlock: () => void
   handleAddExerciseToBlock: (blockId: number) => void
