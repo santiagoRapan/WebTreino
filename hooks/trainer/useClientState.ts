@@ -1,16 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Dispatch, SetStateAction } from "react"
 import type { Client } from "@/types/trainer"
 
 export interface UseClientStateReturn {
   // Client State
   editingClient: Client | null
-  setEditingClient: (client: Client | null) => void
+  setEditingClient: Dispatch<SetStateAction<Client | null>>
   
   // Client Data (this would typically come from a database)
   clients: Client[]
-  setClients: (clients: Client[]) => void
+  setClients: Dispatch<SetStateAction<Client[]>>
   
   // Computed helper for filtered clients
   getFilteredClients: (searchTerm: string, filter: "all" | "active" | "pending") => Client[]

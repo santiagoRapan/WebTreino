@@ -1,43 +1,43 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Dispatch, SetStateAction } from "react"
 
 export interface UseUIStateReturn {
   // Main UI State
   activeTab: string
-  setActiveTab: (tab: string) => void
+  setActiveTab: Dispatch<SetStateAction<string>>
   sidebarCollapsed: boolean
-  setSidebarCollapsed: (collapsed: boolean) => void
+  setSidebarCollapsed: Dispatch<SetStateAction<boolean>>
   theme: "dark" | "light"
-  setTheme: (theme: "dark" | "light") => void
+  setTheme: Dispatch<SetStateAction<"dark" | "light">>
   
   // Search and Filter States
   searchTerm: string
-  setSearchTerm: (term: string) => void
+  setSearchTerm: Dispatch<SetStateAction<string>>
   clientFilter: "all" | "active" | "pending"
-  setClientFilter: (filter: "all" | "active" | "pending") => void
+  setClientFilter: Dispatch<SetStateAction<"all" | "active" | "pending">>
   
   // Dialog States
   isEditDialogOpen: boolean
-  setIsEditDialogOpen: (open: boolean) => void
+  setIsEditDialogOpen: Dispatch<SetStateAction<boolean>>
   isNewClientDialogOpen: boolean
-  setIsNewClientDialogOpen: (open: boolean) => void
+  setIsNewClientDialogOpen: Dispatch<SetStateAction<boolean>>
   isNewChatDialogOpen: boolean
-  setIsNewChatDialogOpen: (open: boolean) => void
+  setIsNewChatDialogOpen: Dispatch<SetStateAction<boolean>>
   isAddEventDialogOpen: boolean
-  setIsAddEventDialogOpen: (open: boolean) => void
+  setIsAddEventDialogOpen: Dispatch<SetStateAction<boolean>>
   isEventDetailsOpen: boolean
-  setIsEventDetailsOpen: (open: boolean) => void
+  setIsEventDetailsOpen: Dispatch<SetStateAction<boolean>>
   isCreateExerciseDialogOpen: boolean
-  setIsCreateExerciseDialogOpen: (open: boolean) => void
+  setIsCreateExerciseDialogOpen: Dispatch<SetStateAction<boolean>>
   
   // UI Interaction States
   expandedClientIds: Set<number>
-  setExpandedClientIds: (ids: Set<number>) => void
+  setExpandedClientIds: Dispatch<SetStateAction<Set<number>>>
   showArchived: boolean
-  setShowArchived: (show: boolean) => void
+  setShowArchived: Dispatch<SetStateAction<boolean>>
   showEmojiPicker: boolean
-  setShowEmojiPicker: (show: boolean) => void
+  setShowEmojiPicker: Dispatch<SetStateAction<boolean>>
 }
 
 export function useUIState(): UseUIStateReturn {

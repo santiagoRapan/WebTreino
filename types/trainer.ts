@@ -68,7 +68,7 @@ export type RoutineBlock = {
 }
 
 export type RoutineTemplate = {
-  id: number
+  id: number | string // Allow both number (database ID) and string (temp ID)
   name: string
   description?: string
   blocks: RoutineBlock[]

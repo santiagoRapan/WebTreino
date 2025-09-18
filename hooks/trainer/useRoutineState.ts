@@ -1,6 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useExercises } from "@/hooks/useExercises"
+import { useRoutineDatabase } from "@/hooks/useRoutineDatabase"
+import { useAuth } from "@/lib/auth-context"
 import type { 
   Exercise, 
   ExerciseFormState, 
@@ -15,7 +18,6 @@ export interface UseRoutineStateReturn {
   exercisesCatalog: Exercise[]
   setExercisesCatalog: (exercises: Exercise[]) => void
   loadingExercises: boolean
-  setLoadingExercises: (loading: boolean) => void
   
   // Exercise Forms
   newExerciseForm: ExerciseFormState
@@ -64,14 +66,28 @@ export interface UseRoutineStateReturn {
   setRestInput: (input: string) => void
   restBlockId: number | null
   setRestBlockId: (id: number | null) => void
-  pendingExercise: { blockId: number } | null
-  setPendingExercise: (exercise: { blockId: number } | null) => void
+  // Exercise Selector State
+  pendingExercise: { exercise: Exercise; blockId: number } | null
+  setPendingExercise: (exercise: { exercise: Exercise; blockId: number } | null) => void
   showNewRoutineInput: boolean
   setShowNewRoutineInput: (show: boolean) => void
   newRoutineName: string
   setNewRoutineName: (name: string) => void
   newBlockName: string
   setNewBlockName: (name: string) => void
+
+  // Database Operations
+  routineDatabase: {
+    loading: boolean
+    error: string | null
+    saveRoutineToDatabase: (routine: RoutineTemplate, ownerId: string) => Promise<number | null>
+    loadRoutinesFromDatabase: (ownerId: string) => Promise<RoutineTemplate[]>
+    updateRoutineInDatabase: (routine: RoutineTemplate, ownerId: string) => Promise<boolean>
+    deleteRoutineFromDatabase: (routineId: number, ownerId: string) => Promise<boolean>
+  }
+
+  // Auth
+  customUser: any // User from auth context
 }
 
 // Fallback exercises data
@@ -112,9 +128,25 @@ const FALLBACK_EXERCISES: Exercise[] = [
 ]
 
 export function useRoutineState(): UseRoutineStateReturn {
-  // Exercise Catalog State
-  const [exercisesCatalog, setExercisesCatalog] = useState<Exercise[]>(FALLBACK_EXERCISES)
-  const [loadingExercises, setLoadingExercises] = useState<boolean>(true)
+  // Auth context for user ID
+  const { customUser } = useAuth()
+  
+  // Exercise Catalog State - Use real database exercises
+  const { exercises: dbExercises, loading: loadingExercises, error: exercisesError } = useExercises()
+  const [exercisesCatalog, setExercisesCatalog] = useState<Exercise[]>([])
+  
+  // Database operations for routines
+  const routineDatabase = useRoutineDatabase()
+  
+  // Update exercises when database exercises are loaded
+  useEffect(() => {
+    if (dbExercises.length > 0) {
+      setExercisesCatalog(dbExercises)
+    } else if (!loadingExercises && dbExercises.length === 0) {
+      // Fallback to mock data if no exercises in database
+      setExercisesCatalog(FALLBACK_EXERCISES)
+    }
+  }, [dbExercises, loadingExercises])
   
   // Exercise Forms
   const [newExerciseForm, setNewExerciseForm] = useState<ExerciseFormState>({
@@ -157,58 +189,84 @@ export function useRoutineState(): UseRoutineStateReturn {
   const [catalogSearch, setCatalogSearch] = useState<string>("")
   const [restInput, setRestInput] = useState<string>("")
   const [restBlockId, setRestBlockId] = useState<number | null>(null)
-  const [pendingExercise, setPendingExercise] = useState<{ blockId: number } | null>(null)
+  const [pendingExercise, setPendingExercise] = useState<{ exercise: Exercise; blockId: number } | null>(null)
   const [showNewRoutineInput, setShowNewRoutineInput] = useState<boolean>(false)
   const [newRoutineName, setNewRoutineName] = useState<string>("")
   const [newBlockName, setNewBlockName] = useState<string>("")
 
-  // Initialize exercise catalog
+    // Initialize routine folders
   useEffect(() => {
-    const initializeExercises = async () => {
+    const initializeRoutineFolders = async () => {
+      // Use the authenticated user's ID, or skip if no user
+      if (!customUser?.id) {
+        console.log('No authenticated user found, using fallback data')
+        const defaultFolders: RoutineFolder[] = [
+          {
+            id: 1,
+            name: 'Mis Rutinas',
+            templates: [
+              {
+                id: 101,
+                name: 'Rutina de Ejemplo',
+                description: 'Rutina básica de entrenamiento',
+                blocks: []
+              }
+            ]
+          }
+        ]
+        setRoutineFolders(defaultFolders)
+        return
+      }
+      
       try {
-        setLoadingExercises(true)
-        // In a real app, you would fetch from an API here
-        // For now, we use the fallback exercises
-        setExercisesCatalog(FALLBACK_EXERCISES)
+        console.log('Loading routines for user:', customUser.id)
+        // Load routines from database using the authenticated user's ID
+        const dbRoutines = await routineDatabase.loadRoutinesFromDatabase(customUser.id)
+        
+        const defaultFolders: RoutineFolder[] = [
+          {
+            id: 1,
+            name: 'Mis Rutinas',
+            templates: dbRoutines.length > 0 ? dbRoutines : [
+              // Fallback default routine if no routines in database
+              {
+                id: 101,
+                name: 'Rutina de Ejemplo',
+                description: 'Rutina básica de entrenamiento',
+                blocks: []
+              }
+            ]
+          }
+        ]
+        setRoutineFolders(defaultFolders)
       } catch (error) {
-        console.error("Error loading exercises:", error)
-        setExercisesCatalog(FALLBACK_EXERCISES)
-      } finally {
-        setLoadingExercises(false)
+        console.error('Error loading routines from database:', error)
+        // Fallback to default folders
+        const defaultFolders: RoutineFolder[] = [
+          {
+            id: 1,
+            name: 'Mis Rutinas',
+            templates: [
+              {
+                id: 101,
+                name: 'Rutina de Ejemplo',
+                description: 'Rutina básica de entrenamiento',
+                blocks: []
+              }
+            ]
+          }
+        ]
+        setRoutineFolders(defaultFolders)
       }
     }
 
-    initializeExercises()
-  }, [])
-
-  // Initialize routine folders
-  useEffect(() => {
-    const initializeRoutineFolders = () => {
-      const defaultFolders: RoutineFolder[] = [
-        {
-          id: 1,
-          name: "Mis Rutinas",
-          templates: [
-            {
-              id: 1,
-              name: "Rutina de Fuerza",
-              description: "Rutina básica de entrenamiento de fuerza",
-              blocks: []
-            }
-          ]
-        }
-      ]
-      setRoutineFolders(defaultFolders)
-    }
-
     initializeRoutineFolders()
-  }, [])
+  }, [customUser?.id]) // Re-run when user changes
 
   return {
     exercisesCatalog,
     setExercisesCatalog,
     loadingExercises,
-    setLoadingExercises,
     newExerciseForm,
     setNewExerciseForm,
     exerciseInputs,
@@ -257,5 +315,9 @@ export function useRoutineState(): UseRoutineStateReturn {
     setNewRoutineName,
     newBlockName,
     setNewBlockName,
+    // Database operations
+    routineDatabase,
+    // Auth
+    customUser
   }
 }

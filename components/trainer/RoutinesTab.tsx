@@ -63,6 +63,7 @@ export function RoutinesTab() {
       viewingRoutine,
       isRoutineViewerOpen,
       newExerciseForm,
+      newBlockName,
     },
     data: { allClients },
     actions: {
@@ -108,6 +109,7 @@ export function RoutinesTab() {
       handleExportRoutineToPDF,
       handleExportRoutineToExcel,
       handleStartChat,
+      setNewBlockName,
     },
   } = useTrainerDashboard()
 
@@ -430,13 +432,11 @@ export function RoutinesTab() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    {Array.from(new Set(exercisesCatalog.map((e) => e.category || e.body_parts?.[0] || "")))
-                      .filter(Boolean)
-                      .map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
-                      ))}
+                    {uniqueCategories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -452,13 +452,11 @@ export function RoutinesTab() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    {Array.from(new Set(exercisesCatalog.flatMap((e) => e.equipments || [])))
-                      .filter(Boolean)
-                      .map((eq) => (
-                        <SelectItem key={eq} value={eq}>
-                          {eq}
-                        </SelectItem>
-                      ))}
+                    {uniqueEquipments.map((eq) => (
+                      <SelectItem key={eq} value={eq}>
+                        {eq}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -700,24 +698,6 @@ export function RoutinesTab() {
                 className="min-h-24"
               />
             </div>
-
-            {/* Level */}
-            <div className="space-y-2">
-              <Label htmlFor="exercise-level">Nivel de Dificultad</Label>
-              <Select
-                value={newExerciseForm.level || ""}
-                onValueChange={(value) => setNewExerciseForm(prev => ({ ...prev, level: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona el nivel" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Principiante">Principiante</SelectItem>
-                  <SelectItem value="Intermedio">Intermedio</SelectItem>
-                  <SelectItem value="Avanzado">Avanzado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
@@ -734,6 +714,352 @@ export function RoutinesTab() {
               disabled={!newExerciseForm.name.trim() || newExerciseForm.target_muscles.length === 0 || newExerciseForm.equipments.length === 0}
             >
               Crear Ejercicio
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Exercise Selector Dialog */}
+      <Dialog open={isExerciseSelectorOpen} onOpenChange={setIsExerciseSelectorOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Seleccionar Ejercicio</DialogTitle>
+            <DialogDescription>
+              Elige un ejercicio para añadir al bloque
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar ejercicios..."
+                value={exerciseSearchTerm}
+                onChange={(e) => setExerciseSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Filters */}
+            <div className="flex gap-2 flex-wrap">
+              <Select
+                value={exerciseFilter.category || "all-categories"}
+                onValueChange={(value) => setExerciseFilter(prev => ({ ...prev, category: value === "all-categories" ? undefined : value }))}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filtrar por categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all-categories">Todas las categorías</SelectItem>
+                  {uniqueCategories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={exerciseFilter.equipment || "all-equipments"}
+                onValueChange={(value) => setExerciseFilter(prev => ({ ...prev, equipment: value === "all-equipments" ? undefined : value }))}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filtrar por equipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all-equipments">Todos los equipos</SelectItem>
+                  {uniqueEquipments.map((eq) => (
+                    <SelectItem key={eq} value={eq}>
+                      {eq}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Exercise List */}
+            <div className="grid gap-3 max-h-96 overflow-y-auto">
+              {exercisesCatalog
+                .filter((exercise) => {
+                  const matchesSearch = exercise.name.toLowerCase().includes(exerciseSearchTerm.toLowerCase());
+                  const matchesCategory = !exerciseFilter.category || 
+                    exercise.category === exerciseFilter.category || 
+                    exercise.body_parts?.includes(exerciseFilter.category);
+                  const matchesEquipment = !exerciseFilter.equipment || 
+                    exercise.equipments?.includes(exerciseFilter.equipment);
+                  return matchesSearch && matchesCategory && matchesEquipment;
+                })
+                .map((exercise) => (
+                  <Card
+                    key={exercise.id}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleSelectExercise(exercise)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center">
+                          <Activity className="w-6 h-6 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium">{exercise.name}</h4>
+                          <div className="flex gap-2 mt-1">
+                            {exercise.target_muscles?.slice(0, 2).map((muscle) => (
+                              <Badge key={muscle} variant="secondary" className="text-xs">
+                                {muscle}
+                              </Badge>
+                            ))}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {exercise.category || exercise.body_parts?.[0]}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+            </div>
+
+            {pendingExercise && (
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3">Configurar Ejercicio</h4>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label htmlFor="sets">Series</Label>
+                    <Input
+                      id="sets"
+                      type="number"
+                      placeholder="4"
+                      value={exerciseInputs.sets}
+                      onChange={(e) => setExerciseInputs(prev => ({ ...prev, sets: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="reps">Repeticiones</Label>
+                    <Input
+                      id="reps"
+                      type="number"
+                      placeholder="12"
+                      value={exerciseInputs.reps}
+                      onChange={(e) => setExerciseInputs(prev => ({ ...prev, reps: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="rest">Descanso (seg)</Label>
+                    <Input
+                      id="rest"
+                      type="number"
+                      placeholder="90"
+                      value={exerciseInputs.restSec}
+                      onChange={(e) => setExerciseInputs(prev => ({ ...prev, restSec: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <Button
+                    onClick={confirmAddExercise}
+                    disabled={!exerciseInputs.sets || !exerciseInputs.reps || !exerciseInputs.restSec}
+                    className="flex-1"
+                  >
+                    Confirmar Añadir
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={cancelAddExercise}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsExerciseSelectorOpen(false)}
+            >
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Routine Editor Dialog */}
+      <Dialog open={isRoutineEditorOpen} onOpenChange={setIsRoutineEditorOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Rutina: {editingRoutine?.name}</DialogTitle>
+            <DialogDescription>
+              Modifica los bloques y ejercicios de la rutina
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingRoutine && (
+            <div className="space-y-4">
+              {/* Routine Name */}
+              <div className="space-y-2">
+                <Label htmlFor="routine-name">Nombre de la Rutina</Label>
+                <Input
+                  id="routine-name"
+                  value={editingRoutine.name}
+                  onChange={(e) => setEditingRoutine({ ...editingRoutine, name: e.target.value })}
+                  placeholder="Nombre de la rutina"
+                />
+              </div>
+
+              {/* Routine Description */}
+              <div className="space-y-2">
+                <Label htmlFor="routine-description">Descripción (opcional)</Label>
+                <Textarea
+                  id="routine-description"
+                  value={editingRoutine.description || ""}
+                  onChange={(e) => setEditingRoutine({ ...editingRoutine, description: e.target.value })}
+                  placeholder="Descripción de la rutina"
+                  className="min-h-20"
+                />
+              </div>
+
+              {/* Blocks Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Bloques de Ejercicios</h3>
+                </div>
+
+                {/* Add Block Section */}
+                <div className="flex gap-2 items-center">
+                  <Input
+                    value={newBlockName}
+                    onChange={(e) => setNewBlockName(e.target.value)}
+                    placeholder="Nombre del nuevo bloque"
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={handleAddBlock}
+                    size="sm"
+                    className="bg-primary hover:bg-primary/90"
+                    disabled={!newBlockName.trim()}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Añadir Bloque
+                  </Button>
+                </div>
+
+                {editingRoutine.blocks.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No hay bloques de ejercicios</p>
+                    <p className="text-sm">Haz clic en "Añadir Bloque" para empezar</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {editingRoutine.blocks.map((block) => (
+                      <Card key={block.id} className="border">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleBlockExpansion(block.id)}
+                                className="p-1 h-auto"
+                              >
+                                {expandedBlocks.has(block.id) ? (
+                                  <ChevronDown className="w-4 h-4" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4" />
+                                )}
+                              </Button>
+                              <CardTitle className="text-base">{block.name}</CardTitle>
+                              <Badge variant="outline" className="text-xs">
+                                {block.exercises.length} ejercicio{block.exercises.length !== 1 ? 's' : ''}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleAddExerciseToBlock(block.id)}
+                                className="text-xs"
+                              >
+                                <Plus className="w-3 h-3 mr-1" />
+                                Ejercicio
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteBlock(block.id)}
+                                className="text-xs text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardHeader>
+
+                        {expandedBlocks.has(block.id) && (
+                          <CardContent className="pt-0">
+                            {block.exercises.length === 0 ? (
+                              <div className="text-center py-4 text-muted-foreground">
+                                <p className="text-sm">No hay ejercicios en este bloque</p>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                {block.exercises.map((exercise, idx) => {
+                                  const exerciseData = exercisesCatalog.find(e => 
+                                    e.id.toString() === exercise.exerciseId.toString()
+                                  );
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className="flex items-center justify-between p-3 bg-muted/50 rounded-md"
+                                    >
+                                      <div className="flex-1">
+                                        <p className="font-medium text-sm">
+                                          {exerciseData?.name || 'Ejercicio no encontrado'}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {exercise.sets} series × {exercise.reps} reps · {exercise.restSec}s descanso
+                                        </p>
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleDeleteExercise(block.id, idx)}
+                                        className="text-red-600 hover:text-red-700 p-1 h-auto"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </CardContent>
+                        )}
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsRoutineEditorOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveRoutine}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Guardar Rutina
             </Button>
           </DialogFooter>
         </DialogContent>

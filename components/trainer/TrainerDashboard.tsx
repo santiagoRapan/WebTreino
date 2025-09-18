@@ -120,7 +120,6 @@ export default function TrainerDashboard() {
       // Routine Actions
       setNewExerciseForm: trainerData.setNewExerciseForm,
       setExercisesCatalog: trainerData.setExercisesCatalog,
-      setLoadingExercises: trainerData.setLoadingExercises,
       setRoutineFolders: trainerData.setRoutineFolders,
       setSelectedFolderId: trainerData.setSelectedFolderId,
       setRoutineSearch: trainerData.setRoutineSearch,
@@ -209,7 +208,7 @@ export default function TrainerDashboard() {
   }
 
   return (
-    <TrainerDashboardProvider value={contextValue}>
+    <TrainerDashboardProvider value={contextValue as any}>
       <div className="h-screen w-full bg-background">
         {/* Sidebar */}
         <Sidebar />

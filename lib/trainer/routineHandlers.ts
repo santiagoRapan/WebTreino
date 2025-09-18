@@ -9,8 +9,8 @@ export interface RoutineHandlers {
   handleCreateRoutine: () => void
   handleCreateExercise: () => void
   handleCreateFolder: () => void
-  handleDeleteTemplate: (templateId: number) => void
-  handleMoveTemplate: (templateId: number, targetFolderId: number) => void
+  handleDeleteTemplate: (templateId: number | string) => void
+    handleMoveTemplate: (templateId: number | string, targetFolderId: number) => void
   handleCreateTemplate: () => void
   handleAssignTemplateToClient: (template: RoutineTemplate, client: Client) => void
   handleEditRoutine: (template: RoutineTemplate) => void
@@ -61,21 +61,63 @@ export function createRoutineHandlers(
       })
     },
 
-    handleDeleteTemplate: (templateId: number) => {
-      const updatedFolders = routineState.routineFolders.map((folder: RoutineFolder) => ({
-        ...folder,
-        templates: folder.templates.filter((template: RoutineTemplate) => template.id !== templateId)
-      }))
+    handleDeleteTemplate: async (templateId: number | string) => {
+      try {
+        console.log('🗑️ Starting delete process for routine:', templateId)
+        
+        // Get the user ID from the routine state
+        const ownerId = routineState.customUser?.id
+        
+        console.log('👤 User ID:', ownerId)
+        
+        if (!ownerId) {
+          console.log('❌ No authenticated user found')
+          toast({
+            title: "Error",
+            description: "No se encontró un usuario autenticado. Por favor, inicia sesión.",
+            variant: "destructive"
+          })
+          return
+        }
 
-      routineState.setRoutineFolders(updatedFolders)
+        // Only delete from database if it's not a temporary ID
+        if (typeof templateId === 'number') {
+          console.log('🔢 Routine has numeric ID, deleting from database:', templateId)
+          const success = await routineState.routineDatabase.deleteRoutineFromDatabase(templateId, ownerId)
+          
+          if (!success) {
+            console.log('❌ Failed to delete from database')
+            throw new Error("Error al eliminar la rutina de la base de datos")
+          }
+          console.log('✅ Successfully deleted from database')
+        } else {
+          console.log('📝 Routine has temporary ID, skipping database deletion:', templateId)
+        }
 
-      toast({
-        title: "Rutina eliminada",
-        description: "La rutina ha sido eliminada exitosamente.",
-      })
+        // Remove from local state
+        const updatedFolders = routineState.routineFolders.map((folder: RoutineFolder) => ({
+          ...folder,
+          templates: folder.templates.filter((template: RoutineTemplate) => template.id !== templateId)
+        }))
+
+        routineState.setRoutineFolders(updatedFolders)
+        console.log('✅ Removed from local state')
+
+        toast({
+          title: "Rutina eliminada",
+          description: "La rutina ha sido eliminada exitosamente.",
+        })
+      } catch (error) {
+        console.error("❌ Error deleting routine:", error)
+        toast({
+          title: "Error",
+          description: "No se pudo eliminar la rutina. Inténtalo de nuevo.",
+          variant: "destructive"
+        })
+      }
     },
 
-    handleMoveTemplate: (templateId: number, targetFolderId: number) => {
+    handleMoveTemplate: (templateId: number | string, targetFolderId: number) => {
       let templateToMove: RoutineTemplate | null = null
 
       // Find and remove the template from its current folder
@@ -111,8 +153,9 @@ export function createRoutineHandlers(
     handleCreateTemplate: () => {
       if (!routineState.newRoutineName.trim()) return
 
+      // Create a temporary routine that will be saved to database when edited and saved
       const newTemplate: RoutineTemplate = {
-        id: Date.now(),
+        id: `temp-${Date.now()}`, // Temporary ID until saved to database
         name: routineState.newRoutineName,
         blocks: []
       }
@@ -132,9 +175,13 @@ export function createRoutineHandlers(
         routineState.setNewRoutineName("")
         routineState.setShowNewRoutineInput(false)
 
+        // Open the routine editor immediately for the new routine
+        routineState.setEditingRoutine(newTemplate)
+        routineState.setIsRoutineEditorOpen(true)
+
         toast({
           title: "Rutina creada",
-          description: `La rutina "${newTemplate.name}" ha sido creada.`,
+          description: `La rutina "${newTemplate.name}" ha sido creada. Agrega bloques y guárdala para persistir en la base de datos.`,
         })
       }
     },
@@ -157,7 +204,10 @@ export function createRoutineHandlers(
       const newBlock = {
         id: Date.now(),
         name: routineState.newBlockName,
-        exercises: []
+        exercises: [],
+        repetitions: 1,
+        restBetweenRepetitions: 60,
+        restAfterBlock: 90
       }
 
       const updatedRoutine = {
@@ -185,6 +235,8 @@ export function createRoutineHandlers(
     },
 
     handleSelectExercise: (exercise: Exercise) => {
+      if (!routineState.selectedBlockId) return
+      
       routineState.setPendingExercise({ 
         exercise, 
         blockId: routineState.selectedBlockId 
@@ -196,18 +248,18 @@ export function createRoutineHandlers(
       if (!routineState.pendingExercise || !routineState.editingRoutine) return
 
       const { exercise, blockId } = routineState.pendingExercise
-      const exerciseWithInputs = {
-        ...exercise,
-        sets: routineState.exerciseInputs.sets,
-        reps: routineState.exerciseInputs.reps,
-        rest: routineState.exerciseInputs.restSec
+      const exerciseForBlock = {
+        exerciseId: exercise.id.toString(), // Ensure it's a string
+        sets: parseInt(routineState.exerciseInputs.sets),
+        reps: parseInt(routineState.exerciseInputs.reps),
+        restSec: parseInt(routineState.exerciseInputs.restSec)
       }
 
       const updatedRoutine = {
         ...routineState.editingRoutine,
         blocks: routineState.editingRoutine.blocks.map((block: any) =>
           block.id === blockId
-            ? { ...block, exercises: [...block.exercises, exerciseWithInputs] }
+            ? { ...block, exercises: [...block.exercises, exerciseForBlock] }
             : block
         )
       }
@@ -229,26 +281,95 @@ export function createRoutineHandlers(
       routineState.setIsExerciseSelectorOpen(false)
     },
 
-    handleSaveRoutine: () => {
+    handleSaveRoutine: async () => {
       if (!routineState.editingRoutine) return
 
-      const updatedFolders = routineState.routineFolders.map((folder: RoutineFolder) => ({
-        ...folder,
-        templates: folder.templates.map((template: RoutineTemplate) =>
-          template.id === routineState.editingRoutine.id
-            ? routineState.editingRoutine
-            : template
-        )
-      }))
-
-      routineState.setRoutineFolders(updatedFolders)
-      routineState.setIsRoutineEditorOpen(false)
-      routineState.setEditingRoutine(null)
-
-      toast({
-        title: "Rutina guardada",
-        description: "La rutina ha sido guardada exitosamente.",
-      })
+      try {
+        // Get the user ID from the routine state (should be passed from context)
+        const ownerId = routineState.customUser?.id
+        
+        if (!ownerId) {
+          toast({
+            title: "Error",
+            description: "No se encontró un usuario autenticado. Por favor, inicia sesión.",
+            variant: "destructive"
+          })
+          return
+        }
+        
+        if (routineState.editingRoutine.id.toString().startsWith('temp-')) {
+          // New routine - save to database
+          const newRoutineId = await routineState.routineDatabase.saveRoutineToDatabase(
+            routineState.editingRoutine,
+            ownerId
+          )
+          
+          if (newRoutineId) {
+            // Update the routine with the database ID
+            const updatedRoutine = {
+              ...routineState.editingRoutine,
+              id: newRoutineId
+            }
+            
+            // Update local state
+            const updatedFolders = routineState.routineFolders.map((folder: RoutineFolder) => ({
+              ...folder,
+              templates: folder.templates.map((template: RoutineTemplate) =>
+                template.id === routineState.editingRoutine.id
+                  ? updatedRoutine
+                  : template
+              )
+            }))
+            
+            routineState.setRoutineFolders(updatedFolders)
+            
+            toast({
+              title: "Rutina creada",
+              description: "La rutina ha sido guardada en la base de datos.",
+            })
+          } else {
+            throw new Error("Error al guardar la rutina en la base de datos")
+          }
+        } else {
+          // Existing routine - update in database
+          const success = await routineState.routineDatabase.updateRoutineInDatabase(
+            routineState.editingRoutine,
+            ownerId
+          )
+          
+          if (success) {
+            // Update local state
+            const updatedFolders = routineState.routineFolders.map((folder: RoutineFolder) => ({
+              ...folder,
+              templates: folder.templates.map((template: RoutineTemplate) =>
+                template.id === routineState.editingRoutine.id
+                  ? routineState.editingRoutine
+                  : template
+              )
+            }))
+            
+            routineState.setRoutineFolders(updatedFolders)
+            
+            toast({
+              title: "Rutina actualizada",
+              description: "La rutina ha sido actualizada en la base de datos.",
+            })
+          } else {
+            throw new Error("Error al actualizar la rutina en la base de datos")
+          }
+        }
+        
+        routineState.setIsRoutineEditorOpen(false)
+        routineState.setEditingRoutine(null)
+        
+      } catch (error) {
+        console.error("Error saving routine:", error)
+        toast({
+          title: "Error",
+          description: "No se pudo guardar la rutina. Inténtalo de nuevo.",
+          variant: "destructive"
+        })
+      }
     },
 
     handleDeleteExercise: (blockId: number, exerciseIndex: number) => {

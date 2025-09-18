@@ -17,7 +17,7 @@ import type {
   RecentClient,
 } from "@/types/trainer"
 
-export type PendingExerciseState = { blockId: number } | null
+export type PendingExerciseState = { exercise: Exercise; blockId: number } | null
 
 export interface TrainerDashboardState {
   activeTab: string
@@ -114,7 +114,6 @@ export interface TrainerDashboardActions {
   setNewEventForm: Dispatch<SetStateAction<EventFormState>>
   setNewExerciseForm: Dispatch<SetStateAction<ExerciseFormState>>
   setExercisesCatalog: Dispatch<SetStateAction<Exercise[]>>
-  setLoadingExercises: Dispatch<SetStateAction<boolean>>
   setRoutineFolders: Dispatch<SetStateAction<RoutineFolder[]>>
   setSelectedFolderId: Dispatch<SetStateAction<number | null>>
   setRoutineSearch: Dispatch<SetStateAction<string>>
@@ -158,8 +157,8 @@ export interface TrainerDashboardActions {
   handleExportRoutineToPDF: (template: RoutineTemplate) => Promise<void>
   handleExportRoutineToExcel: (template: RoutineTemplate) => Promise<void>
   handleCreateFolder: () => void
-  handleDeleteTemplate: (templateId: number) => void
-  handleMoveTemplate: (templateId: number, targetFolderId: number) => void
+  handleDeleteTemplate: (templateId: number | string) => void
+  handleMoveTemplate: (templateId: number | string, targetFolderId: number) => void
   handleCreateTemplate: () => void
   handleAssignTemplateToClient: (template: RoutineTemplate, client: Client) => void
   handleEditRoutine: (template: RoutineTemplate) => void
