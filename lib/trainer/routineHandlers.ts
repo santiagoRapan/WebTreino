@@ -11,7 +11,7 @@ export interface RoutineHandlers {
   handleCreateExercise: () => void
   handleCreateFolder: () => void
   handleDeleteTemplate: (templateId: number | string) => void
-    handleMoveTemplate: (templateId: number | string, targetFolderId: number) => void
+  handleMoveTemplate: (templateId: number | string, targetFolderId: number) => void
   handleCreateTemplate: () => void
   handleAssignTemplateToClient: (template: RoutineTemplate, client: Client) => void
   assignRoutineToClient: (routineId: number | string, traineeId: number | string) => Promise<void>
@@ -197,28 +197,102 @@ export function createRoutineHandlers(
 
     assignRoutineToClient: async (routineId: number | string, traineeId: number | string) => {
       try {
-        console.log("Assigning routine:", routineId, "to trainee:", traineeId)
-        const { error } = await supabase
-          .from('trainee_routine')
-          .insert({
-            trainee_id: traineeId,
-            routine_id: routineId,
-            assigned_on: new Date().toISOString()
+        const trainerId = routineState.customUser?.id
+        console.log('[assignRoutineToClient] start', { routineId, traineeId, trainerId, types: { routineId: typeof routineId, traineeId: typeof traineeId } })
+
+        if (!trainerId) {
+          toast({ title: 'Error', description: 'Usuario no autenticado.', variant: 'destructive' })
+          return
+        }
+
+        // Do not allow assigning unsaved (temporary) routines
+        if (typeof routineId === 'string' && routineId.startsWith('temp-')) {
+          toast({
+            title: 'Rutina no guardada',
+            description: 'Primero guarda la rutina antes de enviarla a un alumno.',
+            variant: 'destructive'
           })
+          return
+        }
 
-        if (error) throw error
+        // Basic guard
+        if (!traineeId) {
+          toast({ title: 'Selecciona un alumno', description: 'Debes elegir un alumno antes de enviar la rutina.' })
+          return
+        }
+
+        // 1. Verify roster membership (RLS usually requires this)
+        const { data: rosterRow, error: rosterError } = await supabase
+          .from('trainer_student')
+          .select('trainer_id, student_id')
+          .eq('trainer_id', trainerId)
+          .eq('student_id', traineeId)
+          .maybeSingle()
+
+        if (rosterError) {
+          console.warn('[assignRoutineToClient] roster check error', rosterError)
+        }
+
+        if (!rosterRow) {
+          toast({
+            title: 'Alumno no vinculado',
+            description: 'Acepta primero la solicitud del alumno (no está en tu roster).',
+            variant: 'destructive'
+          })
+          return
+        }
+
+        // 2. Verify routine ownership
+        const { data: routineRow, error: routineFetchError } = await supabase
+          .from('routines')
+          .select('id, owner_id')
+          .eq('id', routineId)
+          .eq('owner_id', trainerId)
+          .maybeSingle()
+
+        if (routineFetchError) {
+          console.warn('[assignRoutineToClient] routine ownership check error', routineFetchError)
+        }
+        if (!routineRow) {
+          toast({
+            title: 'Rutina no encontrada',
+            description: 'No se encontró la rutina o no eres el propietario.',
+            variant: 'destructive'
+          })
+          return
+        }
+
+        // 3. Perform assignment insert
+        const payload = {
+          trainee_id: traineeId,
+            routine_id: routineId,
+          assigned_on: new Date().toISOString()
+        }
+        console.log('[assignRoutineToClient] inserting trainee_routine payload', payload)
+        const { error: insertError } = await supabase
+          .from('trainee_routine')
+          .insert(payload)
+
+        if (insertError) {
+          console.error('[assignRoutineToClient] insert error', insertError)
+          let userMsg = 'No se pudo asignar la rutina.'
+          if ((insertError as any).code === '23505') {
+            userMsg = 'Esta rutina ya fue asignada a este alumno.'
+          }
+          toast({ title: 'Error', description: userMsg, variant: 'destructive' })
+          return
+        }
 
         toast({
-          title: "Rutina asignada",
-          description: "La rutina ha sido asignada correctamente al alumno.",
+          title: 'Rutina asignada',
+          description: 'La rutina ha sido asignada correctamente al alumno.',
         })
-      }
-       catch (error) {
-        console.error('Error assigning routine:', error)
+      } catch (error: any) {
+        console.error('[assignRoutineToClient] unexpected error', { error })
         toast({
-          title: "Error",
-          description: "No se pudo asignar la rutina al alumno.",
-          variant: "destructive"
+          title: 'Error inesperado',
+          description: error?.message || 'No se pudo asignar la rutina.',
+          variant: 'destructive'
         })
       }
     },

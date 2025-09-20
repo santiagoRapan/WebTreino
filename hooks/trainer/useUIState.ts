@@ -30,6 +30,9 @@ export interface UseUIStateReturn {
   setIsEventDetailsOpen: Dispatch<SetStateAction<boolean>>
   isCreateExerciseDialogOpen: boolean
   setIsCreateExerciseDialogOpen: Dispatch<SetStateAction<boolean>>
+  // History dialog
+  isHistoryDialogOpen: boolean
+  setIsHistoryDialogOpen: Dispatch<SetStateAction<boolean>>
   
   // UI Interaction States
   expandedClientIds: Set<number>
@@ -57,6 +60,7 @@ export function useUIState(): UseUIStateReturn {
   const [isAddEventDialogOpen, setIsAddEventDialogOpen] = useState<boolean>(false)
   const [isEventDetailsOpen, setIsEventDetailsOpen] = useState<boolean>(false)
   const [isCreateExerciseDialogOpen, setIsCreateExerciseDialogOpen] = useState<boolean>(false)
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState<boolean>(false)
 
   // UI Interaction States
   const [expandedClientIds, setExpandedClientIds] = useState<Set<number>>(new Set())
@@ -97,6 +101,8 @@ export function useUIState(): UseUIStateReturn {
     setIsEventDetailsOpen,
     isCreateExerciseDialogOpen,
     setIsCreateExerciseDialogOpen,
+    isHistoryDialogOpen,
+    setIsHistoryDialogOpen,
     expandedClientIds,
     setExpandedClientIds,
     showArchived,

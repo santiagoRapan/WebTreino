@@ -9,6 +9,7 @@ import { ClientsTab } from "./ClientsTab"
 import { ScheduleTab } from "./ScheduleTab"
 import { RoutinesTab } from "./RoutinesTab"
 import { ChatTab } from "./ChatTab"
+import { SettingsTab } from "./SettingsTab"
 
 export default function TrainerDashboard() {
   // Use the master hook that provides all state and handlers
@@ -29,6 +30,7 @@ export default function TrainerDashboard() {
       isAddEventDialogOpen: trainerData.isAddEventDialogOpen,
       isEventDetailsOpen: trainerData.isEventDetailsOpen,
       isCreateExerciseDialogOpen: trainerData.isCreateExerciseDialogOpen,
+      isHistoryDialogOpen: trainerData.isHistoryDialogOpen,
       expandedClientIds: trainerData.expandedClientIds,
       showArchived: trainerData.showArchived,
       showEmojiPicker: trainerData.showEmojiPicker,
@@ -79,6 +81,8 @@ export default function TrainerDashboard() {
       showNewRoutineInput: trainerData.showNewRoutineInput,
       newRoutineName: trainerData.newRoutineName,
       newBlockName: trainerData.newBlockName,
+      historySessions: trainerData.historySessions,
+      historyLogs: trainerData.historyLogs,
     },
     actions: {
       // UI Actions
@@ -93,6 +97,7 @@ export default function TrainerDashboard() {
       setIsAddEventDialogOpen: trainerData.setIsAddEventDialogOpen,
       setIsEventDetailsOpen: trainerData.setIsEventDetailsOpen,
       setIsCreateExerciseDialogOpen: trainerData.setIsCreateExerciseDialogOpen,
+      setIsHistoryDialogOpen: trainerData.setIsHistoryDialogOpen,
       setExpandedClientIds: trainerData.setExpandedClientIds,
       setShowArchived: trainerData.setShowArchived,
       setShowEmojiPicker: trainerData.setShowEmojiPicker,
@@ -100,6 +105,9 @@ export default function TrainerDashboard() {
       // Client Actions
       setEditingClient: trainerData.setEditingClient,
       setClients: trainerData.setClients,
+      acceptLinkRequest: trainerData.acceptLinkRequest,
+      rejectLinkRequest: trainerData.rejectLinkRequest,
+      cancelLinkRequest: trainerData.cancelLinkRequest,
 
       // Chat Actions
       setChatSearchTerm: trainerData.setChatSearchTerm,
@@ -143,16 +151,21 @@ export default function TrainerDashboard() {
       setShowNewRoutineInput: trainerData.setShowNewRoutineInput,
       setNewRoutineName: trainerData.setNewRoutineName,
       setNewBlockName: trainerData.setNewBlockName,
+      setHistorySessions: trainerData.setHistorySessions,
+      setHistoryLogs: trainerData.setHistoryLogs,
 
       // All Handler Functions
       handleEditClient: trainerData.handleEditClient,
       handleDeleteClient: trainerData.handleDeleteClient,
       handleMarkAsActive: trainerData.handleMarkAsActive,
-      handleViewHistory: trainerData.handleViewHistory,
       handleNewClient: trainerData.handleNewClient,
       handleScheduleSession: trainerData.handleScheduleSession,
       handleViewAllClients: trainerData.handleViewAllClients,
       handleChatFromClient: trainerData.handleChatFromClient,
+      acceptLinkRequest: trainerData.acceptLinkRequest,
+      rejectLinkRequest: trainerData.rejectLinkRequest,
+      cancelLinkRequest: trainerData.cancelLinkRequest,
+      openStudentHistory: trainerData.openStudentHistory,
 
       handleSendMessage: trainerData.handleSendMessage,
       handleEmojiPicker: trainerData.handleEmojiPicker,
@@ -228,6 +241,7 @@ export default function TrainerDashboard() {
             {trainerData.activeTab === "schedule" && <ScheduleTab />}
             {trainerData.activeTab === "routines" && <RoutinesTab />}
             {trainerData.activeTab === "chat" && <ChatTab />}
+            {trainerData.activeTab === "settings" && <SettingsTab />}
           </div>
         </main>
       </div>

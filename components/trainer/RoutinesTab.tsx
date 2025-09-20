@@ -109,7 +109,6 @@ export function RoutinesTab() {
       toggleBlockExpansion,
       handleExportRoutineToPDF,
       handleExportRoutineToExcel,
-      handleStartChat,
       setNewBlockName,
     },
   } = useTrainerDashboard()
@@ -412,39 +411,53 @@ export function RoutinesTab() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                      <Button 
+                      <Button
                         className="hover:bg-orange-500 transition-colors"
-                        disabled={!routineAssignments[String(tpl.id)]}
+                        title={typeof tpl.id === 'string' && tpl.id.startsWith('temp-') ? 'Guarda la rutina antes de enviarla' : undefined}
+                        disabled={
+                          !routineAssignments[String(tpl.id)] ||
+                          (typeof tpl.id === 'string' && tpl.id.startsWith('temp-'))
+                        }
                         onClick={async () => {
+                          if (typeof tpl.id === 'string' && tpl.id.startsWith('temp-')) {
+                            toast({
+                              title: 'Rutina no guardada',
+                              description: 'Guarda la rutina antes de enviarla a un alumno.',
+                              variant: 'destructive'
+                            })
+                            return
+                          }
                           const selectedClientId = routineAssignments[String(tpl.id)]
                           if (selectedClientId) {
                             try {
                               await assignRoutineToClient(tpl.id, selectedClientId)
                               const selectedClient = allClients.find(c => String(c.id) === selectedClientId)
                               toast({
-                                title: "Rutina enviada",
+                                title: 'Rutina enviada',
                                 description: `La rutina "${tpl.name}" ha sido enviada a ${selectedClient?.name}.`,
                               })
-                              // Resetear la selección para permitir envío a otro usuario
                               setRoutineAssignments(prev => ({
                                 ...prev,
-                                [String(tpl.id)]: ""
+                                [String(tpl.id)]: ''
                               }))
                             } catch (error) {
                               console.error('Error al enviar rutina:', error)
                               toast({
-                                title: "Error",
-                                description: "No se pudo enviar la rutina. Inténtalo de nuevo.",
-                                variant: "destructive"
+                                title: 'Error',
+                                description: 'No se pudo enviar la rutina. Inténtalo de nuevo.',
+                                variant: 'destructive'
                               })
                             }
                           }
                         }}
                       >
                         {(() => {
+                          if (typeof tpl.id === 'string' && tpl.id.startsWith('temp-')) {
+                            return 'Guarda la rutina primero'
+                          }
                           const selectedClientId = routineAssignments[String(tpl.id)]
                           const selectedClient = selectedClientId ? allClients.find(c => String(c.id) === selectedClientId) : null
-                          return selectedClient ? `Enviar a ${selectedClient.name}` : "Selecciona un alumno"
+                          return selectedClient ? `Enviar a ${selectedClient.name}` : 'Selecciona un alumno'
                         })()}
                       </Button>
                     </div>

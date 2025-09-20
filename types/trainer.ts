@@ -15,6 +15,10 @@ export type Client = {
   sessionsCompleted: number
   totalSessions: number
   plan: string
+  // Supabase identifiers to support roster/requests
+  userId?: string
+  requestId?: string
+  requestedBy?: "alumno" | "entrenador"
 }
 
 export type ChatMessage = {

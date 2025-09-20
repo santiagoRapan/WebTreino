@@ -73,6 +73,9 @@ export interface TrainerDashboardState {
   newRoutineName: string
   newBlockName: string
   chatConversations: Chat[]
+  // history state
+  historySessions: any[]
+  historyLogs: any[]
 }
 
 export interface TrainerDashboardData {
@@ -140,16 +143,13 @@ export interface TrainerDashboardActions {
   setNewRoutineName: Dispatch<SetStateAction<string>>
   setNewBlockName: Dispatch<SetStateAction<string>>
   setChatConversations: Dispatch<SetStateAction<Chat[]>>
+  // history setters
+  setHistorySessions: Dispatch<SetStateAction<any[]>>
+  setHistoryLogs: Dispatch<SetStateAction<any[]>>
   handleEditClient: (client: Client) => void
   handleDeleteClient: (clientId: number) => void
   handleMarkAsActive: (clientId: number) => void
-  handleViewHistory: (clientId: number) => void
-  handleSendMessage: () => void
-  handleEmojiPicker: () => void
-  addEmoji: (emoji: string) => void
-  handleStartChat: (client: Client) => void
   handleNewClient: () => void
-  handleCreateRoutine: () => void
   handleScheduleAppointment: () => void
   handleScheduleSession: (clientId: number) => void
   handleRegisterPayment: () => void
@@ -186,6 +186,10 @@ export interface TrainerDashboardActions {
   handleFileAttachment: () => void
   handleImageAttachment: () => void
   handleChatFromClient: (clientName: string) => void
+  acceptLinkRequest: (client: Client) => Promise<void>
+  rejectLinkRequest: (client: Client) => Promise<void>
+  cancelLinkRequest: (client: Client) => Promise<void>
+  openStudentHistory: (client: Client) => Promise<void>
 
 }
 

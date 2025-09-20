@@ -18,6 +18,13 @@ export interface UseClientStateReturn {
   
   // Computed helper for filtered clients
   getFilteredClients: (searchTerm: string, filter: "all" | "active" | "pending") => Client[]
+  // data loaders
+  fetchStudentSessions: (studentId: string) => Promise<{ sessions: any[]; logs: any[] }>
+  // History state
+  historySessions: any[]
+  setHistorySessions: Dispatch<SetStateAction<any[]>>
+  historyLogs: any[]
+  setHistoryLogs: Dispatch<SetStateAction<any[]>>
 }
 
 // Fallback clients data if no students in database
@@ -74,21 +81,17 @@ const FALLBACK_CLIENTS: Client[] = [
 
 export function useClientState(): UseClientStateReturn {
   const [editingClient, setEditingClient] = useState<Client | null>(null)
+  const [historySessions, setHistorySessions] = useState<any[]>([])
+  const [historyLogs, setHistoryLogs] = useState<any[]>([])
   
   // Use real students data from database
-  const { students, loading: loadingClients, error: clientsError, refreshStudents } = useStudents()
+  const { students, loading: loadingClients, error: clientsError, refreshStudents, fetchStudentSessions } = useStudents()
   const [clients, setClients] = useState<Client[]>([])
 
   // Update clients when students are loaded
   useEffect(() => {
-    if (students.length > 0) {
-      console.log('✅ Using real students from database:', students.length)
-      setClients(students)
-    } else if (!loadingClients && students.length === 0) {
-      console.log('📋 Using fallback client data')
-      // Fallback to mock data if no students in database
-      setClients(FALLBACK_CLIENTS)
-    }
+    // Always use database-driven list (roster + pending). No global fallback.
+    setClients(students)
   }, [students, loadingClients])
 
   const getFilteredClients = (searchTerm: string, filter: "all" | "active" | "pending"): Client[] => {
@@ -118,5 +121,10 @@ export function useClientState(): UseClientStateReturn {
     clientsError,
     refreshClients: refreshStudents,
     getFilteredClients,
+    fetchStudentSessions,
+    historySessions,
+    setHistorySessions,
+    historyLogs,
+    setHistoryLogs,
   }
 }
