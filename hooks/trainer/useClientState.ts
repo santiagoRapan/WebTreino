@@ -27,57 +27,7 @@ export interface UseClientStateReturn {
   setHistoryLogs: Dispatch<SetStateAction<any[]>>
 }
 
-// Fallback clients data if no students in database
-const FALLBACK_CLIENTS: Client[] = [
-  {
-    id: 1,
-    name: "María González",
-    email: "maria.gonzalez@email.com",
-    phone: "+34 612 345 678",
-    status: "Activo",
-    joinDate: "15 Ene 2024",
-    lastSession: "2 días",
-    nextSession: "Mañana 09:00",
-    progress: 85,
-    goal: "Pérdida de peso",
-    avatar: "/fit-woman-outdoors.png",
-    sessionsCompleted: 24,
-    totalSessions: 30,
-    plan: "Premium",
-  },
-  {
-    id: 2,
-    name: "Carlos Ruiz",
-    email: "carlos.ruiz@email.com",
-    phone: "+34 623 456 789",
-    status: "Activo",
-    joinDate: "20 Ene 2024",
-    lastSession: "1 día",
-    nextSession: "Hoy 16:00",
-    progress: 72,
-    goal: "Ganancia muscular",
-    avatar: "/fit-man-gym.png",
-    sessionsCompleted: 18,
-    totalSessions: 24,
-    plan: "Estándar",
-  },
-  {
-    id: 3,
-    name: "Ana López",
-    email: "ana.lopez@email.com",
-    phone: "+34 634 567 890",
-    status: "Pendiente",
-    joinDate: "25 Ene 2024",
-    lastSession: "5 días",
-    nextSession: "Pendiente",
-    progress: 45,
-    goal: "Tonificación",
-    avatar: "/woman-workout.png",
-    sessionsCompleted: 8,
-    totalSessions: 12,
-    plan: "Básico",
-  },
-]
+// Removed fallback clients: client list now always reflects database state
 
 export function useClientState(): UseClientStateReturn {
   const [editingClient, setEditingClient] = useState<Client | null>(null)

@@ -150,6 +150,17 @@ export function RoutinesTab() {
     t.name.toLowerCase().includes(routineSearch.toLowerCase())
   )
 
+  const [isSaving, setIsSaving] = useState(false);
+
+  const saveRoutine = async () => {
+    setIsSaving(true);
+    try {
+      await handleSaveRoutine();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <main className="p-4 space-y-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -314,13 +325,14 @@ export function RoutinesTab() {
                     </div>
                     <div className="flex flex-col gap-2 min-w-[220px]">
                       <Select
-                        value={routineAssignments[String(tpl.id)] || ""}
+                        key={`${String(tpl.id)}:${routineAssignments[String(tpl.id)] ?? ''}`}
+                        value={routineAssignments[String(tpl.id)] ?? undefined}
                         onValueChange={(clientId) => {
                           setRoutineAssignments(prev => ({
                             ...prev,
                             [String(tpl.id)]: clientId
                           }))
-                          const client = allClients.find((c) => String(c.id) === clientId)
+                          const client = allClients.find((c) => String(c.userId) === clientId)
                           if (client) {
                             handleAssignTemplateToClient(tpl, client)
                           }
@@ -354,7 +366,7 @@ export function RoutinesTab() {
                             </SelectItem>
                           ) : (
                             allClients.map((c) => (
-                              <SelectItem key={c.id} value={String(c.id)}>
+                              <SelectItem key={c.id} value={String(c.userId)}>
                                 <div className="flex items-center gap-2">
                                   <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
                                     {c.name.charAt(0).toUpperCase()}
@@ -431,15 +443,16 @@ export function RoutinesTab() {
                           if (selectedClientId) {
                             try {
                               await assignRoutineToClient(tpl.id, selectedClientId)
-                              const selectedClient = allClients.find(c => String(c.id) === selectedClientId)
+                              const selectedClient = allClients.find(c => String(c.userId) === selectedClientId)
                               toast({
                                 title: 'Rutina enviada',
                                 description: `La rutina "${tpl.name}" ha sido enviada a ${selectedClient?.name}.`,
                               })
-                              setRoutineAssignments(prev => ({
-                                ...prev,
-                                [String(tpl.id)]: ''
-                              }))
+                              setRoutineAssignments(prev => {
+                                const next = { ...prev }
+                                delete next[String(tpl.id)]
+                                return next
+                              })
                             } catch (error) {
                               console.error('Error al enviar rutina:', error)
                               toast({
@@ -456,7 +469,7 @@ export function RoutinesTab() {
                             return 'Guarda la rutina primero'
                           }
                           const selectedClientId = routineAssignments[String(tpl.id)]
-                          const selectedClient = selectedClientId ? allClients.find(c => String(c.id) === selectedClientId) : null
+                          const selectedClient = selectedClientId ? allClients.find(c => String(c.userId) === selectedClientId) : null
                           return selectedClient ? `Enviar a ${selectedClient.name}` : 'Selecciona un alumno'
                         })()}
                       </Button>
@@ -1154,10 +1167,17 @@ export function RoutinesTab() {
             </Button>
             <Button
               type="button"
-              onClick={handleSaveRoutine}
+              onClick={saveRoutine}
               className="bg-primary hover:bg-primary/90"
+              disabled={isSaving}
             >
-              Guardar Rutina
+              {isSaving ? (
+                <>
+                  <span className="loader mr-2"></span> Guardando...
+                </>
+              ) : (
+                "Guardar Rutina"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

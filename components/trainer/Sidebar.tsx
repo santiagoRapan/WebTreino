@@ -3,11 +3,7 @@
 import {
   Activity,
   BarChart3,
-  Calendar,
   ChevronRight,
-  DollarSign,
-  Dumbbell,
-  MessageSquare,
   Settings,
   Users,
 } from "lucide-react"
@@ -16,10 +12,10 @@ import { useTrainerDashboard } from "@/components/trainer/TrainerDashboardContex
 const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: BarChart3 },
   { id: "clients", label: "Alumnos", icon: Users },
-  { id: "schedule", label: "Agenda", icon: Calendar },
+  // schedule tab removed
   { id: "routines", label: "Rutinas", icon: Activity },
-  { id: "payments", label: "Pagos", icon: DollarSign },
-  { id: "chat", label: "Chat", icon: MessageSquare },
+  // Payments tab removed
+  //{ id: "chat", label: "Chat", icon: MessageSquare },
   { id: "settings", label: "Configuración", icon: Settings },
 ] as const
 
@@ -37,9 +33,9 @@ export function Sidebar() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
+            className="w-10 h-10 flex items-center justify-center"
           >
-            <Dumbbell className="w-5 h-5 text-primary-foreground" />
+            <img src="/icon-black.png" alt="Toggle Sidebar" className="w-full h-full object-contain" />
           </button>
           {!sidebarCollapsed && <span className="text-lg font-semibold text-sidebar-foreground">Treino</span>}
         </div>

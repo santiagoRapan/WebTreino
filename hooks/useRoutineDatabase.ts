@@ -298,17 +298,53 @@ export function useRoutineDatabase() {
   }
 
   // Delete a routine from database
-  const deleteRoutineFromDatabase = async (routineId: number, ownerId: string): Promise<boolean> => {
+  const deleteRoutineFromDatabase = async (routineId: number | string, ownerId: string): Promise<boolean> => {
     try {
       setLoading(true)
       setError(null)
 
       console.log('🗑️ Attempting to delete routine:', { routineId, ownerId })
 
+      // Ensure we have a concrete ID value to match DB type (Supabase uuid or int)
+      const routineIdValue = routineId
+
+      // Best-effort cleanup of dependent rows if CASCADE isn't present in DB
+      // 1) Delete trainee assignments referencing this routine
+      const { error: traineeDelErr } = await supabase
+        .from('trainee_routine')
+        .delete()
+        .eq('routine_id', routineIdValue)
+      if (traineeDelErr) {
+        console.warn('⚠️ Could not delete trainee_routine rows (may be handled by CASCADE):', traineeDelErr)
+      }
+      // 2) Delete blocks and their exercises explicitly if needed
+      // First fetch blocks to cascade delete exercises if CASCADE not set
+      const { data: blocks, error: blocksErr } = await supabase
+        .from('routine_block')
+        .select('id')
+        .eq('routine_id', routineIdValue)
+      if (!blocksErr && blocks && blocks.length > 0) {
+        const blockIds = blocks.map(b => b.id)
+        const { error: beDelErr } = await supabase
+          .from('block_exercise')
+          .delete()
+          .in('block_id', blockIds)
+        if (beDelErr) {
+          console.warn('⚠️ Could not delete block_exercise rows (may be handled by CASCADE):', beDelErr)
+        }
+      }
+      const { error: rbDelErr } = await supabase
+        .from('routine_block')
+        .delete()
+        .eq('routine_id', routineIdValue)
+      if (rbDelErr) {
+        console.warn('⚠️ Could not delete routine_block rows (may be handled by CASCADE):', rbDelErr)
+      }
+
       const { error } = await supabase
         .from('routines')
         .delete()
-        .eq('id', routineId)
+        .eq('id', routineIdValue)
         .eq('owner_id', ownerId)
 
       if (error) {

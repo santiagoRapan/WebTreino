@@ -5,17 +5,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Activity, Calendar, DollarSign, Plus, Users, ChevronRight } from "lucide-react"
+import { Activity, DollarSign, Users, ChevronRight } from "lucide-react"
 
 export function DashboardTab() {
   const {
-    data: { stats, upcomingSessions, recentClients },
+    data: { stats, recentClients },
     actions: {
-      handleAddSession,
       handleViewAllClients,
       handleNewClient,
       handleCreateRoutine,
-      handleScheduleAppointment,
       handleRegisterPayment,
     },
   } = useTrainerDashboard()
@@ -46,47 +44,7 @@ export function DashboardTab() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle className="text-card-foreground">Próximas Sesiones</CardTitle>
-            <CardDescription>Entrenamientos programados para hoy</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {upcomingSessions.map((session) => (
-              <div key={session.id} className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
-                <Avatar>
-                  <AvatarImage src={session.avatar || "/placeholder.svg"} />
-                  <AvatarFallback>
-                    {session.client
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <p className="font-medium text-card-foreground">{session.client}</p>
-                  <p className="text-sm text-muted-foreground">{session.type}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium text-primary">{session.time}</p>
-                  <Badge variant="outline" className="text-xs">
-                    Hoy
-                  </Badge>
-                </div>
-              </div>
-            ))}
-            <Button
-              className="w-full bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors"
-              variant="outline"
-              onClick={handleAddSession}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Agendar Sesión
-            </Button>
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 gap-6">
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-card-foreground">Alumnos Recientes</CardTitle>
@@ -148,14 +106,6 @@ export function DashboardTab() {
             >
               <Activity className="w-6 h-6" />
               <span className="text-sm">Crear Rutina</span>
-            </Button>
-            <Button
-              className="h-20 flex-col gap-2 bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors"
-              variant="outline"
-              onClick={handleScheduleAppointment}
-            >
-              <Calendar className="w-6 h-6" />
-              <span className="text-sm">Agendar Cita</span>
             </Button>
             <Button
               className="h-20 flex-col gap-2 bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors"

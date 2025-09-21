@@ -6,9 +6,8 @@ import { Sidebar } from "./Sidebar"
 import { TrainerHeader } from "./TrainerHeader"
 import { DashboardTab } from "./DashboardTab"
 import { ClientsTab } from "./ClientsTab"
-import { ScheduleTab } from "./ScheduleTab"
+// import { ScheduleTab } from "./ScheduleTab" // schedule removed
 import { RoutinesTab } from "./RoutinesTab"
-import { ChatTab } from "./ChatTab"
 import { SettingsTab } from "./SettingsTab"
 
 export default function TrainerDashboard() {
@@ -26,33 +25,22 @@ export default function TrainerDashboard() {
       clientFilter: trainerData.clientFilter,
       isEditDialogOpen: trainerData.isEditDialogOpen,
       isNewClientDialogOpen: trainerData.isNewClientDialogOpen,
-      isNewChatDialogOpen: trainerData.isNewChatDialogOpen,
-      isAddEventDialogOpen: trainerData.isAddEventDialogOpen,
-      isEventDetailsOpen: trainerData.isEventDetailsOpen,
+  // isNewChatDialogOpen removed with chat feature
+  // calendar dialogs removed
       isCreateExerciseDialogOpen: trainerData.isCreateExerciseDialogOpen,
       isHistoryDialogOpen: trainerData.isHistoryDialogOpen,
       expandedClientIds: trainerData.expandedClientIds,
       showArchived: trainerData.showArchived,
-      showEmojiPicker: trainerData.showEmojiPicker,
+  // showEmojiPicker removed with chat feature
 
       // Client State
       editingClient: trainerData.editingClient,
 
       // Chat State
-      chatSearchTerm: trainerData.chatSearchTerm,
-      chatFilter: trainerData.chatFilter,
-      selectedChat: trainerData.selectedChat,
-      chatMessage: trainerData.chatMessage,
-      newChatSearchTerm: trainerData.newChatSearchTerm,
-      chatConversations: trainerData.chatConversations,
+  // chat state removed
 
       // Calendar State
-      calendarEvents: trainerData.calendarEvents,
-      selectedEvent: trainerData.selectedEvent,
-      selectedDate: trainerData.selectedDate,
-      currentMonth: trainerData.currentMonth,
-      currentYear: trainerData.currentYear,
-      newEventForm: trainerData.newEventForm,
+  // calendar state removed
 
       // Routine State
       newExerciseForm: trainerData.newExerciseForm,
@@ -93,14 +81,13 @@ export default function TrainerDashboard() {
       setClientFilter: trainerData.setClientFilter,
       setIsEditDialogOpen: trainerData.setIsEditDialogOpen,
       setIsNewClientDialogOpen: trainerData.setIsNewClientDialogOpen,
-      setIsNewChatDialogOpen: trainerData.setIsNewChatDialogOpen,
-      setIsAddEventDialogOpen: trainerData.setIsAddEventDialogOpen,
-      setIsEventDetailsOpen: trainerData.setIsEventDetailsOpen,
+  // setIsNewChatDialogOpen removed
+  // calendar dialogs removed
       setIsCreateExerciseDialogOpen: trainerData.setIsCreateExerciseDialogOpen,
       setIsHistoryDialogOpen: trainerData.setIsHistoryDialogOpen,
       setExpandedClientIds: trainerData.setExpandedClientIds,
       setShowArchived: trainerData.setShowArchived,
-      setShowEmojiPicker: trainerData.setShowEmojiPicker,
+  // setShowEmojiPicker removed
 
       // Client Actions
       setEditingClient: trainerData.setEditingClient,
@@ -110,20 +97,10 @@ export default function TrainerDashboard() {
       cancelLinkRequest: trainerData.cancelLinkRequest,
 
       // Chat Actions
-      setChatSearchTerm: trainerData.setChatSearchTerm,
-      setChatFilter: trainerData.setChatFilter,
-      setSelectedChat: trainerData.setSelectedChat,
-      setChatMessage: trainerData.setChatMessage,
-      setNewChatSearchTerm: trainerData.setNewChatSearchTerm,
-      setChatConversations: trainerData.setChatConversations,
+  // chat setters removed
 
       // Calendar Actions
-      setCalendarEvents: trainerData.setCalendarEvents,
-      setSelectedEvent: trainerData.setSelectedEvent,
-      setSelectedDate: trainerData.setSelectedDate,
-      setCurrentMonth: trainerData.setCurrentMonth,
-      setCurrentYear: trainerData.setCurrentYear,
-      setNewEventForm: trainerData.setNewEventForm,
+  // calendar state setters removed
 
       // Routine Actions
       setNewExerciseForm: trainerData.setNewExerciseForm,
@@ -159,30 +136,13 @@ export default function TrainerDashboard() {
       handleDeleteClient: trainerData.handleDeleteClient,
       handleMarkAsActive: trainerData.handleMarkAsActive,
       handleNewClient: trainerData.handleNewClient,
-      handleScheduleSession: trainerData.handleScheduleSession,
+  // schedule handlers removed
       handleViewAllClients: trainerData.handleViewAllClients,
-      handleChatFromClient: trainerData.handleChatFromClient,
-      acceptLinkRequest: trainerData.acceptLinkRequest,
-      rejectLinkRequest: trainerData.rejectLinkRequest,
-      cancelLinkRequest: trainerData.cancelLinkRequest,
       openStudentHistory: trainerData.openStudentHistory,
 
-      handleSendMessage: trainerData.handleSendMessage,
-      handleEmojiPicker: trainerData.handleEmojiPicker,
-      addEmoji: trainerData.addEmoji,
-      handleStartChat: trainerData.handleStartChat,
-      handleFileAttachment: trainerData.handleFileAttachment,
-      handleImageAttachment: trainerData.handleImageAttachment,
-
-      handleAddEvent: trainerData.handleAddEvent,
-      handleEventClick: trainerData.handleEventClick,
-      handleEditEvent: trainerData.handleEditEvent,
-      handleDeleteEvent: trainerData.handleDeleteEvent,
-      handleCompleteEvent: trainerData.handleCompleteEvent,
-      handleCreateEvent: trainerData.handleCreateEvent,
-      handleUpdateEvent: trainerData.handleUpdateEvent,
-      handleGoToRoutines: trainerData.handleGoToRoutines,
-      handleAddSession: trainerData.handleAddSession,
+  // chat handlers removed
+  // calendar handlers removed
+  // add session removed
 
       handleCreateRoutine: trainerData.handleCreateRoutine,
       handleCreateExercise: trainerData.handleCreateExercise,
@@ -200,24 +160,19 @@ export default function TrainerDashboard() {
       confirmAddExercise: trainerData.confirmAddExercise,
       cancelAddExercise: trainerData.cancelAddExercise,
       handleSaveRoutine: trainerData.handleSaveRoutine,
-      handleDeleteExercise: trainerData.handleDeleteExercise,
       handleDeleteBlock: trainerData.handleDeleteBlock,
       toggleBlockExpansion: trainerData.toggleBlockExpansion,
       handleExportRoutineToPDF: trainerData.handleExportRoutineToPDF,
       handleExportRoutineToExcel: trainerData.handleExportRoutineToExcel,
       
       // Additional context handlers
-      handleScheduleAppointment: trainerData.handleScheduleAppointment,
       handleRegisterPayment: trainerData.handleRegisterPayment,
     },
     data: {
       stats: trainerData.stats,
-      upcomingSessions: trainerData.upcomingSessions,
       recentClients: trainerData.recentClients,
       allClients: trainerData.clients,
       filteredClients: trainerData.filteredClients,
-      filteredChats: trainerData.filteredChats,
-      dedupedNewChatResults: trainerData.dedupedNewChatResults,
       loadingClients: trainerData.loadingClients,
       clientsError: trainerData.clientsError,
     },
@@ -238,9 +193,8 @@ export default function TrainerDashboard() {
           <div className="flex-1 overflow-auto">
             {trainerData.activeTab === "dashboard" && <DashboardTab />}
             {trainerData.activeTab === "clients" && <ClientsTab />}
-            {trainerData.activeTab === "schedule" && <ScheduleTab />}
+            {/* schedule tab removed */}
             {trainerData.activeTab === "routines" && <RoutinesTab />}
-            {trainerData.activeTab === "chat" && <ChatTab />}
             {trainerData.activeTab === "settings" && <SettingsTab />}
           </div>
         </main>

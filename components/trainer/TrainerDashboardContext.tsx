@@ -2,18 +2,14 @@
 
 import { createContext, useContext, Dispatch, SetStateAction } from "react"
 import type {
-  CalendarEvent,
-  Chat,
   Client,
   DashboardStat,
-  EventFormState,
   Exercise,
   ExerciseFilterState,
   ExerciseFormState,
   ExerciseInputsState,
   RoutineFolder,
   RoutineTemplate,
-  UpcomingSession,
   RecentClient,
 } from "@/types/trainer"
 
@@ -28,24 +24,15 @@ export interface TrainerDashboardState {
   isEditDialogOpen: boolean
   editingClient: Client | null
   expandedClientIds: Set<number>
-  chatSearchTerm: string
-  chatFilter: "all" | "unread" | "favorites"
-  selectedChat: Chat | null
-  chatMessage: string
-  showEmojiPicker: boolean
+  // chat removed
   isNewClientDialogOpen: boolean
-  isNewChatDialogOpen: boolean
-  newChatSearchTerm: string
+  // History dialog
+  isHistoryDialogOpen: boolean
+  // chat dialog removed
   showArchived: boolean
-  isAddEventDialogOpen: boolean
-  selectedEvent: CalendarEvent | null
-  isEventDetailsOpen: boolean
+  // calendar state removed
   isCreateExerciseDialogOpen: boolean
-  calendarEvents: CalendarEvent[]
-  selectedDate: string
-  currentMonth: number
-  currentYear: number
-  newEventForm: EventFormState
+  // calendar state removed
   newExerciseForm: ExerciseFormState
   exercisesCatalog: Exercise[]
   loadingExercises: boolean
@@ -72,7 +59,7 @@ export interface TrainerDashboardState {
   showNewRoutineInput: boolean
   newRoutineName: string
   newBlockName: string
-  chatConversations: Chat[]
+  // chatConversations removed
   // history state
   historySessions: any[]
   historyLogs: any[]
@@ -80,12 +67,10 @@ export interface TrainerDashboardState {
 
 export interface TrainerDashboardData {
   stats: DashboardStat[]
-  upcomingSessions: UpcomingSession[]
   recentClients: RecentClient[]
   allClients: Client[]
   filteredClients: Client[]
-  filteredChats: Chat[]
-  dedupedNewChatResults: Client[]
+  // chat data removed
   loadingClients: boolean
   clientsError: string | null
 }
@@ -99,24 +84,15 @@ export interface TrainerDashboardActions {
   setIsEditDialogOpen: Dispatch<SetStateAction<boolean>>
   setEditingClient: Dispatch<SetStateAction<Client | null>>
   setExpandedClientIds: Dispatch<SetStateAction<Set<number>>>
-  setChatSearchTerm: Dispatch<SetStateAction<string>>
-  setChatFilter: Dispatch<SetStateAction<"all" | "unread" | "favorites">>
-  setSelectedChat: Dispatch<SetStateAction<Chat | null>>
-  setChatMessage: Dispatch<SetStateAction<string>>
-  setShowEmojiPicker: Dispatch<SetStateAction<boolean>>
+  // chat setters removed
   setIsNewClientDialogOpen: Dispatch<SetStateAction<boolean>>
-  setIsNewChatDialogOpen: Dispatch<SetStateAction<boolean>>
-  setNewChatSearchTerm: Dispatch<SetStateAction<string>>
+  // History dialog setter
+  setIsHistoryDialogOpen: Dispatch<SetStateAction<boolean>>
+  // chat dialog setters removed
   setShowArchived: Dispatch<SetStateAction<boolean>>
-  setIsAddEventDialogOpen: Dispatch<SetStateAction<boolean>>
-  setSelectedEvent: Dispatch<SetStateAction<CalendarEvent | null>>
-  setIsEventDetailsOpen: Dispatch<SetStateAction<boolean>>
+  // calendar actions removed
   setIsCreateExerciseDialogOpen: Dispatch<SetStateAction<boolean>>
-  setCalendarEvents: Dispatch<SetStateAction<CalendarEvent[]>>
-  setSelectedDate: Dispatch<SetStateAction<string>>
-  setCurrentMonth: Dispatch<SetStateAction<number>>
-  setCurrentYear: Dispatch<SetStateAction<number>>
-  setNewEventForm: Dispatch<SetStateAction<EventFormState>>
+  // calendar actions removed
   setNewExerciseForm: Dispatch<SetStateAction<ExerciseFormState>>
   setExercisesCatalog: Dispatch<SetStateAction<Exercise[]>>
   setRoutineFolders: Dispatch<SetStateAction<RoutineFolder[]>>
@@ -142,7 +118,7 @@ export interface TrainerDashboardActions {
   setShowNewRoutineInput: Dispatch<SetStateAction<boolean>>
   setNewRoutineName: Dispatch<SetStateAction<string>>
   setNewBlockName: Dispatch<SetStateAction<string>>
-  setChatConversations: Dispatch<SetStateAction<Chat[]>>
+  // setChatConversations removed
   // history setters
   setHistorySessions: Dispatch<SetStateAction<any[]>>
   setHistoryLogs: Dispatch<SetStateAction<any[]>>
@@ -150,16 +126,15 @@ export interface TrainerDashboardActions {
   handleDeleteClient: (clientId: number) => void
   handleMarkAsActive: (clientId: number) => void
   handleNewClient: () => void
-  handleScheduleAppointment: () => void
-  handleScheduleSession: (clientId: number) => void
+  handleCreateRoutine: () => void
+  // schedule handlers removed
   handleRegisterPayment: () => void
-  handleAddEvent: () => void
-  handleCreateEvent: (eventData: EventFormState & { clientName?: string }) => void
+  // calendar handlers removed
   handleCreateExercise: () => void
   handleExportRoutineToPDF: (template: RoutineTemplate) => Promise<void>
   handleExportRoutineToExcel: (template: RoutineTemplate) => Promise<void>
   handleCreateFolder: () => void
-  handleDeleteTemplate: (templateId: number | string) => void
+  handleDeleteTemplate: (templateId: number | string) => Promise<void>
   handleMoveTemplate: (templateId: number | string, targetFolderId: number) => void
   handleCreateTemplate: () => void
   handleAssignTemplateToClient: (template: RoutineTemplate, client: Client) => void
@@ -171,21 +146,14 @@ export interface TrainerDashboardActions {
   handleSelectExercise: (exercise: Exercise) => void
   confirmAddExercise: () => void
   cancelAddExercise: () => void
-  handleSaveRoutine: () => void
+  handleSaveRoutine: () => Promise<void>
   handleDeleteExercise: (blockId: number, exerciseIndex: number) => void
   handleDeleteBlock: (blockId: number) => void
   toggleBlockExpansion: (blockId: number) => void
   handleViewAllClients: () => void
-  handleAddSession: () => void
-  handleEventClick: (event: CalendarEvent) => void
-  handleEditEvent: (event: CalendarEvent) => void
-  handleDeleteEvent: (eventId: number) => void
-  handleUpdateEvent: (eventData: EventFormState & { clientName?: string }) => void
-  handleCompleteEvent: (eventId: number) => void
+  // calendar handlers removed
   handleGoToRoutines: (clientName: string) => void
-  handleFileAttachment: () => void
-  handleImageAttachment: () => void
-  handleChatFromClient: (clientName: string) => void
+  // chat handlers removed
   acceptLinkRequest: (client: Client) => Promise<void>
   rejectLinkRequest: (client: Client) => Promise<void>
   cancelLinkRequest: (client: Client) => Promise<void>

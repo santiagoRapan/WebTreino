@@ -8,10 +8,10 @@ import { useTrainerDashboard } from "@/components/trainer/TrainerDashboardContex
 const TAB_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
   clients: "Gestión de Alumnos",
-  schedule: "Agenda",
+  // schedule: "Agenda", // removed
   routines: "Rutinas",
-  payments: "Pagos",
-  chat: "Chat",
+  // payments: "Pagos", // removed
+  // chat: "Chat", // removed previously
   settings: "Configuración",
 }
 

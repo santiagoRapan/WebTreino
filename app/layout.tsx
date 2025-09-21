@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from "@/lib/auth-context"
 
 export const metadata: Metadata = {
-  title: "TrainerPro - Plataforma para Entrenadores",
+  title: "Treino",
   description: "Plataforma profesional para personal trainers",
   generator: "v0.app",
 }
@@ -19,6 +19,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className="dark">
+      <head>
+        <link rel="icon" href="/icon-black.png" type="image/svg+xml" />
+      </head>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}>
         <AuthProvider>
           {children}

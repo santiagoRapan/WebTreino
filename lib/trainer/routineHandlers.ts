@@ -10,7 +10,7 @@ export interface RoutineHandlers {
   handleCreateRoutine: () => void
   handleCreateExercise: () => void
   handleCreateFolder: () => void
-  handleDeleteTemplate: (templateId: number | string) => void
+  handleDeleteTemplate: (templateId: number | string) => Promise<void>
   handleMoveTemplate: (templateId: number | string, targetFolderId: number) => void
   handleCreateTemplate: () => void
   handleAssignTemplateToClient: (template: RoutineTemplate, client: Client) => void
@@ -22,7 +22,7 @@ export interface RoutineHandlers {
   handleSelectExercise: (exercise: Exercise) => void
   confirmAddExercise: () => void
   cancelAddExercise: () => void
-  handleSaveRoutine: () => void
+  handleSaveRoutine: () => Promise<void>
   handleDeleteExercise: (blockId: number, exerciseIndex: number) => void
   handleDeleteBlock: (blockId: number) => void
   toggleBlockExpansion: (blockId: number) => void
@@ -38,6 +38,10 @@ export function createRoutineHandlers(
     handleCreateRoutine: () => {
       uiState.setActiveTab("routines")
       routineState.setShowNewRoutineInput(true)
+      // Asegurar que la carpeta principal esté seleccionada
+      if (routineState.selectedFolderId == null) {
+        routineState.setSelectedFolderId(1)
+      }
     },
 
     handleCreateExercise: () => {
@@ -82,18 +86,23 @@ export function createRoutineHandlers(
           return
         }
 
-        // Only delete from database if it's not a temporary ID
-        if (typeof templateId === 'number') {
-          console.log('🔢 Routine has numeric ID, deleting from database:', templateId)
-          const success = await routineState.routineDatabase.deleteRoutineFromDatabase(templateId, ownerId)
-          
+        // Only skip DB deletion for temporary IDs (created but never saved)
+        const isTempId = typeof templateId === 'string' && templateId.startsWith('temp-')
+        if (isTempId) {
+          console.log('� Routine has temporary ID, skipping database deletion:', templateId)
+        } else {
+          // Delete from database for any persisted ID (number or UUID string)
+          console.log('🗄️ Deleting routine from database:', templateId)
+          const success = await routineState.routineDatabase.deleteRoutineFromDatabase(
+            templateId as any,
+            ownerId
+          )
+
           if (!success) {
             console.log('❌ Failed to delete from database')
             throw new Error("Error al eliminar la rutina de la base de datos")
           }
           console.log('✅ Successfully deleted from database')
-        } else {
-          console.log('📝 Routine has temporary ID, skipping database deletion:', templateId)
         }
 
         // Remove from local state
@@ -162,12 +171,18 @@ export function createRoutineHandlers(
         blocks: []
       }
 
-      const selectedFolder = routineState.routineFolders.find(
-        (f: RoutineFolder) => f.id === routineState.selectedFolderId
-      )
+      // Garantizar que exista la carpeta base
+      let folders = routineState.routineFolders
+      if (!folders || folders.length === 0) {
+        folders = [{ id: 1, name: 'Mis rutinas', templates: [] }]
+        routineState.setRoutineFolders(folders)
+        routineState.setSelectedFolderId(1)
+      }
+
+      const selectedFolder = folders.find((f: RoutineFolder) => f.id === routineState.selectedFolderId) || folders[0]
 
       if (selectedFolder) {
-        const updatedFolders = routineState.routineFolders.map((folder: RoutineFolder) =>
+        const updatedFolders = folders.map((folder: RoutineFolder) =>
           folder.id === routineState.selectedFolderId
             ? { ...folder, templates: [...folder.templates, newTemplate] }
             : folder
@@ -416,16 +431,30 @@ export function createRoutineHandlers(
             }
             
             // Update local state
-            const updatedFolders = routineState.routineFolders.map((folder: RoutineFolder) => ({
-              ...folder,
-              templates: folder.templates.map((template: RoutineTemplate) =>
-                template.id === routineState.editingRoutine.id
-                  ? updatedRoutine
-                  : template
-              )
-            }))
+            let folders = routineState.routineFolders
+            if (!folders || folders.length === 0) {
+              folders = [{ id: 1, name: 'Mis rutinas', templates: [] }]
+            }
+            const updatedFolders = folders.map((folder: RoutineFolder) => {
+              if (folder.templates.some((t: RoutineTemplate) => t.id === routineState.editingRoutine.id)) {
+                return {
+                  ...folder,
+                  templates: folder.templates.map((template: RoutineTemplate) =>
+                    template.id === routineState.editingRoutine.id ? updatedRoutine : template
+                  )
+                }
+              }
+              // If somehow not found, add to main folder
+              if (folder.id === 1) {
+                return { ...folder, templates: [...folder.templates, updatedRoutine] }
+              }
+              return folder
+            })
             
             routineState.setRoutineFolders(updatedFolders)
+            if (routineState.selectedFolderId == null) {
+              routineState.setSelectedFolderId(1)
+            }
             
             toast({
               title: "Rutina creada",

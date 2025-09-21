@@ -33,9 +33,8 @@ export function ClientsTab() {
             
             <ClientTable
               clients={data.filteredClients}
-              onChatWithClient={actions.handleChatFromClient}
+              //onChatWithClient={actions.handleChatFromClient}
               onEditClient={actions.handleEditClient}
-              onScheduleSession={actions.handleScheduleSession}
               onDeleteClient={actions.handleDeleteClient}
               onAcceptRequest={actions.acceptLinkRequest}
               onRejectRequest={actions.rejectLinkRequest}

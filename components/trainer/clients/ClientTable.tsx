@@ -4,14 +4,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Calendar, Check, Edit, History, MessageSquare, MoreVertical, Trash2, X } from "lucide-react"
+import { Check, Edit, History, MessageSquare, MoreVertical, Trash2, X } from "lucide-react"
 import { Client } from "@/types/trainer"
 
 interface ClientTableProps {
   clients: Client[]
-  onChatWithClient: (clientName: string) => void
+  onChatWithClient?: (clientName: string) => void
   onEditClient: (client: Client) => void
-  onScheduleSession: (clientId: number) => void
   onDeleteClient: (clientId: number) => void
   onAcceptRequest?: (client: Client) => void
   onRejectRequest?: (client: Client) => void
@@ -23,7 +22,6 @@ export function ClientTable({
   clients,
   onChatWithClient,
   onEditClient,
-  onScheduleSession,
   onDeleteClient,
   onAcceptRequest,
   onRejectRequest,
@@ -109,10 +107,12 @@ export function ClientTable({
                       </>
                     ) : (
                       <>
-                        <DropdownMenuItem onClick={() => onChatWithClient(client.name)}>
-                          <MessageSquare className="w-4 h-4 mr-2" />
-                          Chat
-                        </DropdownMenuItem>
+                        {onChatWithClient && (
+                          <DropdownMenuItem onClick={() => onChatWithClient(client.name)}>
+                            <MessageSquare className="w-4 h-4 mr-2" />
+                            Chat
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => onEditClient(client)}>
                           <Edit className="w-4 h-4 mr-2" />
                           Editar
@@ -123,10 +123,7 @@ export function ClientTable({
                             Ver historial
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem onClick={() => onScheduleSession(client.id)}>
-                          <Calendar className="w-4 h-4 mr-2" />
-                          Agendar sesión
-                        </DropdownMenuItem>
+                        {/* Agenda removed */}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => onDeleteClient(client.id)}

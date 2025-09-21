@@ -22,12 +22,8 @@ export interface UseUIStateReturn {
   setIsEditDialogOpen: Dispatch<SetStateAction<boolean>>
   isNewClientDialogOpen: boolean
   setIsNewClientDialogOpen: Dispatch<SetStateAction<boolean>>
-  isNewChatDialogOpen: boolean
-  setIsNewChatDialogOpen: Dispatch<SetStateAction<boolean>>
-  isAddEventDialogOpen: boolean
-  setIsAddEventDialogOpen: Dispatch<SetStateAction<boolean>>
-  isEventDetailsOpen: boolean
-  setIsEventDetailsOpen: Dispatch<SetStateAction<boolean>>
+  // chat dialog removed
+  // calendar dialogs removed
   isCreateExerciseDialogOpen: boolean
   setIsCreateExerciseDialogOpen: Dispatch<SetStateAction<boolean>>
   // History dialog
@@ -39,8 +35,7 @@ export interface UseUIStateReturn {
   setExpandedClientIds: Dispatch<SetStateAction<Set<number>>>
   showArchived: boolean
   setShowArchived: Dispatch<SetStateAction<boolean>>
-  showEmojiPicker: boolean
-  setShowEmojiPicker: Dispatch<SetStateAction<boolean>>
+  // emoji picker removed (chat)
 }
 
 export function useUIState(): UseUIStateReturn {
@@ -56,16 +51,15 @@ export function useUIState(): UseUIStateReturn {
   // Dialog States
   const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false)
   const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState<boolean>(false)
-  const [isNewChatDialogOpen, setIsNewChatDialogOpen] = useState<boolean>(false)
-  const [isAddEventDialogOpen, setIsAddEventDialogOpen] = useState<boolean>(false)
-  const [isEventDetailsOpen, setIsEventDetailsOpen] = useState<boolean>(false)
+  // chat dialog state removed
+  // calendar dialogs removed
   const [isCreateExerciseDialogOpen, setIsCreateExerciseDialogOpen] = useState<boolean>(false)
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState<boolean>(false)
 
   // UI Interaction States
   const [expandedClientIds, setExpandedClientIds] = useState<Set<number>>(new Set())
   const [showArchived, setShowArchived] = useState<boolean>(false)
-  const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false)
+  // emoji picker state removed
 
   // Theme Effect
   useEffect(() => {
@@ -93,12 +87,8 @@ export function useUIState(): UseUIStateReturn {
     setIsEditDialogOpen,
     isNewClientDialogOpen,
     setIsNewClientDialogOpen,
-    isNewChatDialogOpen,
-    setIsNewChatDialogOpen,
-    isAddEventDialogOpen,
-    setIsAddEventDialogOpen,
-    isEventDetailsOpen,
-    setIsEventDetailsOpen,
+  // chat dialog removed
+    // calendar dialogs removed
     isCreateExerciseDialogOpen,
     setIsCreateExerciseDialogOpen,
     isHistoryDialogOpen,
@@ -107,7 +97,6 @@ export function useUIState(): UseUIStateReturn {
     setExpandedClientIds,
     showArchived,
     setShowArchived,
-    showEmojiPicker,
-    setShowEmojiPicker,
+    // emoji picker removed
   }
 }

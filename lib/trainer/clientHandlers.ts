@@ -7,9 +7,7 @@ export interface ClientHandlers {
   handleDeleteClient: (clientId: number) => void
   handleMarkAsActive: (clientId: number) => void
   handleNewClient: () => void
-  handleScheduleSession: (clientId: number) => void
   handleViewAllClients: () => void
-  handleChatFromClient: (clientId: number) => void
   acceptLinkRequest: (client: Client) => Promise<void>
   rejectLinkRequest: (client: Client) => Promise<void>
   cancelLinkRequest: (client: Client) => Promise<void>
@@ -57,33 +55,11 @@ export function createClientHandlers(
       }, 100)
     },
 
-    handleScheduleSession: (clientId: number) => {
-      const client = clientState.clients.find((c: Client) => c.id === clientId)
-      if (client) {
-        uiState.setIsAddEventDialogOpen(true)
-        // Pre-fill event form with client data
-        toast({
-          title: "Programar sesión",
-          description: `Programando sesión para ${client.name}`,
-        })
-      }
-    },
-
     handleViewAllClients: () => {
       uiState.setActiveTab("clients")
     },
 
-    handleChatFromClient: (clientId: number) => {
-      const client = clientState.clients.find((c: Client) => c.id === clientId)
-      if (client) {
-        uiState.setActiveTab("chat")
-        // Logic to select or create chat with this client would go here
-        toast({
-          title: "Chat iniciado",
-          description: `Iniciando chat con ${client.name}`,
-        })
-      }
-    },
+    // chat handler removed
 
     // Requests management
     acceptLinkRequest: async (client: Client) => {

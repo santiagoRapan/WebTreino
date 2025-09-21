@@ -83,7 +83,7 @@ export interface UseRoutineStateReturn {
     saveRoutineToDatabase: (routine: RoutineTemplate, ownerId: string) => Promise<number | null>
     loadRoutinesFromDatabase: (ownerId: string) => Promise<RoutineTemplate[]>
     updateRoutineInDatabase: (routine: RoutineTemplate, ownerId: string) => Promise<boolean>
-    deleteRoutineFromDatabase: (routineId: number, ownerId: string) => Promise<boolean>
+    deleteRoutineFromDatabase: (routineId: number | string, ownerId: string) => Promise<boolean>
   }
 
   // Auth
@@ -201,20 +201,10 @@ export function useRoutineState(): UseRoutineStateReturn {
       if (!customUser?.id) {
         console.log('No authenticated user found, using fallback data')
         const defaultFolders: RoutineFolder[] = [
-          {
-            id: 1,
-            name: 'Mis Rutinas',
-            templates: [
-              {
-                id: 101,
-                name: 'Rutina de Ejemplo',
-                description: 'Rutina básica de entrenamiento',
-                blocks: []
-              }
-            ]
-          }
+          { id: 1, name: 'Mis rutinas', templates: [] }
         ]
         setRoutineFolders(defaultFolders)
+        setSelectedFolderId(1)
         return
       }
       
@@ -224,39 +214,18 @@ export function useRoutineState(): UseRoutineStateReturn {
         const dbRoutines = await routineDatabase.loadRoutinesFromDatabase(customUser.id)
         
         const defaultFolders: RoutineFolder[] = [
-          {
-            id: 1,
-            name: 'Mis Rutinas',
-            templates: dbRoutines.length > 0 ? dbRoutines : [
-              // Fallback default routine if no routines in database
-              {
-                id: 101,
-                name: 'Rutina de Ejemplo',
-                description: 'Rutina básica de entrenamiento',
-                blocks: []
-              }
-            ]
-          }
+          { id: 1, name: 'Mis rutinas', templates: dbRoutines }
         ]
         setRoutineFolders(defaultFolders)
+        setSelectedFolderId(1)
       } catch (error) {
         console.error('Error loading routines from database:', error)
         // Fallback to default folders
         const defaultFolders: RoutineFolder[] = [
-          {
-            id: 1,
-            name: 'Mis Rutinas',
-            templates: [
-              {
-                id: 101,
-                name: 'Rutina de Ejemplo',
-                description: 'Rutina básica de entrenamiento',
-                blocks: []
-              }
-            ]
-          }
+          { id: 1, name: 'Mis rutinas', templates: [] }
         ]
         setRoutineFolders(defaultFolders)
+        setSelectedFolderId(1)
       }
     }
 

@@ -1,3 +1,10 @@
+// @ts-nocheck
+// Legacy backup of TrainerDashboard (chat version) intentionally neutralized.
+// Keeping the file to preserve history but prevent compilation issues.
+// If you don't need this file, it's safe to delete it from the repository.
+
+export {};
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -78,7 +85,7 @@ import { DashboardTab } from "@/components/trainer/DashboardTab"
 import { ClientsTab } from "@/components/trainer/ClientsTab"
 import { ScheduleTab } from "@/components/trainer/ScheduleTab"
 import { RoutinesTab } from "@/components/trainer/RoutinesTab"
-import { ChatTab } from "@/components/trainer/ChatTab"
+//import { ChatTab } from "@/components/trainer/ChatTab"
 import {
   CalendarEvent,
   Chat,
