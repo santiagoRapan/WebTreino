@@ -371,7 +371,6 @@ export function createRoutineHandlers(
         exerciseId: exercise.id.toString(), // Ensure it's a string
         sets: parseInt(routineState.exerciseInputs.sets),
         reps: parseInt(routineState.exerciseInputs.reps),
-        restSec: parseInt(routineState.exerciseInputs.restSec)
       }
 
       const updatedRoutine = {
@@ -385,7 +384,7 @@ export function createRoutineHandlers(
 
       routineState.setEditingRoutine(updatedRoutine)
       routineState.setPendingExercise(null)
-      routineState.setExerciseInputs({ sets: '', reps: '', restSec: '' })
+      routineState.setExerciseInputs({ sets: '', reps: ''})
       routineState.setIsExerciseSelectorOpen(false)
 
       toast({
@@ -396,7 +395,7 @@ export function createRoutineHandlers(
 
     cancelAddExercise: () => {
       routineState.setPendingExercise(null)
-      routineState.setExerciseInputs({ sets: '', reps: '', restSec: '' })
+      routineState.setExerciseInputs({ sets: '', reps: ''})
       routineState.setIsExerciseSelectorOpen(false)
     },
 
@@ -498,7 +497,7 @@ export function createRoutineHandlers(
         routineState.setNewBlockName("")
         routineState.setExpandedBlocks(new Set())
         routineState.setSelectedBlockId(null)
-        routineState.setExerciseInputs({ sets: '', reps: '', restSec: '' })
+        routineState.setExerciseInputs({ sets: '', reps: ''})
         routineState.setPendingExercise(null)
         
       } catch (error) {

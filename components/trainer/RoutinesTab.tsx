@@ -935,7 +935,7 @@ export function RoutinesTab() {
             {pendingExercise && (
               <div className="border-t pt-4">
                 <h4 className="font-medium mb-3">Configurar Ejercicio</h4>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="sets">Series</Label>
                     <Input
@@ -956,21 +956,11 @@ export function RoutinesTab() {
                       onChange={(e) => setExerciseInputs(prev => ({ ...prev, reps: e.target.value }))}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="rest">Descanso (seg)</Label>
-                    <Input
-                      id="rest"
-                      type="number"
-                      placeholder="90"
-                      value={exerciseInputs.restSec}
-                      onChange={(e) => setExerciseInputs(prev => ({ ...prev, restSec: e.target.value }))}
-                    />
-                  </div>
                 </div>
                 <div className="flex gap-2 mt-4">
                   <Button
                     onClick={confirmAddExercise}
-                    disabled={!exerciseInputs.sets || !exerciseInputs.reps || !exerciseInputs.restSec}
+                    disabled={!exerciseInputs.sets || !exerciseInputs.reps}
                     className="flex-1"
                   >
                     Confirmar Añadir
@@ -1131,7 +1121,7 @@ export function RoutinesTab() {
                                           {exerciseData?.name || 'Ejercicio no encontrado'}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                          {exercise.sets} series × {exercise.reps} reps · {exercise.restSec}s descanso
+                                          {exercise.sets} series × {exercise.reps} reps
                                         </p>
                                       </div>
                                       <Button

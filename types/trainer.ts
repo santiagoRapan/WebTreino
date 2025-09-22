@@ -124,7 +124,6 @@ export type ExerciseFormState = {
 export type ExerciseInputsState = {
   sets: string
   reps: string
-  restSec: string
 }
 
 export type ExerciseFilterState = {

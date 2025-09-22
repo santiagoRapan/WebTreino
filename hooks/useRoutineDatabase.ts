@@ -99,7 +99,7 @@ export function useRoutineDatabase() {
               display_order: exerciseIndex + 1,
               sets: exercise.sets,
               reps: exercise.reps,
-              rest_seconds: exercise.restSec,
+              rest_seconds: exercise.restSec ?? 0,
               load_target: null,
               tempo: null,
               is_superset_group: null,

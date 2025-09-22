@@ -162,8 +162,7 @@ export function useRoutineState(): UseRoutineStateReturn {
 
   const [exerciseInputs, setExerciseInputs] = useState<ExerciseInputsState>({ 
     sets: '', 
-    reps: '', 
-    restSec: '' 
+    reps: ''
   })
   
   // Routine Management
