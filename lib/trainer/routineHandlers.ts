@@ -607,14 +607,6 @@ export function createRoutineHandlers(
           (routineState.exercisesCatalog || []).map((e: any) => [e.id?.toString(), e])
         )
 
-        // Title row
-        const title = worksheet.addRow([template.name || 'Rutina'])
-        title.font = { size: 18, bold: true }
-        title.alignment = { vertical: 'middle', horizontal: 'center' }
-        worksheet.mergeCells(`A1:E1`)
-        worksheet.addRow([`Generado: ${new Date().toLocaleString()}`])
-        worksheet.addRow([])
-
         // Column headers definition
         worksheet.columns = [
           { header: '#', key: 'idx', width: 5 },
@@ -655,57 +647,38 @@ export function createRoutineHandlers(
           })
         }
 
+        // Single table header
+        const headerRow = worksheet.getRow(1)
+        headerRow.values = ['#', 'Ejercicio', 'Series', 'Repeticiones', 'Descanso (s)']
+        addHeaderStyles(1)
+
+        let exerciseCounter = 1
+
         if (!template.blocks || template.blocks.length === 0) {
           worksheet.addRow(['Sin bloques']).font = { italic: true, color: { argb: 'FF777777' } }
         } else {
-          template.blocks.forEach((block: any, blockIdx: number) => {
-            // Block header row (merged)
-            const startRow = worksheet.lastRow?.number ? worksheet.lastRow.number + 1 : 1
-            const blockHeader = worksheet.addRow([`Bloque ${blockIdx + 1}: ${block.name}`])
-            blockHeader.font = { bold: true, size: 14 }
-            blockHeader.alignment = { vertical: 'middle', horizontal: 'left' }
-            worksheet.mergeCells(`A${startRow}:E${startRow}`)
-
-            // Block metadata rows
-            const repsRow = worksheet.addRow([
-              'Repeticiones del bloque', block.repetitions ?? 1,
-              'Descanso entre repeticiones (s)', block.restBetweenRepetitions ?? '',
-            ])
-            const restAfterRow = worksheet.addRow([
-              'Descanso después del bloque (s)', block.restAfterBlock ?? '', '', ''
-            ])
-            repsRow.eachCell((cell) => (cell.alignment = { vertical: 'middle', horizontal: 'left' }))
-            restAfterRow.eachCell((cell) => (cell.alignment = { vertical: 'middle', horizontal: 'left' }))
-
-            worksheet.addRow([])
-
-            // Table header
-            const headerRowIndex = (worksheet.lastRow?.number || 0) + 1
-            worksheet.addRow({ idx: '#', name: 'Ejercicio', sets: 'Series', reps: 'Repeticiones', rest: 'Descanso (s)' })
-            addHeaderStyles(headerRowIndex)
-
+          template.blocks.forEach((block: any) => {
             // Table rows
             const exercises = block.exercises || []
-            exercises.forEach((ex: any, i: number) => {
+            exercises.forEach((ex: any) => {
               const resolved = exercisesById.get(ex.exerciseId?.toString())
-              const name = resolved?.name || ex.name || `Ejercicio ${i + 1}`
+              const name = resolved?.name || ex.name || `Ejercicio ${exerciseCounter}`
               const row = worksheet.addRow({
-                idx: i + 1,
+                idx: exerciseCounter,
                 name,
                 sets: ex.sets ?? '',
                 reps: ex.reps ?? '',
                 rest: ex.restSec ?? '',
               })
-              row.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' }
+              row.getCell('A').alignment = { vertical: 'middle', horizontal: 'center' }
               addBodyBorders(row.number)
+              exerciseCounter++
             })
-
-            worksheet.addRow([])
           })
         }
 
-        // Freeze top rows after title area
-        worksheet.views = [{ state: 'frozen', ySplit: 4 }]
+        // Freeze header row
+        worksheet.views = [{ state: 'frozen', ySplit: 1 }]
 
         // File name sanitize
         const safeName = (template.name || 'rutina')
