@@ -1,4 +1,6 @@
-import { Dumbbell, Globe, Shield, Instagram, Phone } from "lucide-react";
+import { Globe, Shield, Instagram, Phone } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
 export function Footer() {
   return (
@@ -7,7 +9,14 @@ export function Footer() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="space-y-4">
               <div className="flex items-center space-x-2">
-                <Dumbbell className="w-8 h-8 text-primary" />
+                <div className="w-8 h-8 relative">
+                  <Image 
+                    src="/treinologo.png" 
+                    alt="Treino Logo" 
+                    fill 
+                    className="object-contain"
+                  />
+                </div>
                 <span className="text-2xl font-bold text-primary">Treino</span>
               </div>
               <p className="text-muted-foreground">
@@ -31,7 +40,12 @@ export function Footer() {
             <div>
               <h4 className="font-semibold mb-4">Empresa</h4>
               <div className="space-y-2 text-muted-foreground">
-                <div className="hover:text-primary cursor-pointer">Sobre Nosotros</div>
+                <Link 
+                  href="/about"
+                  className="block hover:text-primary cursor-pointer transition-colors"
+                >
+                  Sobre Nosotros
+                </Link>
               </div>
             </div>
 

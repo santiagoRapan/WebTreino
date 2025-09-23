@@ -46,22 +46,22 @@ export function FeaturesSection() {
     },
     {
       icon: Calendar,
-      title: "Agenda Inteligente (WIP)",
+      title: "Agenda Inteligente (PROXIMAMENTE)",
       description: "Programa sesiones, recibe recordatorios automáticos y nunca pierdas una cita importante."
     },
     {
       icon: BarChart3,
-      title: "Análisis y Reportes (WIP)",
+      title: "Análisis y Reportes (PROXIMAMENTE)",
       description: "Visualiza el progreso de tus clientes con gráficos detallados y métricas de rendimiento."
     },
     {
       icon: MessageSquare,
-      title: "Agente de Inteligencia Artificial (WIP)",
+      title: "Agente de Inteligencia Artificial (PROXIMAMENTE)",
       description: "Agente de IA integrado para ayudarte a crear rutinas y responder preguntas comunes."
     },
     {
       icon: Smartphone,
-      title: "Acceso Móvil (WIP)",
+      title: "Acceso Móvil (PROXIMAMENTE)",
       description: "Gestiona tu negocio desde cualquier lugar con nuestra aplicación móvil optimizada."
     }
   ]

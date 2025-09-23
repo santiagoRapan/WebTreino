@@ -20,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="es" className="dark">
       <head>
-        <link rel="icon" href="/icon-black.png" type="image/svg+xml" />
+        <link rel="icon" href="/treinologo.png" type="image/svg+xml" />
       </head>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}>
         <AuthProvider>

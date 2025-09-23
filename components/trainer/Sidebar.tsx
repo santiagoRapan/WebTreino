@@ -35,7 +35,7 @@ export function Sidebar() {
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             className="w-10 h-10 flex items-center justify-center"
           >
-            <img src="/icon-black.png" alt="Toggle Sidebar" className="w-full h-full object-contain" />
+            <img src="/treinologo.png" alt="Toggle Sidebar" className="w-full h-full object-contain" />
           </button>
           {!sidebarCollapsed && <span className="text-lg font-semibold text-sidebar-foreground">Treino</span>}
         </div>
