@@ -597,33 +597,136 @@ export function createRoutineHandlers(
     handleExportRoutineToExcel: async (template: RoutineTemplate) => {
       try {
         const workbook = new ExcelJS.Workbook()
-        const worksheet = workbook.addWorksheet(template.name)
-        
-        worksheet.addRow([template.name])
+        workbook.creator = 'Treino'
+        workbook.created = new Date()
+
+        const worksheet = workbook.addWorksheet(template.name?.slice(0, 31) || 'Rutina')
+
+        // Map exercises by id to resolve names
+        const exercisesById = new Map(
+          (routineState.exercisesCatalog || []).map((e: any) => [e.id?.toString(), e])
+        )
+
+        // Title row
+        const title = worksheet.addRow([template.name || 'Rutina'])
+        title.font = { size: 18, bold: true }
+        title.alignment = { vertical: 'middle', horizontal: 'center' }
+        worksheet.mergeCells(`A1:E1`)
+        worksheet.addRow([`Generado: ${new Date().toLocaleString()}`])
         worksheet.addRow([])
-        
-        template.blocks.forEach((block: any) => {
-          worksheet.addRow([block.name])
-          worksheet.addRow(['Ejercicio', 'Series', 'Repeticiones'])
-          
-          block.exercises.forEach((exercise: any) => {
-            worksheet.addRow([exercise.name, exercise.sets, exercise.reps])
+
+        // Column headers definition
+        worksheet.columns = [
+          { header: '#', key: 'idx', width: 5 },
+          { header: 'Ejercicio', key: 'name', width: 40 },
+          { header: 'Series', key: 'sets', width: 12 },
+          { header: 'Repeticiones', key: 'reps', width: 16 },
+          { header: 'Descanso (s)', key: 'rest', width: 16 },
+        ]
+
+        const addHeaderStyles = (rowNumber: number) => {
+          const row = worksheet.getRow(rowNumber)
+          row.font = { bold: true }
+          row.alignment = { vertical: 'middle', horizontal: 'center' }
+          row.eachCell((cell) => {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFEDEDED' },
+            }
+            cell.border = {
+              top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+              left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+              bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+              right: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+            }
           })
-          
-          worksheet.addRow([])
-        })
-        
+        }
+
+        const addBodyBorders = (rowNumber: number) => {
+          const row = worksheet.getRow(rowNumber)
+          row.eachCell((cell) => {
+            cell.border = {
+              top: { style: 'thin', color: { argb: 'FFEEEEEE' } },
+              left: { style: 'thin', color: { argb: 'FFEEEEEE' } },
+              bottom: { style: 'thin', color: { argb: 'FFEEEEEE' } },
+              right: { style: 'thin', color: { argb: 'FFEEEEEE' } },
+            }
+          })
+        }
+
+        if (!template.blocks || template.blocks.length === 0) {
+          worksheet.addRow(['Sin bloques']).font = { italic: true, color: { argb: 'FF777777' } }
+        } else {
+          template.blocks.forEach((block: any, blockIdx: number) => {
+            // Block header row (merged)
+            const startRow = worksheet.lastRow?.number ? worksheet.lastRow.number + 1 : 1
+            const blockHeader = worksheet.addRow([`Bloque ${blockIdx + 1}: ${block.name}`])
+            blockHeader.font = { bold: true, size: 14 }
+            blockHeader.alignment = { vertical: 'middle', horizontal: 'left' }
+            worksheet.mergeCells(`A${startRow}:E${startRow}`)
+
+            // Block metadata rows
+            const repsRow = worksheet.addRow([
+              'Repeticiones del bloque', block.repetitions ?? 1,
+              'Descanso entre repeticiones (s)', block.restBetweenRepetitions ?? '',
+            ])
+            const restAfterRow = worksheet.addRow([
+              'Descanso después del bloque (s)', block.restAfterBlock ?? '', '', ''
+            ])
+            repsRow.eachCell((cell) => (cell.alignment = { vertical: 'middle', horizontal: 'left' }))
+            restAfterRow.eachCell((cell) => (cell.alignment = { vertical: 'middle', horizontal: 'left' }))
+
+            worksheet.addRow([])
+
+            // Table header
+            const headerRowIndex = (worksheet.lastRow?.number || 0) + 1
+            worksheet.addRow({ idx: '#', name: 'Ejercicio', sets: 'Series', reps: 'Repeticiones', rest: 'Descanso (s)' })
+            addHeaderStyles(headerRowIndex)
+
+            // Table rows
+            const exercises = block.exercises || []
+            exercises.forEach((ex: any, i: number) => {
+              const resolved = exercisesById.get(ex.exerciseId?.toString())
+              const name = resolved?.name || ex.name || `Ejercicio ${i + 1}`
+              const row = worksheet.addRow({
+                idx: i + 1,
+                name,
+                sets: ex.sets ?? '',
+                reps: ex.reps ?? '',
+                rest: ex.restSec ?? '',
+              })
+              row.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' }
+              addBodyBorders(row.number)
+            })
+
+            worksheet.addRow([])
+          })
+        }
+
+        // Freeze top rows after title area
+        worksheet.views = [{ state: 'frozen', ySplit: 4 }]
+
+        // File name sanitize
+        const safeName = (template.name || 'rutina')
+          .replace(/[^a-zA-Z0-9-_ ]/g, '_')
+          .trim()
+          .slice(0, 50)
+        const fileName = `${safeName}_${new Date().toISOString().slice(0, 10)}.xlsx`
+
         const buffer = await workbook.xlsx.writeBuffer()
-        saveAs(new Blob([buffer]), `${template.name}.xlsx`)
-        
+        saveAs(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), fileName)
+
         toast({
-          title: "Excel exportado",
-          description: "La rutina ha sido exportada a Excel.",
+          title: 'Excel exportado',
+          description: 'La rutina ha sido exportada a Excel (XLSX).',
         })
       } catch (error) {
+        console.error('Error exporting to Excel', error)
         toast({
-          title: "Error",
-          description: "Error al exportar la rutina a Excel.",
+          title: 'Error',
+          description: 'Error al exportar la rutina a Excel.',
+          variant: 'destructive',
         })
       }
     },

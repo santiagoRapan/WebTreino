@@ -398,7 +398,7 @@ export function RoutinesTab() {
                           <DropdownMenuContent align="end" className="w-56">
                             <DropdownMenuItem onClick={() => handleExportRoutineToExcel(tpl)}>
                               <FileText className="w-4 h-4 mr-2 text-green-500" />
-                              Exportar como CSV
+                              Exportar a Excel (XLSX)
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             {routineFolders
