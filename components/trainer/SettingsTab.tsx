@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LogOut, User, Shield, Palette, Bell } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { useTheme } from "next-themes"
 
 export function SettingsTab() {
   const { signOut, authUser, customUser } = useAuth()
   const router = useRouter()
+  const { theme, setTheme } = useTheme()
 
   const handleLogout = async () => {
     try {
@@ -29,6 +31,10 @@ export function SettingsTab() {
       })
     }
   }
+
+  const toggleTheme = () => {
+    setTheme(theme === "light" ? "dark" : "light");
+  };
 
   return (
     <main className="p-6 space-y-6">
@@ -67,37 +73,6 @@ export function SettingsTab() {
           </CardContent>
         </Card>
 
-        {/* Privacy & Security */}
-        <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-card-foreground">
-              <Shield className="w-5 h-5" />
-              Privacidad y Seguridad
-            </CardTitle>
-            <CardDescription>Configuraciones de seguridad de tu cuenta</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-foreground">Cambiar contraseña</p>
-                <p className="text-sm text-muted-foreground">Actualiza tu contraseña para mantener tu cuenta segura</p>
-              </div>
-              <Button variant="outline" className="hover:bg-accent hover:text-accent-foreground transition-colors">
-                Cambiar
-              </Button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-foreground">Autenticación de dos factores</p>
-                <p className="text-sm text-muted-foreground">Agrega una capa extra de seguridad a tu cuenta</p>
-              </div>
-              <Button variant="outline" className="hover:bg-accent hover:text-accent-foreground transition-colors">
-                Configurar
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Preferences */}
         <Card className="bg-card border-border">
           <CardHeader>
@@ -113,7 +88,11 @@ export function SettingsTab() {
                 <p className="font-medium text-foreground">Tema de la aplicación</p>
                 <p className="text-sm text-muted-foreground">Cambia entre tema claro y oscuro</p>
               </div>
-              <Button variant="outline" className="hover:bg-accent hover:text-accent-foreground transition-colors">
+              <Button
+                variant="outline"
+                className="hover:bg-accent hover:text-accent-foreground transition-colors"
+                onClick={toggleTheme}
+              >
                 Cambiar tema
               </Button>
             </div>

@@ -90,7 +90,7 @@ export function DashboardTab() {
           <CardDescription>Herramientas frecuentemente utilizadas</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="flex justify-around gap-4 flex-wrap">
             <Button
               className="h-20 flex-col gap-2 bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors"
               variant="outline"
@@ -107,14 +107,14 @@ export function DashboardTab() {
               <Activity className="w-6 h-6" />
               <span className="text-sm">Crear Rutina</span>
             </Button>
-            <Button
+{/*             <Button
               className="h-20 flex-col gap-2 bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors"
               variant="outline"
               onClick={handleRegisterPayment}
             >
               <DollarSign className="w-6 h-6" />
               <span className="text-sm">Registrar Pago</span>
-            </Button>
+            </Button> */}
           </div>
         </CardContent>
       </Card>
