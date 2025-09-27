@@ -4,16 +4,16 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/services/auth"
 import { TrainerLayout } from "@/components/features/trainer/TrainerLayout"
-import { DashboardTab } from "@/components/features/trainer/DashboardTab"
+import { ClientsTab } from "@/components/features/trainer/ClientsTab"
 import { Loader2 } from "lucide-react"
 
-export default function DashboardPage() {
+export default function AlumnosPage() {
   const { authUser, loading, isAuthenticated } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      router.push('/auth?redirect=/dashboard')
+      router.push('/auth?redirect=/alumnos')
     }
   }, [loading, isAuthenticated, router])
 
@@ -34,7 +34,7 @@ export default function DashboardPage() {
 
   return (
     <TrainerLayout>
-      <DashboardTab />
+      <ClientsTab />
     </TrainerLayout>
   )
 }

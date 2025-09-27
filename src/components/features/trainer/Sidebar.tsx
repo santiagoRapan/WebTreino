@@ -7,23 +7,24 @@ import {
   Settings,
   Users,
 } from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { useTrainerDashboard } from "@/components/features/trainer/TrainerDashboardContext"
 
 const NAV_ITEMS = [
-  { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-  { id: "clients", label: "Alumnos", icon: Users },
-  // schedule tab removed
-  { id: "routines", label: "Rutinas", icon: Activity },
-  // Payments tab removed
-  //{ id: "chat", label: "Chat", icon: MessageSquare },
-  { id: "settings", label: "Configuración", icon: Settings },
+  { id: "dashboard", label: "Dashboard", icon: BarChart3, href: "/dashboard" },
+  { id: "clients", label: "Alumnos", icon: Users, href: "/alumnos" },
+  { id: "routines", label: "Rutinas", icon: Activity, href: "/rutinas" },
+  { id: "settings", label: "Configuración", icon: Settings, href: "/configuracion" },
 ] as const
 
 export function Sidebar() {
   const {
-    state: { activeTab, sidebarCollapsed },
-    actions: { setActiveTab, setSidebarCollapsed },
+    state: { sidebarCollapsed },
+    actions: { setSidebarCollapsed },
   } = useTrainerDashboard()
+  
+  const pathname = usePathname()
 
   return (
     <div
@@ -47,21 +48,24 @@ export function Sidebar() {
       </div>
 
       <nav className="p-4 space-y-2">
-        {NAV_ITEMS.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-              activeTab === item.id
-                ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            }`}
-            title={sidebarCollapsed ? item.label : undefined}
-          >
-            <item.icon className={`flex-shrink-0 ${sidebarCollapsed ? "w-4 h-4" : "w-5 h-5"}`} />
-            {!sidebarCollapsed && item.label}
-          </button>
-        ))}
+        {NAV_ITEMS.map((item) => {
+          const isActive = pathname === item.href
+          return (
+            <Link
+              key={item.id}
+              href={item.href}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                isActive
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              }`}
+              title={sidebarCollapsed ? item.label : undefined}
+            >
+              <item.icon className={`flex-shrink-0 ${sidebarCollapsed ? "w-4 h-4" : "w-5 h-5"}`} />
+              {!sidebarCollapsed && item.label}
+            </Link>
+          )
+        })}
       </nav>
     </div>
   )
