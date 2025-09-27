@@ -3,8 +3,8 @@
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { NavigationBar } from "@/components/sections/NavigationBar"
-import { Footer } from "@/components/sections/Footer"
+import { NavigationBar } from "@/components/features/landing/NavigationBar"
+import { Footer } from "@/components/features/landing/Footer"
 import { Users, Code, Heart, Target } from "lucide-react"
 
 interface TeamMember {

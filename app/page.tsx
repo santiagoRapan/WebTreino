@@ -1,5 +1,4 @@
-import LandingPage from "@/components/LandingPage"
-import TrainerDashboard from "@/components/trainer/TrainerDashboard.backup"
+import LandingPage from "@/components/features/landing/LandingPage"
 
 export default function Page() {
   return <LandingPage />
