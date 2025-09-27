@@ -30,9 +30,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Función para refrescar datos del usuario
   const refreshUserData = async () => {
     if (authUser) {
+      console.log('Refreshing user data for:', authUser.email)
       const userData = await getFullUserData(authUser)
       setFullUserData(userData)
       setCustomUser(userData.customUser)
+      console.log('User data refreshed:', userData)
     }
   }
 
@@ -70,9 +72,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(session)
           setAuthUser(session?.user ?? null)
           
-          // Si hay un usuario, obtener sus datos personalizados
+          // Si hay un usuario, cargar sus datos existentes
           if (session?.user) {
-            await handleUserAuthenticated(session.user)
+            console.log('Loading existing user data for:', session.user.email)
+            const userData = await getFullUserData(session.user)
+            setFullUserData(userData)
+            setCustomUser(userData.customUser)
           }
         }
       } catch (error) {
@@ -112,6 +117,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe()
     }
   }, [])
+
+  // Refresh user data when page becomes visible (handles tab switching)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && authUser && session) {
+        console.log('Page became visible, refreshing user data')
+        refreshUserData()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [authUser, session])
+
+  // Periodic refresh of user data (every 5 minutes when page is active)
+  useEffect(() => {
+    if (!authUser || !session) return
+
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        console.log('Periodic user data refresh')
+        refreshUserData()
+      }
+    }, 5 * 60 * 1000) // 5 minutes
+
+    return () => clearInterval(interval)
+  }, [authUser, session])
 
   const handleSignInWithGoogle = async (redirectTo?: string) => {
     try {
