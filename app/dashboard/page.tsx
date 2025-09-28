@@ -29,7 +29,7 @@ export default function DashboardPage() {
   }
 
   if (!isAuthenticated) {
-    return null // Will redirect in useEffect
+    return null // Will redirect  in useEffect
   }
 
   return (
