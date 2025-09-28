@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/services/database"
 import { toast } from "@/hooks/use-toast"
+import { useAuth } from "@/services/auth"
 import type { Client } from "@/lib/types/trainer"
 
 export interface UseStudentsReturn {
@@ -14,9 +15,11 @@ export interface UseStudentsReturn {
 }
 
 export function useStudents(): UseStudentsReturn {
+  const { authUser, customUser } = useAuth()
   const [students, setStudents] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [refreshTimeout, setRefreshTimeout] = useState<NodeJS.Timeout | null>(null)
 
   const fetchStudents = async () => {
     try {
@@ -25,14 +28,13 @@ export function useStudents(): UseStudentsReturn {
 
       console.log('📚 Loading roster and pending requests...')
 
-      // Get current trainer id
-      const { data: userRes, error: userErr } = await supabase.auth.getUser()
-      if (userErr || !userRes.user) {
-        console.error('❌ Error getting auth user:', userErr)
+      // Get current trainer id from auth context
+      if (!authUser) {
+        console.error('❌ No authenticated user')
         setError('No se pudo obtener el usuario autenticado')
         return
       }
-      const trainerId = userRes.user.id
+      const trainerId = authUser.id
 
       // 1) Fetch roster (trainer_student)
       const { data: rosterRows, error: rosterError } = await supabase
@@ -63,7 +65,7 @@ export function useStudents(): UseStudentsReturn {
         name: profile.name || 'Alumno',
         email: '',
         phone: '',
-        status: "Activo" as const,
+        status: "active" as const,
         joinDate: new Date(profile.created_on || new Date()).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
         lastSession: "N/A",
         nextSession: "N/A",
@@ -113,7 +115,7 @@ export function useStudents(): UseStudentsReturn {
           name: profile.name || 'Solicitud pendiente',
           email: '',
           phone: '',
-          status: "Pendiente" as const,
+          status: "pending" as const,
           joinDate: new Date(row.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
           lastSession: "N/A",
           nextSession: "N/A",
@@ -147,10 +149,20 @@ export function useStudents(): UseStudentsReturn {
     await fetchStudents()
   }
 
+  // Debounced refresh to prevent too many rapid API calls
+  const debouncedRefresh = () => {
+    if (refreshTimeout) {
+      clearTimeout(refreshTimeout)
+    }
+    const newTimeout = setTimeout(() => {
+      fetchStudents()
+    }, 500) // Wait 500ms before refreshing
+    setRefreshTimeout(newTimeout)
+  }
+
   const fetchStudentSessions = async (studentId: string) => {
-    // Get current trainer id
-    const { data: userRes } = await supabase.auth.getUser()
-    const trainerId = userRes.user?.id
+    // Get current trainer id from auth context
+    const trainerId = authUser?.id
     if (!trainerId) return { sessions: [], logs: [] }
 
     // Sessions for this student where routine is owned by trainer
@@ -199,8 +211,96 @@ export function useStudents(): UseStudentsReturn {
   }
 
   useEffect(() => {
-    fetchStudents()
-  }, [])
+    if (authUser) {
+      fetchStudents()
+    }
+  }, [authUser])
+
+  // Real-time subscriptions for automatic updates
+  useEffect(() => {
+    if (!authUser) return
+
+    console.log('🔔 Setting up real-time subscriptions for trainer:', authUser.id)
+
+    // Subscribe to trainer_link_request changes
+    const requestsSubscription = supabase
+      .channel('trainer-link-requests')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'trainer_link_request',
+          filter: `trainer_id=eq.${authUser.id}`,
+        },
+        (payload) => {
+          console.log('🔔 Trainer link request change:', payload.eventType, payload)
+          // Provide user feedback for new requests
+          if (payload.eventType === 'INSERT') {
+            console.log('📥 Nueva solicitud de entrenador recibida!')
+            toast({
+              title: "Nueva solicitud recibida",
+              description: "Un alumno ha solicitado conectar contigo. Revisa la pestaña de alumnos.",
+            })
+          } else if (payload.eventType === 'UPDATE') {
+            console.log('📝 Estado de solicitud actualizado')
+          } else if (payload.eventType === 'DELETE') {
+            console.log('🗑️ Solicitud eliminada')
+          }
+          // Refetch students data when requests change (debounced)
+          debouncedRefresh()
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Subscribed to trainer link requests')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error subscribing to trainer link requests')
+        }
+      })
+
+    // Subscribe to trainer_student changes (when requests get accepted)
+    const relationshipSubscription = supabase
+      .channel('trainer-student-relationships')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'trainer_student',
+          filter: `trainer_id=eq.${authUser.id}`,
+        },
+        (payload) => {
+          console.log('🔔 Trainer-student relationship change:', payload.eventType, payload)
+          if (payload.eventType === 'INSERT') {
+            console.log('🎉 Nuevo alumno añadido a la lista!')
+            toast({
+              title: "Alumno añadido",
+              description: "Se ha establecido una nueva conexión con un alumno.",
+            })
+          }
+          // Refetch students data when relationships change (debounced)
+          debouncedRefresh()
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Subscribed to trainer-student relationships')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error subscribing to trainer-student relationships')
+        }
+      })
+
+    // Cleanup subscriptions on unmount or auth change
+    return () => {
+      console.log('🔕 Cleaning up real-time subscriptions')
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout)
+      }
+      supabase.removeChannel(requestsSubscription)
+      supabase.removeChannel(relationshipSubscription)
+    }
+  }, [authUser])
 
   return {
     students,

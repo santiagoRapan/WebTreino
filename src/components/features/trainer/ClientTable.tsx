@@ -42,7 +42,7 @@ export function ClientTable({
             <th className="px-3 py-2 text-left">{t("clients.table.status")}</th>
             <th className="px-3 py-2 text-left">{t("clients.table.progress")}</th>
             <th className="px-3 py-2 text-left">{t("clients.table.nextSession")}</th>
-            <th className="w-12"></th>
+            <th className="w-48 text-right">{t("clients.table.actions")}</th>
           </tr>
         </thead>
         <tbody>
@@ -74,38 +74,53 @@ export function ClientTable({
               </td>
               <td className="px-3 py-2 text-left align-middle">{client.progress}%</td>
               <td className="px-3 py-2">{client.nextSession}</td>
-              <td className="w-12 px-1 py-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="w-5 h-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
+              <td className="w-48 px-1 py-2">
+                <div className="flex items-center gap-2">
+                  {/* Accept/Decline buttons for pending students */}
+                  {client.status === "pending" && client.requestedBy === 'alumno' && onAcceptRequest && onRejectRequest && (
+                    <>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white px-3"
+                        onClick={() => onAcceptRequest(client)}
+                      >
+                        <Check className="w-4 h-4 mr-1" />
+                        {t("clients.actions.accept")}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 border-red-200 hover:bg-red-50 px-3"
+                        onClick={() => onRejectRequest(client)}
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        {t("clients.actions.decline")}
+                      </Button>
+                    </>
+                  )}
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="w-5 h-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     {client.status === "pending" ? (
                       <>
-                        {/* Accept/Reject only if requested_by = alumno (trainer is counterpart) */}
-                        {onAcceptRequest && client.requestedBy === 'alumno' && (
-                          <DropdownMenuItem onClick={() => onAcceptRequest(client)}>
-                            <Check className="w-4 h-4 mr-2" />
-                            {t("clients.actions.acceptRequest")}
-                          </DropdownMenuItem>
-                        )}
-                        {onRejectRequest && client.requestedBy === 'alumno' && (
-                          <DropdownMenuItem onClick={() => onRejectRequest(client)}>
-                            <X className="w-4 h-4 mr-2" />
-                            {t("clients.actions.rejectRequest")}
-                          </DropdownMenuItem>
-                        )}
                         {/* Cancel only if requested_by = entrenador (trainer initiated) */}
                         {onCancelRequest && client.requestedBy === 'entrenador' && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => onCancelRequest(client)}>
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              {t("clients.actions.cancelRequest")}
-                            </DropdownMenuItem>
-                          </>
+                          <DropdownMenuItem onClick={() => onCancelRequest(client)}>
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            {t("clients.actions.cancelRequest")}
+                          </DropdownMenuItem>
+                        )}
+                        {/* Show a placeholder if no actions are available */}
+                        {(!onCancelRequest || client.requestedBy !== 'entrenador') && (
+                          <DropdownMenuItem disabled>
+                            {t("clients.actions.noActionsAvailable")}
+                          </DropdownMenuItem>
                         )}
                       </>
                     ) : (
@@ -139,6 +154,7 @@ export function ClientTable({
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
+                </div>
               </td>
             </tr>
           ))}

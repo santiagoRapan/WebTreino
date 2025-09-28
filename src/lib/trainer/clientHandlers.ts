@@ -76,8 +76,8 @@ export function createClientHandlers(
 
       if (error) {
         console.error('❌ acceptLinkRequest error:', error)
-        const isUnique = (error as any)?.code === '23505' || `${error.message}`.includes('uq_open_pair') || `${error.details}`.includes('uq_open_pair')
-        if (isUnique) {
+        const isUniqueConstraint = (error as any)?.code === '23505' || `${error.message}`.includes('uq_open_pair') || `${error.details}`.includes('uq_open_pair')
+        if (isUniqueConstraint) {
           toast({ title: 'Ya aceptada', description: 'Esta relación ya existe. Actualizando la lista...', variant: 'default' })
           await clientState.refreshClients()
         } else {
@@ -97,9 +97,12 @@ export function createClientHandlers(
         return
       }
       if (!client.requestId) return
+      
+      // Delete the request entirely when rejecting to avoid constraint violations
+      console.log(`🗑️ Deleting trainer link request ${client.requestId} for ${client.name}`)
       const { error } = await supabase
         .from('trainer_link_request')
-        .update({ status: 'rejected', decided_at: new Date().toISOString() })
+        .delete()
         .eq('id', client.requestId)
         .eq('status', 'pending')
 
@@ -118,9 +121,12 @@ export function createClientHandlers(
         return
       }
       if (!client.requestId) return
+      
+      // Delete the request entirely when cancelling to avoid constraint violations
+      console.log(`🗑️ Deleting trainer link request ${client.requestId} for ${client.name}`)
       const { error } = await supabase
         .from('trainer_link_request')
-        .update({ status: 'canceled', decided_at: new Date().toISOString() })
+        .delete()
         .eq('id', client.requestId)
         .eq('status', 'pending')
 
