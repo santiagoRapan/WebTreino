@@ -1,5 +1,5 @@
 import { toast } from "@/hooks/use-toast"
-import type { Chat, ChatMessage } from "@/src/lib/types/trainer"
+import type { Chat, ChatMessage } from "@/lib/types/trainer"
 
 export interface ChatHandlers {
   handleSendMessage: () => void

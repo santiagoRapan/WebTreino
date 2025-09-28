@@ -1,7 +1,8 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { useTrainerDashboard } from "@/components/features/trainer/TrainerDashboardContext"
+import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
+import { useTranslation } from "@/lib/i18n/LanguageProvider"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -35,6 +36,8 @@ import {
 } from "lucide-react"
 
 export function RoutinesTab() {
+  const { t } = useTranslation()
+  
   const {
     state: {
       routineFolders,
@@ -165,15 +168,15 @@ export function RoutinesTab() {
     <main className="p-4 space-y-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-foreground">Rutinas</h2>
-          <p className="text-xs text-muted-foreground">Carpetas y plantillas para asignar a alumnos</p>
+          <h2 className="text-xl font-semibold text-foreground">{t('routines.title')}</h2>
+          <p className="text-xs text-muted-foreground">{t('routines.subtitle')}</p>
         </div>
         <div className="flex gap-2">
           {showNewFolderInput ? (
             <div className="flex gap-2 items-center">
               <Input
                 type="text"
-                placeholder="Nombre de la carpeta"
+                placeholder={t('routines.placeholders.folderName')}
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
                 className="w-48"
@@ -185,7 +188,7 @@ export function RoutinesTab() {
                 className="bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors"
                 disabled={!newFolderName.trim()}
               >
-                Crear
+                {t('routines.actions.create')}
               </Button>
               <Button
                 variant="outline"
@@ -194,7 +197,7 @@ export function RoutinesTab() {
                   setNewFolderName("")
                 }}
               >
-                Cancelar
+                {t('routines.actions.cancel')}
               </Button>
             </div>
           ) : (
@@ -204,14 +207,14 @@ export function RoutinesTab() {
               className="bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Nueva carpeta
+              {t('routines.actions.newFolder')}
             </Button>
           )}
           {showNewRoutineInput ? (
             <div className="flex gap-2 items-center">
               <Input
                 type="text"
-                placeholder="Nombre de la rutina"
+                placeholder={t('routines.placeholders.routineName')}
                 value={newRoutineName}
                 onChange={(e) => setNewRoutineName(e.target.value)}
                 className="w-48"
@@ -222,7 +225,7 @@ export function RoutinesTab() {
                 className="hover:bg-orange-500 transition-colors"
                 disabled={!newRoutineName.trim()}
               >
-                Crear
+                {t('routines.actions.create')}
               </Button>
               <Button
                 variant="outline"
@@ -231,13 +234,13 @@ export function RoutinesTab() {
                   setNewRoutineName("")
                 }}
               >
-                Cancelar
+                {t('routines.actions.cancel')}
               </Button>
             </div>
           ) : (
             <Button onClick={() => setShowNewRoutineInput(true)} className="hover:bg-orange-500 transition-colors">
               <Plus className="w-4 h-4 mr-2" />
-              Nueva rutina
+              {t('routines.actions.newRoutine')}
             </Button>
           )}
         </div>
@@ -247,7 +250,7 @@ export function RoutinesTab() {
         <Card className="bg-card border-border lg:col-span-1">
           <CardHeader>
             <CardTitle className="text-card-foreground">Carpetas</CardTitle>
-            <CardDescription>Organiza tus plantillas</CardDescription>
+            <CardDescription>{t('routines.folders.description')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {(routineFolders || []).map((folder) => (
@@ -271,7 +274,7 @@ export function RoutinesTab() {
 
         <Card className="bg-card border-border lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-card-foreground">Plantillas: {currentFolder?.name}</CardTitle>
+            <CardTitle className="text-card-foreground">{t('routines.templates.title')}: {currentFolder?.name}</CardTitle>
             <CardDescription>Selecciona o edita una rutina base</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -279,7 +282,7 @@ export function RoutinesTab() {
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar plantillas..."
+                  placeholder={t('routines.placeholders.searchTemplates')}
                   value={routineSearch}
                   onChange={(e) => setRoutineSearch(e.target.value)}
                   className="pl-10"
@@ -299,7 +302,7 @@ export function RoutinesTab() {
                         <div>
                           <h3 className="text-lg font-semibold text-card-foreground">{tpl.name}</h3>
                           <p className="text-sm text-muted-foreground max-w-[360px]">
-                            {tpl.description || "Plantilla predeterminada sin descripción."}
+                            {tpl.description || t('routines.templates.defaultDescription')}
                           </p>
                         </div>
                       </div>
@@ -309,7 +312,7 @@ export function RoutinesTab() {
                           <p className="text-lg font-semibold text-card-foreground">{tpl.blocks.length}</p>
                         </div>
                         <div className="p-3 rounded border border-border bg-background/80 shadow-sm">
-                          <p className="text-xs text-muted-foreground">Ejercicios totales</p>
+                          <p className="text-xs text-muted-foreground">{t('routines.templates.totalExercises')}</p>
                           <p className="text-lg font-semibold text-card-foreground">
                             {tpl.blocks.reduce((acc, block) => acc + block.exercises.length, 0)}
                           </p>
@@ -342,19 +345,19 @@ export function RoutinesTab() {
                           <SelectValue 
                             placeholder={
                               loadingClients 
-                                ? "Cargando alumnos..." 
+                                ? t('routines.assignments.loadingStudents')
                                 : clientsError 
-                                  ? "Error al cargar alumnos" 
+                                  ? t('routines.assignments.errorLoadingStudents')
                                   : allClients.length === 0
-                                    ? "Sin alumnos registrados"
-                                    : "Asignar a alumno"
+                                    ? t('routines.assignments.noStudentsRegistered')
+                                    : t('routines.assignments.assignToStudent')
                             } 
                           />
                         </SelectTrigger>
                         <SelectContent>
                           {loadingClients ? (
                             <SelectItem value="loading" disabled>
-                              Cargando alumnos...
+                              {t('routines.assignments.loadingStudents')}
                             </SelectItem>
                           ) : clientsError ? (
                             <SelectItem value="error" disabled>
@@ -362,7 +365,7 @@ export function RoutinesTab() {
                             </SelectItem>
                           ) : allClients.length === 0 ? (
                             <SelectItem value="empty" disabled>
-                              No hay alumnos registrados
+                              {t('routines.assignments.noStudentsRegistered')}
                             </SelectItem>
                           ) : (
                             allClients.map((c) => (
@@ -387,7 +390,7 @@ export function RoutinesTab() {
                           className="bg-transparent flex-1"
                           onClick={() => handleEditRoutine(tpl)}
                         >
-                          Editar
+                          {t('routines.actions.edit')}
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -418,7 +421,7 @@ export function RoutinesTab() {
                               className="text-destructive focus:text-destructive"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
-                              Eliminar rutina
+                              {t('routines.actions.deleteRoutine')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -434,7 +437,7 @@ export function RoutinesTab() {
                           if (typeof tpl.id === 'string' && tpl.id.startsWith('temp-')) {
                             toast({
                               title: 'Rutina no guardada',
-                              description: 'Guarda la rutina antes de enviarla a un alumno.',
+                              description: t('routines.assignments.saveBeforeSending'),
                               variant: 'destructive'
                             })
                             return
@@ -470,7 +473,7 @@ export function RoutinesTab() {
                           }
                           const selectedClientId = routineAssignments[String(tpl.id)]
                           const selectedClient = selectedClientId ? allClients.find(c => String(c.userId) === selectedClientId) : null
-                          return selectedClient ? `Enviar a ${selectedClient.name}` : 'Selecciona un alumno'
+                          return selectedClient ? `${t('routines.assignments.sendTo')} ${selectedClient.name}` : t('routines.assignments.selectStudent')
                         })()}
                       </Button>
                     </div>
@@ -478,7 +481,7 @@ export function RoutinesTab() {
                 </div>
               ))}
               {filteredTemplates.length === 0 && (
-                <div className="p-8 text-center text-muted-foreground">No hay plantillas en esta carpeta.</div>
+                <div className="p-8 text-center text-muted-foreground">{t('routines.templates.noTemplatesInFolder')}</div>
               )}
             </div>
           </CardContent>
@@ -489,8 +492,8 @@ export function RoutinesTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-card-foreground">Catálogo de ejercicios</CardTitle>
-              <CardDescription>Gestiona tu biblioteca de ejercicios</CardDescription>
+              <CardTitle className="text-card-foreground">{t('routines.exercises.catalogTitle')}</CardTitle>
+              <CardDescription>{t('routines.exercises.catalogDescription')}</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -501,7 +504,7 @@ export function RoutinesTab() {
                 className="hover:bg-orange-500 transition-colors"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Nuevo ejercicio
+                {t('routines.exercises.newExercise')}
               </Button>
               <Button variant="outline" onClick={() => setShowExerciseCatalog((prev) => !prev)}>
                 {showExerciseCatalog ? "Ocultar" : "Mostrar"}
@@ -515,7 +518,7 @@ export function RoutinesTab() {
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar ejercicios..."
+                  placeholder={t('routines.exercises.searchPlaceholder')}
                   value={catalogSearch}
                   onChange={(e) => setCatalogSearch(e.target.value)}
                   className="pl-10"
@@ -593,10 +596,10 @@ export function RoutinesTab() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={() => toast({ title: "Funcionalidad de editar ejercicio estará disponible próximamente" })}
+                          onClick={() => toast({ title: t('routines.exercises.editFeatureSoon') })}
                         >
                           <Edit className="w-4 h-4 mr-2" />
-                          Editar
+                          {t('routines.actions.edit')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => toast({ title: "Funcionalidad de eliminar ejercicio estará disponible próximamente" })}
@@ -623,18 +626,18 @@ export function RoutinesTab() {
       <Dialog open={isCreateExerciseDialogOpen} onOpenChange={setIsCreateExerciseDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Crear Nuevo Ejercicio</DialogTitle>
+            <DialogTitle>{t('routines.dialogs.createExercise.title')}</DialogTitle>
             <DialogDescription>
-              Agrega un nuevo ejercicio a tu catálogo. Completa todos los campos requeridos.
+              {t('routines.dialogs.createExercise.description')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6">
             {/* Exercise Name */}
             <div className="space-y-2">
-              <Label htmlFor="exercise-name">Nombre del Ejercicio*</Label>
+                            <Label htmlFor="exercise-name">{t('routines.forms.exerciseName')}</Label>
               <Input
                 id="exercise-name"
-                placeholder="Ej: Press de banca con barra"
+                placeholder={t('routines.forms.exerciseNamePlaceholder')}
                 value={newExerciseForm.name}
                 onChange={(e) => setNewExerciseForm(prev => ({ ...prev, name: e.target.value }))}
               />
@@ -643,14 +646,14 @@ export function RoutinesTab() {
             {/* Target Muscles */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Músculos Objetivo*</Label>
+                                <Label>{t('routines.forms.targetMuscles')}</Label>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setShowMusclesSelector(!showMusclesSelector)}
                 >
-                  {showMusclesSelector ? "Ocultar" : "Seleccionar"}
+                  {showMusclesSelector ? t('routines.actions.hide') : t('routines.actions.select')}
                   <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${showMusclesSelector ? "rotate-180" : ""}`} />
                 </Button>
               </div>
@@ -708,14 +711,14 @@ export function RoutinesTab() {
             {/* Equipment */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Equipamiento*</Label>
+                <Label>{t('routines.forms.equipment')}</Label>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setShowEquipmentSelector(!showEquipmentSelector)}
                 >
-                  {showEquipmentSelector ? "Ocultar" : "Seleccionar"}
+                  {showEquipmentSelector ? t('routines.actions.hide') : t('routines.actions.select')}
                   <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${showEquipmentSelector ? "rotate-180" : ""}`} />
                 </Button>
               </div>
@@ -772,13 +775,13 @@ export function RoutinesTab() {
 
             {/* Category */}
             <div className="space-y-2">
-              <Label htmlFor="exercise-category">Categoría</Label>
+              <Label htmlFor="exercise-category">{t('routines.forms.category')}</Label>
               <Select
                 value={newExerciseForm.category || ""}
                 onValueChange={(value) => setNewExerciseForm(prev => ({ ...prev, category: value }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona una categoría" />
+                  <SelectValue placeholder={t('routines.forms.selectCategory')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Fuerza">Fuerza</SelectItem>
@@ -792,10 +795,10 @@ export function RoutinesTab() {
 
             {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="exercise-description">Descripción</Label>
+              <Label htmlFor="exercise-description">{t('routines.forms.description')}</Label>
               <Textarea
                 id="exercise-description"
-                placeholder="Describe cómo realizar el ejercicio, la técnica correcta, consejos importantes..."
+                placeholder={t('routines.forms.descriptionPlaceholder')}
                 value={newExerciseForm.description || ""}
                 onChange={(e) => setNewExerciseForm(prev => ({ ...prev, description: e.target.value }))}
                 className="min-h-24"
@@ -809,14 +812,14 @@ export function RoutinesTab() {
               variant="outline"
               onClick={() => setIsCreateExerciseDialogOpen(false)}
             >
-              Cancelar
+              {t('routines.actions.cancel')}
             </Button>
             <Button
               type="button"
               onClick={handleCreateExercise}
               disabled={!newExerciseForm.name.trim() || newExerciseForm.target_muscles.length === 0 || newExerciseForm.equipments.length === 0}
             >
-              Crear Ejercicio
+              {t('routines.actions.createExercise')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -826,9 +829,9 @@ export function RoutinesTab() {
       <Dialog open={isExerciseSelectorOpen} onOpenChange={setIsExerciseSelectorOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Seleccionar Ejercicio</DialogTitle>
+            <DialogTitle>{t('routines.dialogs.selectExercise.title')}</DialogTitle>
             <DialogDescription>
-              Elige un ejercicio para añadir al bloque
+              {t('routines.dialogs.selectExercise.description')}
             </DialogDescription>
           </DialogHeader>
 
@@ -937,7 +940,7 @@ export function RoutinesTab() {
                 <h4 className="font-medium mb-3">Configurar Ejercicio</h4>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <Label htmlFor="sets">Series</Label>
+                    <Label htmlFor="sets">{t('routines.forms.sets')}</Label>
                     <Input
                       id="sets"
                       type="number"
@@ -947,7 +950,7 @@ export function RoutinesTab() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="reps">Repeticiones</Label>
+                    <Label htmlFor="reps">{t('routines.forms.repetitions')}</Label>
                     <Input
                       id="reps"
                       type="number"
@@ -957,7 +960,7 @@ export function RoutinesTab() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="rest">Descanso (seg)</Label>
+                    <Label htmlFor="rest">{t('routines.forms.rest')}</Label>
                     <Input
                       id="rest"
                       type="number"
@@ -973,7 +976,7 @@ export function RoutinesTab() {
                     disabled={!exerciseInputs.sets || !exerciseInputs.reps || !exerciseInputs.restSec}
                     className="flex-1"
                   >
-                    Confirmar Añadir
+                    {t('routines.actions.confirmAdd')}
                   </Button>
                   <Button
                     variant="outline"
@@ -991,7 +994,7 @@ export function RoutinesTab() {
               variant="outline"
               onClick={() => setIsExerciseSelectorOpen(false)}
             >
-              Cerrar
+              {t('routines.actions.close')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1001,9 +1004,9 @@ export function RoutinesTab() {
       <Dialog open={isRoutineEditorOpen} onOpenChange={setIsRoutineEditorOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Editar Rutina: {editingRoutine?.name}</DialogTitle>
+            <DialogTitle>{t('routines.dialogs.editRoutine.title')}: {editingRoutine?.name}</DialogTitle>
             <DialogDescription>
-              Modifica los bloques y ejercicios de la rutina
+              {t('routines.dialogs.editRoutine.description')}
             </DialogDescription>
           </DialogHeader>
 
@@ -1011,23 +1014,23 @@ export function RoutinesTab() {
             <div className="space-y-4">
               {/* Routine Name */}
               <div className="space-y-2">
-                <Label htmlFor="routine-name">Nombre de la Rutina</Label>
+                <Label htmlFor="routine-name">{t('routines.forms.routineName')}</Label>
                 <Input
                   id="routine-name"
                   value={editingRoutine.name}
                   onChange={(e) => setEditingRoutine({ ...editingRoutine, name: e.target.value })}
-                  placeholder="Nombre de la rutina"
+                  placeholder={t('routines.placeholders.routineName')}
                 />
               </div>
 
               {/* Routine Description */}
               <div className="space-y-2">
-                <Label htmlFor="routine-description">Descripción (opcional)</Label>
+                <Label htmlFor="routine-description">{t('routines.forms.routineDescription')}</Label>
                 <Textarea
                   id="routine-description"
                   value={editingRoutine.description || ""}
                   onChange={(e) => setEditingRoutine({ ...editingRoutine, description: e.target.value })}
-                  placeholder="Descripción de la rutina"
+                  placeholder={t('routines.placeholders.routineDescription')}
                   className="min-h-20"
                 />
               </div>
@@ -1035,7 +1038,7 @@ export function RoutinesTab() {
               {/* Blocks Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Bloques de Ejercicios</h3>
+                  <h3 className="text-lg font-semibold">{t('routines.blocks.title')}</h3>
                 </div>
 
                 {/* Add Block Section */}
@@ -1043,7 +1046,7 @@ export function RoutinesTab() {
                   <Input
                     value={newBlockName}
                     onChange={(e) => setNewBlockName(e.target.value)}
-                    placeholder="Nombre del nuevo bloque"
+                    placeholder={t('routines.placeholders.newBlockName')}
                     className="flex-1"
                   />
                   <Button
@@ -1053,7 +1056,7 @@ export function RoutinesTab() {
                     disabled={!newBlockName.trim()}
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    Añadir Bloque
+                    {t('routines.actions.addBlock')}
                   </Button>
                 </div>
 
@@ -1061,7 +1064,7 @@ export function RoutinesTab() {
                   <div className="text-center py-8 text-muted-foreground">
                     <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>No hay bloques de ejercicios</p>
-                    <p className="text-sm">Haz clic en "Añadir Bloque" para empezar</p>
+                    <p className="text-sm">{t('routines.blocks.clickToStart')}</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -1113,7 +1116,7 @@ export function RoutinesTab() {
                           <CardContent className="pt-0">
                             {block.exercises.length === 0 ? (
                               <div className="text-center py-4 text-muted-foreground">
-                                <p className="text-sm">No hay ejercicios en este bloque</p>
+                                <p className="text-sm">{t('routines.blocks.noExercises')}</p>
                               </div>
                             ) : (
                               <div className="space-y-2">
@@ -1128,10 +1131,10 @@ export function RoutinesTab() {
                                     >
                                       <div className="flex-1">
                                         <p className="font-medium text-sm">
-                                          {exerciseData?.name || 'Ejercicio no encontrado'}
+                                          {exerciseData?.name || t('routines.blocks.exerciseNotFound')}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                          {exercise.sets} series × {exercise.reps} reps · {exercise.restSec}s descanso
+                                          {exercise.sets} {t('routines.forms.sets').toLowerCase()} × {exercise.reps} {t('routines.forms.reps')} · {exercise.restSec}s {t('routines.forms.restShort')}
                                         </p>
                                       </div>
                                       <Button
@@ -1163,7 +1166,7 @@ export function RoutinesTab() {
               variant="outline"
               onClick={() => setIsRoutineEditorOpen(false)}
             >
-              Cancelar
+              {t('routines.actions.cancel')}
             </Button>
             <Button
               type="button"
@@ -1173,10 +1176,10 @@ export function RoutinesTab() {
             >
               {isSaving ? (
                 <>
-                  <span className="loader mr-2"></span> Guardando...
+                  <span className="loader mr-2"></span> {t('routines.actions.saving')}
                 </>
               ) : (
-                "Guardar Rutina"
+                t('routines.actions.saveRoutine')
               )}
             </Button>
           </DialogFooter>

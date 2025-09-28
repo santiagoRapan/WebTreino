@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { supabase } from '@/services/database'
-import { RoutineTemplate, RoutineBlock } from '@/src/lib/types/trainer'
+import { RoutineTemplate, RoutineBlock } from '@/lib/types/trainer'
 import { toast } from '@/hooks/use-toast'
 
 export interface DatabaseRoutine {

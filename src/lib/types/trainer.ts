@@ -1,11 +1,13 @@
 import type { LucideIcon } from "lucide-react"
 
+export type ClientStatus = "active" | "pending" | "inactive"
+
 export type Client = {
   id: number
   name: string
   email: string
   phone: string
-  status: "Activo" | "Pendiente" | "Inactivo"
+  status: ClientStatus
   joinDate: string
   lastSession: string
   nextSession: string
@@ -133,7 +135,7 @@ export type ExerciseFilterState = {
 }
 
 export type DashboardStat = {
-  title: string
+  titleKey: string // Translation key instead of hardcoded title
   value: string
   change: string
   icon: LucideIcon
@@ -151,7 +153,7 @@ export type UpcomingSession = {
 export type RecentClient = {
   id: number
   name: string
-  status: string
+  status: ClientStatus
   lastSession: string
   progress: number
   avatar: string

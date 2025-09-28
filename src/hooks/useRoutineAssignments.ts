@@ -2,7 +2,7 @@
 
 import { supabase } from '@/services/database'
 import { toast } from '@/hooks/use-toast'
-import type { RoutineTemplate } from '@/src/lib/types/trainer'
+import type { RoutineTemplate } from '@/lib/types/trainer'
 
 export interface RoutineAssignment {
   id?: number

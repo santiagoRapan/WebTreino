@@ -1,16 +1,15 @@
 "use client"
 
 import { useTrainerDashboard } from "@/hooks/trainer/useTrainerDashboard"
-import { TrainerDashboardProvider } from "./TrainerDashboardContext"
+import { TrainerDashboardProvider } from "@/lib/context/TrainerDashboardContext"
 import { Sidebar } from "./Sidebar"
 import { TrainerHeader } from "./TrainerHeader"
-import { DashboardTab } from "./DashboardTab"
-import { ClientsTab } from "./ClientsTab"
-// import { ScheduleTab } from "./ScheduleTab" // schedule removed
-import { RoutinesTab } from "./RoutinesTab"
-import { SettingsTab } from "./SettingsTab"
 
-export default function TrainerDashboard() {
+interface TrainerLayoutProps {
+  children: React.ReactNode
+}
+
+export function TrainerLayout({ children }: TrainerLayoutProps) {
   // Use the master hook that provides all state and handlers
   const trainerData = useTrainerDashboard()
 
@@ -25,22 +24,13 @@ export default function TrainerDashboard() {
       clientFilter: trainerData.clientFilter,
       isEditDialogOpen: trainerData.isEditDialogOpen,
       isNewClientDialogOpen: trainerData.isNewClientDialogOpen,
-  // isNewChatDialogOpen removed with chat feature
-  // calendar dialogs removed
       isCreateExerciseDialogOpen: trainerData.isCreateExerciseDialogOpen,
       isHistoryDialogOpen: trainerData.isHistoryDialogOpen,
       expandedClientIds: trainerData.expandedClientIds,
       showArchived: trainerData.showArchived,
-  // showEmojiPicker removed with chat feature
 
       // Client State
       editingClient: trainerData.editingClient,
-
-      // Chat State
-  // chat state removed
-
-      // Calendar State
-  // calendar state removed
 
       // Routine State
       newExerciseForm: trainerData.newExerciseForm,
@@ -81,13 +71,10 @@ export default function TrainerDashboard() {
       setClientFilter: trainerData.setClientFilter,
       setIsEditDialogOpen: trainerData.setIsEditDialogOpen,
       setIsNewClientDialogOpen: trainerData.setIsNewClientDialogOpen,
-  // setIsNewChatDialogOpen removed
-  // calendar dialogs removed
       setIsCreateExerciseDialogOpen: trainerData.setIsCreateExerciseDialogOpen,
       setIsHistoryDialogOpen: trainerData.setIsHistoryDialogOpen,
       setExpandedClientIds: trainerData.setExpandedClientIds,
       setShowArchived: trainerData.setShowArchived,
-  // setShowEmojiPicker removed
 
       // Client Actions
       setEditingClient: trainerData.setEditingClient,
@@ -95,12 +82,6 @@ export default function TrainerDashboard() {
       acceptLinkRequest: trainerData.acceptLinkRequest,
       rejectLinkRequest: trainerData.rejectLinkRequest,
       cancelLinkRequest: trainerData.cancelLinkRequest,
-
-      // Chat Actions
-  // chat setters removed
-
-      // Calendar Actions
-  // calendar state setters removed
 
       // Routine Actions
       setNewExerciseForm: trainerData.setNewExerciseForm,
@@ -136,13 +117,8 @@ export default function TrainerDashboard() {
       handleDeleteClient: trainerData.handleDeleteClient,
       handleMarkAsActive: trainerData.handleMarkAsActive,
       handleNewClient: trainerData.handleNewClient,
-  // schedule handlers removed
       handleViewAllClients: trainerData.handleViewAllClients,
       openStudentHistory: trainerData.openStudentHistory,
-
-  // chat handlers removed
-  // calendar handlers removed
-  // add session removed
 
       handleCreateRoutine: trainerData.handleCreateRoutine,
       handleCreateExercise: trainerData.handleCreateExercise,
@@ -189,13 +165,9 @@ export default function TrainerDashboard() {
           {/* Header - Full Width of main area */}
           <TrainerHeader />
 
-          {/* Tab Content - Scrollable */}
+          {/* Page Content - Scrollable */}
           <div className="flex-1 overflow-auto">
-            {trainerData.activeTab === "dashboard" && <DashboardTab />}
-            {trainerData.activeTab === "clients" && <ClientsTab />}
-            {/* schedule tab removed */}
-            {trainerData.activeTab === "routines" && <RoutinesTab />}
-            {trainerData.activeTab === "settings" && <SettingsTab />}
+            {children}
           </div>
         </main>
       </div>

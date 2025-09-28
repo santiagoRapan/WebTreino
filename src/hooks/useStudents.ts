@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/services/database"
 import { toast } from "@/hooks/use-toast"
-import type { Client } from "@/src/lib/types/trainer"
+import type { Client } from "@/lib/types/trainer"
 
 export interface UseStudentsReturn {
   students: Client[]
@@ -69,7 +69,7 @@ export function useStudents(): UseStudentsReturn {
         nextSession: "N/A",
         progress: 0,
         goal: "Sin definir",
-        avatar: profile.avatar_url || "/placeholder-user.jpg",
+  avatar: profile.avatar_url || "/images/placeholder-user.jpg",
         sessionsCompleted: 0,
         totalSessions: 0,
         plan: "Básico",
@@ -119,7 +119,7 @@ export function useStudents(): UseStudentsReturn {
           nextSession: "N/A",
           progress: 0,
           goal: "Sin definir",
-          avatar: profile.avatar_url || "/placeholder-user.jpg",
+          avatar: profile.avatar_url || "/images/placeholder-user.jpg",
           sessionsCompleted: 0,
           totalSessions: 0,
           plan: "Básico",

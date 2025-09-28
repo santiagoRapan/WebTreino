@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from "@/services/auth"
+import { LanguageProvider } from "@/lib/i18n/LanguageProvider"
 
 export const metadata: Metadata = {
   title: "Treino",
@@ -20,12 +21,14 @@ export default function RootLayout({
   return (
     <html lang="es" className="dark">
       <head>
-        <link rel="icon" href="/treinologo.png" type="image/svg+xml" />
+        <link rel="icon" href="/images/treinologo.png" type="image/png" />
       </head>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </LanguageProvider>
         <Toaster />
       </body>
     </html>

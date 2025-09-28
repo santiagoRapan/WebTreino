@@ -3,8 +3,8 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/services/auth"
-import { TrainerLayout } from "@/components/features/trainer/TrainerLayout"
-import { RoutinesTab } from "@/components/features/trainer/RoutinesTab"
+import { TrainerLayout } from "@/components/layout/TrainerLayout"
+import { RoutinesTab } from "@/components/features/routines/RoutinesTab"
 import { Loader2 } from "lucide-react"
 
 export default function RutinasPage() {

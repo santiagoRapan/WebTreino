@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../database/supabaseClient'
 import { signInWithGoogle as authSignInWithGoogle, signOut as authSignOut, createOrUpdateCustomUser, getFullUserData } from './auth'
-import { CustomUser, FullUserData } from '@/src/lib/types/user'
+import { CustomUser, FullUserData } from '@/lib/types/user'
 
 interface AuthContextType {
   authUser: User | null

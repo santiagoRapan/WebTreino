@@ -1,6 +1,6 @@
 import { supabase } from '../database/supabaseClient'
 import { AuthError, User } from '@supabase/supabase-js'
-import { CustomUser, CreateUserData, UpdateUserData, FullUserData } from '@/src/lib/types/user'
+import { CustomUser, CreateUserData, UpdateUserData, FullUserData } from '@/lib/types/user'
 
 export interface AuthResponse {
   user?: User | null

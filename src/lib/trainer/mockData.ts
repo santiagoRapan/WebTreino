@@ -1,4 +1,4 @@
-import type { DashboardStat, UpcomingSession, RecentClient } from "@/src/lib/types/trainer"
+import type { DashboardStat, UpcomingSession, RecentClient } from "@/lib/types/trainer"
 import { BarChart3, Users, Calendar, DollarSign } from "lucide-react"
 
 export const DASHBOARD_STATS: DashboardStat[] = [

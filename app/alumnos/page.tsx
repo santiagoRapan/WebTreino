@@ -3,7 +3,7 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/services/auth"
-import { TrainerLayout } from "@/components/features/trainer/TrainerLayout"
+import { TrainerLayout } from "@/components/layout/TrainerLayout"
 import { ClientsTab } from "@/components/features/trainer/ClientsTab"
 import { Loader2 } from "lucide-react"
 

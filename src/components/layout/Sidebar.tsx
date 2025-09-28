@@ -9,13 +9,14 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useTrainerDashboard } from "@/components/features/trainer/TrainerDashboardContext"
+import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
+import { useTranslation } from "@/lib/i18n/LanguageProvider"
 
 const NAV_ITEMS = [
-  { id: "dashboard", label: "Dashboard", icon: BarChart3, href: "/dashboard" },
-  { id: "clients", label: "Alumnos", icon: Users, href: "/alumnos" },
-  { id: "routines", label: "Rutinas", icon: Activity, href: "/rutinas" },
-  { id: "settings", label: "Configuración", icon: Settings, href: "/configuracion" },
+  { id: "dashboard", translationKey: "navigation.dashboard", icon: BarChart3, href: "/dashboard" },
+  { id: "clients", translationKey: "navigation.clients", icon: Users, href: "/alumnos" },
+  { id: "routines", translationKey: "navigation.routines", icon: Activity, href: "/rutinas" },
+  { id: "settings", translationKey: "navigation.settings", icon: Settings, href: "/configuracion" },
 ] as const
 
 export function Sidebar() {
@@ -25,6 +26,7 @@ export function Sidebar() {
   } = useTrainerDashboard()
   
   const pathname = usePathname()
+  const { t } = useTranslation()
 
   return (
     <div
@@ -36,7 +38,7 @@ export function Sidebar() {
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             className="w-10 h-10 flex items-center justify-center"
           >
-            <img src="/treinologo.png" alt="Toggle Sidebar" className="w-full h-full object-contain" />
+            <img src="/images/treinologo.png" alt="Toggle Sidebar" className="w-full h-full object-contain" />
           </button>
           {!sidebarCollapsed && <span className="text-lg font-semibold text-sidebar-foreground">Treino</span>}
         </div>
@@ -50,6 +52,7 @@ export function Sidebar() {
       <nav className="p-4 space-y-2">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href
+          const label = t(item.translationKey)
           return (
             <Link
               key={item.id}
@@ -59,10 +62,10 @@ export function Sidebar() {
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               }`}
-              title={sidebarCollapsed ? item.label : undefined}
+              title={sidebarCollapsed ? label : undefined}
             >
               <item.icon className={`flex-shrink-0 ${sidebarCollapsed ? "w-4 h-4" : "w-5 h-5"}`} />
-              {!sidebarCollapsed && item.label}
+              {!sidebarCollapsed && label}
             </Link>
           )
         })}

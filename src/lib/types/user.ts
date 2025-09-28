@@ -1,17 +1,17 @@
 // Tipos # Tipo para crear un nuevo usuario
 export interface CreateUserData {
-  id: string # UUID del auth user de Supabase
+  id: string // UUID del auth user de Supabase
   name: string
   role?: 'alumno' | 'entrenador'
   avatar_url?: string | null
 }
 
-# Tipo para actualizar un usuario existente
+// Tipo para actualizar un usuario existent
 export interface UpdateUserData {
   name?: string
   role?: 'alumno' | 'entrenador'
   avatar_url?: string | null
-} de usuario personalizado de la base de datos
+} 
 export interface CustomUser {
   id: string
   name: string
@@ -24,14 +24,14 @@ export interface CustomUser {
 export interface CreateUserData {
   id: string // UUID del auth user de Supabase
   name: string
-  role?: string
+  role?: 'alumno' | 'entrenador'
   avatar_url?: string | null
 }
 
 // Tipo para actualizar un usuario existente
 export interface UpdateUserData {
   name?: string
-  role?: string
+  role?: 'alumno' | 'entrenador'
   avatar_url?: string | null
 }
 

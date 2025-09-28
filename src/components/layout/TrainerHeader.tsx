@@ -3,19 +3,12 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Bell, Moon, Sun, RefreshCw } from "lucide-react"
-import { useTrainerDashboard } from "@/components/features/trainer/TrainerDashboardContext"
+import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
 import { useAuth } from "@/services/auth"
 import { useState } from "react"
+import { useTranslation } from "@/lib/i18n/LanguageProvider"
 
-const TAB_LABELS: Record<string, string> = {
-  dashboard: "Dashboard",
-  clients: "Gestión de Alumnos",
-  // schedule: "Agenda", // removed
-  routines: "Rutinas",
-  // payments: "Pagos", // removed
-  // chat: "Chat", // removed previously
-  settings: "Configuración",
-}
+// Removed TAB_LABELS - now using translations
 
 export function TrainerHeader() {
   const {
@@ -25,8 +18,19 @@ export function TrainerHeader() {
   
   const { customUser, refreshUserData } = useAuth()
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const { t } = useTranslation()
 
-  const title = TAB_LABELS[activeTab] ?? "Dashboard"
+  const getTabTitle = (tab: string) => {
+    const tabMap: Record<string, string> = {
+      dashboard: "navigation.dashboard",
+      clients: "navigation.clients",
+      routines: "navigation.routines", 
+      settings: "navigation.settings",
+    }
+    return tabMap[tab] ? t(tabMap[tab]) : t("navigation.dashboard")
+  }
+
+  const title = getTabTitle(activeTab)
 
   const handleRefreshData = async () => {
     try {
@@ -53,7 +57,7 @@ export function TrainerHeader() {
           size="icon"
           onClick={handleRefreshData}
           disabled={isRefreshing}
-          title="Actualizar datos"
+          title={t("navigation.refreshData")}
         >
           <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
         </Button>
@@ -68,14 +72,14 @@ export function TrainerHeader() {
         <div className="flex items-center gap-2">
           <div className="text-right">
             <p className="text-sm font-medium text-foreground">
-              {customUser?.name || "Usuario"}
+              {customUser?.name || t("navigation.defaultUser")}
             </p>
             <p className="text-xs text-muted-foreground">
-              {customUser?.role || "entrenador"}
+              {customUser?.role || t("dashboard.userProfile.role")}
             </p>
           </div>
           <Avatar>
-            <AvatarImage src={customUser?.avatar_url || "/trainer-profile.png"} />
+            <AvatarImage src={customUser?.avatar_url || "/images/trainer-profile.png"} />
             <AvatarFallback>
               {customUser?.name?.charAt(0)?.toUpperCase() || "U"}
             </AvatarFallback>

@@ -1,13 +1,13 @@
 "use client"
 
-import { useTrainerDashboard } from "@/components/features/trainer/TrainerDashboardContext"
+import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
 import { Card, CardContent } from "@/components/ui/card"
-import { ClientsHeader } from "./clients/ClientsHeader"
-import { ClientFilters } from "./clients/ClientFilters"
-import { ClientTable } from "./clients/ClientTable"
-import { EditClientDialog } from "./clients/EditClientDialog"
-import { NewClientDialog } from "./clients/NewClientDialog"
-import { ClientHistoryDialog } from "./clients/ClientHistoryDialog"
+import { ClientsHeader } from "./ClientsHeader"
+import { ClientFilters } from "./ClientFilters"
+import { ClientTable } from "./ClientTable"
+import { EditClientDialog } from "./EditClientDialog"
+import { NewClientDialog } from "./NewClientDialog"
+import { ClientHistoryDialog } from "./ClientHistoryDialog"
 
 export function ClientsTab() {
   const {

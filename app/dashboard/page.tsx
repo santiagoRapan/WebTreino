@@ -3,8 +3,8 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/services/auth"
-import { TrainerLayout } from "@/components/features/trainer/TrainerLayout"
-import { DashboardTab } from "@/components/features/trainer/DashboardTab"
+import { TrainerLayout } from "@/components/layout/TrainerLayout"
+import { DashboardTab } from "@/components/features/dashboard/DashboardTab"
 import { Loader2 } from "lucide-react"
 
 export default function DashboardPage() {

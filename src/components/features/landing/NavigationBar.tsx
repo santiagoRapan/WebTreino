@@ -5,10 +5,12 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useTranslation } from "@/lib/i18n/LanguageProvider";
 
 export function NavigationBar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const router = useRouter();
+  const { t } = useTranslation();
 
   const handleLogin = () => {
     router.push("/auth");
@@ -25,19 +27,19 @@ export function NavigationBar() {
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 relative">
               <Image 
-                src="/treinologo.png" 
-                alt="Treino Logo" 
+                src="/images/treinologo.png" 
+                alt={t("common.brand")} 
                 fill 
                 className="object-contain"
               />
             </div>
-            <span className="text-2xl font-bold text-primary">Treino</span>
+            <span className="text-2xl font-bold text-primary">{t("common.brand")}</span>
           </div>
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex space-x-8">
-            <a href="#features" className="text-foreground hover:text-primary transition-colors">Características</a>
-            <a href="#contact" className="text-foreground hover:text-primary transition-colors">Contacto</a>
+            <a href="#features" className="text-foreground hover:text-primary transition-colors">{t("nav.features")}</a>
+            <a href="#contact" className="text-foreground hover:text-primary transition-colors">{t("nav.contact")}</a>
           </div>
 
           <div className="hidden md:flex space-x-4">
@@ -46,13 +48,13 @@ export function NavigationBar() {
               className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
               onClick={handleLogin}
             >
-              Iniciar Sesión
+              {t("nav.login")}
             </Button>
             <Button 
               className="bg-primary hover:bg-primary/90"
               onClick={handleSignIn}
             >
-              Registrarse
+              {t("nav.signup")}
             </Button>
           </div>
 
@@ -73,21 +75,21 @@ export function NavigationBar() {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col space-y-4">
-              <a href="#features" className="text-foreground hover:text-primary transition-colors">Características</a>
-              <a href="#contact" className="text-foreground hover:text-primary transition-colors">Contacto</a>
+              <a href="#features" className="text-foreground hover:text-primary transition-colors">{t("nav.features")}</a>
+              <a href="#contact" className="text-foreground hover:text-primary transition-colors">{t("nav.contact")}</a>
               <div className="flex flex-col space-y-2 pt-4">
                 <Button 
                   variant="outline" 
                   className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                   onClick={handleLogin}
                 >
-                  Iniciar Sesión
+                  {t("nav.login")}
                 </Button>
                 <Button 
                   className="bg-primary hover:bg-primary/90"
                   onClick={handleSignIn}
                 >
-                  Registrarse
+                  {t("nav.signup")}
                 </Button>
               </div>
             </div>

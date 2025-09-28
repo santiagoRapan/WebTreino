@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/services/database'
-import type { Exercise } from '@/src/lib/types/trainer'
+import type { Exercise } from '@/lib/types/trainer'
 
 export function useExercises() {
   const [exercises, setExercises] = useState<Exercise[]>([])

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Dispatch, SetStateAction } from "react"
 import { useStudents } from "@/hooks/useStudents"
-import type { Client } from "@/src/lib/types/trainer"
+import type { Client } from "@/lib/types/trainer"
 
 export interface UseClientStateReturn {
   // Client State

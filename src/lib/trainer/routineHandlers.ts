@@ -4,7 +4,7 @@ import html2canvas from "html2canvas"
 import ExcelJS from "exceljs"
 import { saveAs } from "file-saver"
 import { supabase } from "@/services/database"
-import type { Exercise, RoutineTemplate, RoutineFolder, Client } from "@/src/lib/types/trainer"
+import type { Exercise, RoutineTemplate, RoutineFolder, Client } from "@/lib/types/trainer"
 
 export interface RoutineHandlers {
   handleCreateRoutine: () => void

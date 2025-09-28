@@ -11,7 +11,7 @@ import type {
   RoutineFolder,
   RoutineTemplate,
   RecentClient,
-} from "@/src/lib/types/trainer"
+} from "@/lib/types/trainer"
 
 export type PendingExerciseState = { exercise: Exercise; blockId: number } | null
 

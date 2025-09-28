@@ -4,9 +4,11 @@ import React from 'react'
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n/LanguageProvider';
 
 export function HeroSection() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const handleSignIn = () => {
     router.push("/auth?mode=signup");
@@ -19,13 +21,12 @@ export function HeroSection() {
 
           
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight">
-            Transforma tu
-            <span className="text-primary"> Negocio Fitness</span>
+            {t("landing.hero.title.part1")}
+            <span className="text-primary"> {t("landing.hero.title.highlight")}</span>
           </h1>
           
           <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            La plataforma todo-en-uno que necesitas para gestionar clientes, crear rutinas personalizadas 
-            y hacer crecer tu negocio como entrenador personal.
+            {t("landing.hero.subtitle")}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -34,7 +35,7 @@ export function HeroSection() {
               className="bg-primary hover:bg-primary/90 text-lg px-8 py-4"
               onClick={handleSignIn}
             >
-              Comenzar prueba
+              {t("landing.hero.cta")}
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
           </div>

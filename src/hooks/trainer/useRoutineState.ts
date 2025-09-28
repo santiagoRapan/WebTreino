@@ -11,7 +11,7 @@ import type {
   ExerciseInputsState,
   RoutineFolder, 
   RoutineTemplate 
-} from "@/src/lib/types/trainer"
+} from "@/lib/types/trainer"
 
 export interface UseRoutineStateReturn {
   // Exercise Catalog State

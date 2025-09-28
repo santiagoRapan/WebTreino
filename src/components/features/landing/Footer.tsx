@@ -11,7 +11,7 @@ export function Footer() {
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 relative">
                   <Image 
-                    src="/treinologo.png" 
+                    src="/images/treinologo.png" 
                     alt="Treino Logo" 
                     fill 
                     className="object-contain"

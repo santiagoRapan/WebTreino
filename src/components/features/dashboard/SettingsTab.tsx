@@ -4,31 +4,34 @@ import { useAuth } from "@/services/auth"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { LogOut, User, Shield, Palette, Bell, RefreshCw } from "lucide-react"
+import { LogOut, User, Shield, Palette, Bell, RefreshCw, Globe } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { useTheme } from "next-themes"
 import { useState } from "react"
+import { useTranslation } from "@/lib/i18n/LanguageProvider"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 export function SettingsTab() {
   const { signOut, authUser, customUser, refreshUserData } = useAuth()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const { t, locale, setLocale } = useTranslation()
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const handleLogout = async () => {
     try {
       await signOut()
       toast({
-        title: "Sesión cerrada",
-        description: "Has cerrado sesión exitosamente.",
+        title: t("settings.toasts.logout.title"),
+        description: t("settings.toasts.logout.description"),
       })
       // Redirect to home/landing page
       router.push("/")
     } catch (error) {
       console.error("Error during logout:", error)
       toast({
-        title: "Error",
-        description: "Hubo un problema al cerrar sesión. Inténtalo de nuevo.",
+        title: t("settings.toasts.error.title"),
+        description: t("settings.toasts.logoutError"),
         variant: "destructive"
       })
     }
@@ -43,14 +46,14 @@ export function SettingsTab() {
       setIsRefreshing(true)
       await refreshUserData()
       toast({
-        title: "Datos actualizados",
-        description: "Tu información se ha actualizado correctamente.",
+        title: t("settings.toasts.refreshSuccess.title"),
+        description: t("settings.toasts.refreshSuccess.description"),
       })
     } catch (error) {
       console.error("Error refreshing user data:", error)
       toast({
-        title: "Error",
-        description: "No se pudieron actualizar los datos. Inténtalo de nuevo.",
+        title: t("settings.toasts.error.title"),
+        description: t("settings.toasts.refreshError"),
         variant: "destructive"
       })
     } finally {
@@ -62,8 +65,8 @@ export function SettingsTab() {
     <main className="p-6 space-y-6">
       <div className="flex flex-col gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Configuración</h2>
-          <p className="text-muted-foreground">Gestiona tu cuenta y preferencias</p>
+          <h2 className="text-2xl font-bold text-foreground">{t("settings.title")}</h2>
+          <p className="text-muted-foreground">{t("settings.subtitle")}</p>
         </div>
       </div>
 
@@ -75,9 +78,9 @@ export function SettingsTab() {
               <div>
                 <CardTitle className="flex items-center gap-2 text-card-foreground">
                   <User className="w-5 h-5" />
-                  Información del Perfil
+                  {t("settings.profile.title")}
                 </CardTitle>
-                <CardDescription>Información básica de tu cuenta</CardDescription>
+                <CardDescription>{t("settings.profile.description")}</CardDescription>
               </div>
               <Button
                 variant="outline"
@@ -87,39 +90,39 @@ export function SettingsTab() {
                 className="flex items-center gap-2"
               >
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? 'Actualizando...' : 'Actualizar'}
+                {isRefreshing ? t("settings.profile.refreshing") : t("settings.profile.refresh")}
               </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Email</label>
-                <p className="text-foreground">{authUser?.email || "No disponible"}</p>
+                <label className="text-sm font-medium text-muted-foreground">{t("settings.profile.email")}</label>
+                <p className="text-foreground">{authUser?.email || t("settings.profile.notAvailable")}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Nombre</label>
+                <label className="text-sm font-medium text-muted-foreground">{t("settings.profile.name")}</label>
                 <p className="text-foreground">
                   {isRefreshing ? (
                     <span className="flex items-center gap-2">
                       <RefreshCw className="w-3 h-3 animate-spin" />
-                      Cargando...
+                      {t("settings.profile.loading")}
                     </span>
                   ) : (
-                    customUser?.name || "No disponible"
+                    customUser?.name || t("settings.profile.notAvailable")
                   )}
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Rol</label>
+                <label className="text-sm font-medium text-muted-foreground">{t("settings.profile.role")}</label>
                 <p className="text-foreground">
                   {isRefreshing ? (
                     <span className="flex items-center gap-2">
                       <RefreshCw className="w-3 h-3 animate-spin" />
-                      Cargando...
+                      {t("settings.profile.loading")}
                     </span>
                   ) : (
-                    customUser?.role || "No disponible"
+                    customUser?.role || t("settings.profile.notAvailable")
                   )}
                 </p>
               </div>
@@ -132,32 +135,48 @@ export function SettingsTab() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-card-foreground">
               <Palette className="w-5 h-5" />
-              Preferencias
+              {t("settings.preferences.title")}
             </CardTitle>
-            <CardDescription>Personaliza tu experiencia</CardDescription>
+            <CardDescription>{t("settings.preferences.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-foreground">Tema de la aplicación</p>
-                <p className="text-sm text-muted-foreground">Cambia entre tema claro y oscuro</p>
+                <p className="font-medium text-foreground">{t("settings.preferences.theme.title")}</p>
+                <p className="text-sm text-muted-foreground">{t("settings.preferences.theme.description")}</p>
               </div>
               <Button
                 variant="outline"
                 className="hover:bg-accent hover:text-accent-foreground transition-colors"
                 onClick={toggleTheme}
               >
-                Cambiar tema
+                {t("settings.preferences.theme.change")}
               </Button>
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-foreground">Idioma</p>
-                <p className="text-sm text-muted-foreground">Selecciona tu idioma preferido</p>
+                <p className="font-medium text-foreground">{t("settings.preferences.language.title")}</p>
+                <p className="text-sm text-muted-foreground">{t("settings.preferences.language.description")}</p>
               </div>
-              <Button variant="outline" className="hover:bg-accent hover:text-accent-foreground transition-colors">
-                Español
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-2">
+                    <Globe className="w-4 h-4" />
+                    {t(`language.${locale}`)}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setLocale("es")} className={locale === "es" ? "bg-accent" : ""}>
+                    {t("language.es")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLocale("en")} className={locale === "en" ? "bg-accent" : ""}>
+                    {t("language.en")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLocale("pt")} className={locale === "pt" ? "bg-accent" : ""}>
+                    {t("language.pt")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </CardContent>
         </Card>
@@ -167,27 +186,27 @@ export function SettingsTab() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-card-foreground">
               <Bell className="w-5 h-5" />
-              Notificaciones
+              {t("settings.notifications.title")}
             </CardTitle>
-            <CardDescription>Gestiona cómo recibes notificaciones</CardDescription>
+            <CardDescription>{t("settings.notifications.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-foreground">Notificaciones por email</p>
-                <p className="text-sm text-muted-foreground">Recibe actualizaciones importantes por correo</p>
+                <p className="font-medium text-foreground">{t("settings.notifications.email.title")}</p>
+                <p className="text-sm text-muted-foreground">{t("settings.notifications.email.description")}</p>
               </div>
               <Button variant="outline" className="hover:bg-accent hover:text-accent-foreground transition-colors">
-                Activadas
+                {t("settings.notifications.email.enabled")}
               </Button>
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-foreground">Notificaciones push</p>
-                <p className="text-sm text-muted-foreground">Recibe notificaciones en tiempo real</p>
+                <p className="font-medium text-foreground">{t("settings.notifications.push.title")}</p>
+                <p className="text-sm text-muted-foreground">{t("settings.notifications.push.description")}</p>
               </div>
               <Button variant="outline" className="hover:bg-accent hover:text-accent-foreground transition-colors">
-                Desactivadas
+                {t("settings.notifications.push.disabled")}
               </Button>
             </div>
           </CardContent>
@@ -198,15 +217,15 @@ export function SettingsTab() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-card-foreground">
               <LogOut className="w-5 h-5" />
-              Cerrar Sesión
+              {t("settings.logout.title")}
             </CardTitle>
-            <CardDescription>Termina tu sesión actual de forma segura</CardDescription>
+            <CardDescription>{t("settings.logout.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-foreground">Salir de la aplicación</p>
-                <p className="text-sm text-muted-foreground">Serás redirigido a la página principal</p>
+                <p className="font-medium text-foreground">{t("settings.logout.action.title")}</p>
+                <p className="text-sm text-muted-foreground">{t("settings.logout.action.description")}</p>
               </div>
               <Button 
                 onClick={handleLogout}
@@ -214,7 +233,7 @@ export function SettingsTab() {
                 className="hover:bg-destructive/90 transition-colors"
               >
                 <LogOut className="w-4 h-4 mr-2" />
-                Cerrar Sesión
+                {t("settings.logout.button")}
               </Button>
             </div>
           </CardContent>

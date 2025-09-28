@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Check, Edit, History, MessageSquare, MoreVertical, Trash2, X } from "lucide-react"
-import { Client } from "@/src/lib/types/trainer"
+import { Client } from "@/lib/types/trainer"
+import { useTranslation } from "@/lib/i18n/LanguageProvider"
 
 interface ClientTableProps {
   clients: Client[]
@@ -28,17 +29,19 @@ export function ClientTable({
   onCancelRequest,
   onViewHistory,
 }: ClientTableProps) {
+  const { t } = useTranslation()
+
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-sm">
         <thead>
           <tr className="bg-muted/40 text-muted-foreground">
-            <th className="px-3 py-2 text-left">Nombre</th>
-            <th className="px-3 py-2 text-left">Email</th>
-            <th className="px-3 py-2 text-left">Teléfono</th>
-            <th className="px-3 py-2 text-left">Estado</th>
-            <th className="px-3 py-2 text-left">Progreso</th>
-            <th className="px-3 py-2 text-left">Próxima sesión</th>
+            <th className="px-3 py-2 text-left">{t("clients.table.name")}</th>
+            <th className="px-3 py-2 text-left">{t("clients.table.email")}</th>
+            <th className="px-3 py-2 text-left">{t("clients.table.phone")}</th>
+            <th className="px-3 py-2 text-left">{t("clients.table.status")}</th>
+            <th className="px-3 py-2 text-left">{t("clients.table.progress")}</th>
+            <th className="px-3 py-2 text-left">{t("clients.table.nextSession")}</th>
             <th className="w-12"></th>
           </tr>
         </thead>
@@ -47,7 +50,7 @@ export function ClientTable({
             <tr key={client.id} className="border-b border-border hover:bg-muted/30 transition-colors items-center">
               <td className="px-3 py-2 font-medium flex items-center gap-2">
                 <Avatar className="w-14 h-14">
-                  <AvatarImage src={client.avatar || "/placeholder.svg"} />
+                  <AvatarImage src={client.avatar || "/images/placeholder.svg"} />
                   <AvatarFallback>
                     {client.name.split(" ").map((n) => n[0]).join("")}
                   </AvatarFallback>
@@ -59,14 +62,14 @@ export function ClientTable({
               <td className="px-3 py-2">
                 <Badge
                   variant={
-                    client.status === "Activo"
+                    client.status === "active"
                       ? "default"
-                      : client.status === "Pendiente"
+                      : client.status === "pending"
                       ? "secondary"
                       : "destructive"
                   }
                 >
-                  {client.status}
+                  {t(`dashboard.status.${client.status}`)}
                 </Badge>
               </td>
               <td className="px-3 py-2 text-left align-middle">{client.progress}%</td>
@@ -79,19 +82,19 @@ export function ClientTable({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {client.status === "Pendiente" ? (
+                    {client.status === "pending" ? (
                       <>
                         {/* Accept/Reject only if requested_by = alumno (trainer is counterpart) */}
                         {onAcceptRequest && client.requestedBy === 'alumno' && (
                           <DropdownMenuItem onClick={() => onAcceptRequest(client)}>
                             <Check className="w-4 h-4 mr-2" />
-                            Aceptar solicitud
+                            {t("clients.actions.acceptRequest")}
                           </DropdownMenuItem>
                         )}
                         {onRejectRequest && client.requestedBy === 'alumno' && (
                           <DropdownMenuItem onClick={() => onRejectRequest(client)}>
                             <X className="w-4 h-4 mr-2" />
-                            Rechazar solicitud
+                            {t("clients.actions.rejectRequest")}
                           </DropdownMenuItem>
                         )}
                         {/* Cancel only if requested_by = entrenador (trainer initiated) */}
@@ -100,7 +103,7 @@ export function ClientTable({
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => onCancelRequest(client)}>
                               <Trash2 className="w-4 h-4 mr-2" />
-                              Cancelar solicitud
+                              {t("clients.actions.cancelRequest")}
                             </DropdownMenuItem>
                           </>
                         )}
@@ -110,17 +113,17 @@ export function ClientTable({
                         {onChatWithClient && (
                           <DropdownMenuItem onClick={() => onChatWithClient(client.name)}>
                             <MessageSquare className="w-4 h-4 mr-2" />
-                            Chat
+                            {t("clients.actions.chat")}
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuItem onClick={() => onEditClient(client)}>
                           <Edit className="w-4 h-4 mr-2" />
-                          Editar
+                          {t("clients.actions.edit")}
                         </DropdownMenuItem>
                         {onViewHistory && (
                           <DropdownMenuItem onClick={() => onViewHistory(client)}>
                             <History className="w-4 h-4 mr-2" />
-                            Ver historial
+                            {t("clients.actions.viewHistory")}
                           </DropdownMenuItem>
                         )}
                         {/* Agenda removed */}
@@ -130,7 +133,7 @@ export function ClientTable({
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
-                          Eliminar
+                          {t("clients.actions.delete")}
                         </DropdownMenuItem>
                       </>
                     )}
@@ -142,7 +145,7 @@ export function ClientTable({
           {clients.length === 0 && (
             <tr>
               <td colSpan={7} className="text-center py-8 text-muted-foreground">
-                No se encontraron alumnos con los filtros aplicados.
+                {t("clients.noResults")}
               </td>
             </tr>
           )}

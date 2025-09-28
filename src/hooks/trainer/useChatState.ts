@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import type { Chat, ChatMessage } from "@/src/lib/types/trainer"
+import type { Chat, ChatMessage } from "@/lib/types/trainer"
 
 export interface UseChatStateReturn {
   // Chat State

@@ -1,6 +1,6 @@
 import { toast } from "@/hooks/use-toast"
 import { supabase } from "@/services/database"
-import type { Client } from "@/src/lib/types/trainer"
+import type { Client } from "@/lib/types/trainer"
 
 export interface ClientHandlers {
   handleEditClient: (client: Client) => void

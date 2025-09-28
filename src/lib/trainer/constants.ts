@@ -1,4 +1,4 @@
-import type { Exercise } from "@/src/lib/types/trainer"
+import type { Exercise } from "@/lib/types/trainer"
 
 export const FALLBACK_EXERCISES: Exercise[] = [
   {
