@@ -603,8 +603,8 @@ export function createRoutineHandlers(
         const worksheet = workbook.addWorksheet(template.name?.slice(0, 31) || 'Rutina')
 
         // Map exercises by id to resolve names
-        const exercisesById = new Map(
-          (routineState.exercisesCatalog || []).map((e: any) => [e.id?.toString(), e])
+        const exercisesById = new Map<string, Exercise>(
+          (routineState.exercisesCatalog || []).map((e: Exercise) => [e.id?.toString(), e])
         )
 
         // Column headers definition

@@ -55,8 +55,8 @@ export function useClientState(): UseClientStateReturn {
 
       const matchesFilter = 
         filter === "all" ||
-        (filter === "active" && client.status === "Activo") ||
-        (filter === "pending" && client.status === "Pendiente")
+        (filter === "active" && client.status === "active") ||
+        (filter === "pending" && client.status === "pending")
 
       return matchesSearch && matchesFilter
     })

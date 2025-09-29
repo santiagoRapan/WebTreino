@@ -36,7 +36,7 @@ export function DashboardTab() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t(stat.titleKey)}</p>
+                  <p className="text-sm text-muted-foreground">{stat.titleKey}</p>
                   <p className="text-2xl font-bold text-card-foreground">{stat.value}</p>
                   <p className="text-sm text-primary">{stat.change}</p>
                 </div>
@@ -67,11 +67,11 @@ export function DashboardTab() {
                 </Avatar>
                 <div className="flex-1">
                   <p className="font-medium text-card-foreground">{client.name}</p>
-                  <p className="text-sm text-muted-foreground">{t('dashboard.recentClients.lastSession')}: {client.lastSession}</p>
+                  <p className="text-sm text-muted-foreground">Última sesión: {client.lastSession}</p>
                 </div>
                 <div className="text-right">
-                  <Badge variant={client.status === "active" ? "default" : "secondary"}>{t(`dashboard.status.${client.status}`)}</Badge>
-                  <p className="text-sm text-primary mt-1">{client.progress}% {t('dashboard.recentClients.progress')}</p>
+                  <Badge variant={client.status === "active" ? "default" : "secondary"}>{client.status}</Badge>
+                  <p className="text-sm text-primary mt-1">{client.progress}% de progreso</p>
                 </div>
               </div>
             ))}

@@ -170,7 +170,6 @@ export function useStudents(): UseStudentsReturn {
       .from('workout_session')
       .select('id, performer_id, routine_id, started_at, completed_at, notes, routines!inner(id, name, owner_id)')
       .eq('performer_id', studentId)
-      .eq('routines.owner_id', trainerId)
       .order('started_at', { ascending: false })
 
     if (sessErr) {
