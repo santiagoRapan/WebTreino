@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useExercises } from "@/hooks/useExercises"
 import { useRoutineDatabase } from "@/hooks/useRoutineDatabase"
 import { useAuth } from "@/services/auth"
 import type { 
@@ -131,22 +130,13 @@ export function useRoutineState(): UseRoutineStateReturn {
   // Auth context for user ID
   const { customUser } = useAuth()
   
-  // Exercise Catalog State - Use real database exercises
-  const { exercises: dbExercises, loading: loadingExercises, error: exercisesError } = useExercises()
+  // Exercise Catalog State - Don't load exercises automatically
+  // They will be loaded on-demand when user searches
   const [exercisesCatalog, setExercisesCatalog] = useState<Exercise[]>([])
+  const [loadingExercises, setLoadingExercises] = useState(false)
   
   // Database operations for routines
   const routineDatabase = useRoutineDatabase()
-  
-  // Update exercises when database exercises are loaded
-  useEffect(() => {
-    if (dbExercises.length > 0) {
-      setExercisesCatalog(dbExercises)
-    } else if (!loadingExercises && dbExercises.length === 0) {
-      // Fallback to mock data if no exercises in database
-      setExercisesCatalog(FALLBACK_EXERCISES)
-    }
-  }, [dbExercises, loadingExercises])
   
   // Exercise Forms
   const [newExerciseForm, setNewExerciseForm] = useState<ExerciseFormState>({
