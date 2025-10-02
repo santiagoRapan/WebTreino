@@ -4,7 +4,7 @@ import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
-import { AuthProvider } from "@/services/auth"
+import { AuthProvider } from "@/features/auth"
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider"
 
 export const metadata: Metadata = {

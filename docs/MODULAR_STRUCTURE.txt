@@ -1,0 +1,313 @@
+================================================================================
+TREINO WEB - MODULAR STRUCTURE DOCUMENTATION
+================================================================================
+
+This document outlines the new modular, feature-based architecture for the 
+Treino web application.
+
+================================================================================
+DIRECTORY STRUCTURE
+================================================================================
+
+/Users/jnolascodecarles/TREINO/web/Treino-web/
+│
+├── app/                          # Next.js App Router (pages only)
+│   ├── dashboard/page.tsx
+│   ├── alumnos/page.tsx
+│   ├── rutinas/page.tsx
+│   ├── configuracion/page.tsx
+│   ├── auth/page.tsx
+│   ├── layout.tsx
+│   ├── page.tsx
+│   └── globals.css
+│
+├── layouts/                      # ROOT-LEVEL layouts (common to all dashboards)
+│   ├── TrainerLayout.tsx        # Main trainer dashboard layout wrapper
+│   ├── Sidebar.tsx              # Navigation sidebar with menu items
+│   ├── TrainerHeader.tsx        # Dashboard header with theme, user menu
+│   └── index.ts                 # Barrel exports for layouts
+│
+├── src/
+│   ├── features/                # Feature-based modules (main app logic)
+│   │   │
+│   │   ├── trainer/             # Trainer/Client management feature
+│   │   │   ├── components/
+│   │   │   │   ├── ClientsTab.tsx
+│   │   │   │   ├── ClientTable.tsx
+│   │   │   │   ├── ClientFilters.tsx
+│   │   │   │   ├── ClientsHeader.tsx
+│   │   │   │   ├── NewClientDialog.tsx
+│   │   │   │   ├── EditClientDialog.tsx
+│   │   │   │   └── ClientHistoryDialog.tsx
+│   │   │   ├── hooks/
+│   │   │   │   ├── useClientState.ts
+│   │   │   │   ├── useUIState.ts
+│   │   │   │   └── useTrainerDashboard.ts
+│   │   │   ├── services/
+│   │   │   │   ├── clientHandlers.ts
+│   │   │   │   └── handlers.ts
+│   │   │   ├── types.ts         # Trainer-specific types
+│   │   │   └── index.ts         # Barrel exports
+│   │   │
+│   │   ├── routines/            # Routine management feature
+│   │   │   ├── components/
+│   │   │   │   ├── RoutinesTab.tsx
+│   │   │   │   └── (routine editor components)
+│   │   │   ├── hooks/
+│   │   │   │   ├── useRoutineState.ts
+│   │   │   │   ├── useRoutineDatabase.ts
+│   │   │   │   └── useRoutineAssignments.ts
+│   │   │   ├── services/
+│   │   │   │   └── routineHandlers.ts
+│   │   │   ├── types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── students/            # Student/Alumno management feature
+│   │   │   ├── components/
+│   │   │   │   └── (student-specific components)
+│   │   │   ├── hooks/
+│   │   │   │   ├── useStudents.ts
+│   │   │   │   ├── useStudentHistory.ts
+│   │   │   │   └── useTrainerLinkRequests.ts
+│   │   │   ├── services/
+│   │   │   │   └── (student API calls)
+│   │   │   ├── types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── exercises/           # Exercise catalog and search feature
+│   │   │   ├── components/
+│   │   │   │   ├── ExerciseSelector.tsx
+│   │   │   │   ├── ExerciseCatalog.tsx
+│   │   │   │   └── CreateExerciseDialog.tsx
+│   │   │   ├── hooks/
+│   │   │   │   ├── useExercises.ts
+│   │   │   │   └── useExerciseSearch.ts
+│   │   │   ├── services/
+│   │   │   │   └── exerciseHandlers.ts
+│   │   │   ├── types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── auth/                # Authentication feature
+│   │   │   ├── components/
+│   │   │   │   ├── AuthPage.tsx
+│   │   │   │   └── (auth forms)
+│   │   │   ├── hooks/
+│   │   │   │   └── (auth hooks)
+│   │   │   ├── services/
+│   │   │   │   ├── auth.ts
+│   │   │   │   ├── auth-context.tsx
+│   │   │   │   └── index.ts
+│   │   │   ├── types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── dashboard/           # Dashboard/Home overview feature
+│   │   │   ├── components/
+│   │   │   │   ├── DashboardTab.tsx
+│   │   │   │   └── StatsCards.tsx
+│   │   │   ├── hooks/
+│   │   │   │   └── (dashboard-specific hooks)
+│   │   │   ├── types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── landing/             # Public landing page feature
+│   │   │   ├── components/
+│   │   │   │   ├── LandingPage.tsx
+│   │   │   │   ├── NavigationBar.tsx
+│   │   │   │   ├── HeroSection.tsx
+│   │   │   │   ├── FeaturesSection.tsx
+│   │   │   │   └── Footer.tsx
+│   │   │   └── index.ts
+│   │   │
+│   │   └── settings/            # Settings and configuration feature
+│   │       ├── components/
+│   │       │   └── SettingsTab.tsx
+│   │       └── index.ts
+│   │
+│   ├── components/              # Shared components (not feature-specific)
+│   │   ├── ui/                  # shadcn/ui component library
+│   │   │   ├── button.tsx
+│   │   │   ├── card.tsx
+│   │   │   ├── dialog.tsx
+│   │   │   ├── input.tsx
+│   │   │   ├── (all other UI primitives)
+│   │   │   └── index.ts
+│   │   └── common/              # Common app components
+│   │       ├── ThemeProvider.tsx
+│   │       ├── ThemeToggle.tsx
+│   │       └── index.ts
+│   │
+│   ├── hooks/                   # Cross-feature, reusable hooks
+│   │   ├── use-toast.ts
+│   │   ├── use-mobile.ts
+│   │   └── index.ts
+│   │
+│   ├── services/                # Global services and API clients
+│   │   ├── database/
+│   │   │   ├── supabaseClient.ts
+│   │   │   └── index.ts
+│   │   └── index.ts
+│   │
+│   ├── lib/                     # Utilities, helpers, constants
+│   │   ├── utils/
+│   │   │   ├── utils.ts         # cn() classname helper, etc.
+│   │   │   └── index.ts
+│   │   ├── i18n/                # Internationalization
+│   │   │   ├── config.ts
+│   │   │   ├── LanguageProvider.tsx
+│   │   │   └── index.ts
+│   │   ├── context/             # Global React contexts
+│   │   │   ├── TrainerDashboardContext.tsx
+│   │   │   └── index.ts
+│   │   └── index.ts
+│   │
+│   ├── types/                   # Shared TypeScript types
+│   │   ├── common.ts
+│   │   └── index.ts
+│   │
+│   ├── providers/               # App-wide providers (Query, Theme, etc.)
+│   │   ├── QueryProvider.tsx
+│   │   └── index.ts
+│   │
+│   └── styles/
+│       └── globals.css
+│
+├── public/                      # Static assets
+│   └── images/
+│
+├── docs/                        # Documentation
+│   └── MODULAR_STRUCTURE.txt    # This file
+│
+├── tsconfig.json
+├── package.json
+├── next.config.mjs
+└── components.json
+
+================================================================================
+FEATURE MODULE STRUCTURE
+================================================================================
+
+Each feature module follows this pattern:
+
+features/[feature-name]/
+  ├── components/       # UI components specific to this feature
+  ├── hooks/            # Custom hooks for this feature's logic
+  ├── services/         # API calls, handlers, business logic
+  ├── types.ts          # TypeScript types for this feature
+  └── index.ts          # Barrel exports for clean imports
+
+================================================================================
+KEY PRINCIPLES
+================================================================================
+
+1. FEATURE ISOLATION
+   - Each feature is self-contained with its own components, hooks, and logic
+   - Features can import from shared resources but not from other features
+   - Makes features portable and easy to refactor
+
+2. LAYOUTS AT ROOT
+   - Common layout components (Sidebar, Header) live at root level
+   - Not inside src/ because they wrap the entire app
+   - Accessible to all pages without nested imports
+
+3. SHARED VS FEATURE-SPECIFIC
+   - src/components/ = truly reusable across features (UI library, common utils)
+   - features/[name]/components/ = only used within that feature
+   
+4. BARREL EXPORTS
+   - Each feature has index.ts that exports its public API
+   - Clean imports: import { useRoutines } from '@/features/routines'
+   - Hides internal implementation details
+
+5. NO DUPLICATES
+   - Single source of truth for each file
+   - Root-level components/, hooks/, lib/ folders will be removed after migration
+   - Everything consolidated into proper locations
+
+================================================================================
+BENEFITS
+================================================================================
+
+✅ SCALABILITY
+   - Easy to add new features without touching existing code
+   - Clear boundaries prevent feature coupling
+
+✅ MAINTAINABILITY
+   - Know exactly where to find code for each feature
+   - Related code lives together (components, hooks, services)
+
+✅ TEAM COLLABORATION
+   - Multiple developers can work on different features simultaneously
+   - Less merge conflicts due to clear separation
+
+✅ CODE REUSABILITY
+   - Shared components clearly identified in src/components/
+   - Easy to spot what's truly generic vs feature-specific
+
+✅ BETTER DX (Developer Experience)
+   - Intuitive file organization
+   - Faster navigation and code discovery
+   - Clear import paths
+
+================================================================================
+IMPORT PATH ALIASES
+================================================================================
+
+tsconfig.json will be updated with these aliases:
+
+@/features/*          → src/features/*
+@/components/*        → src/components/*
+@/hooks/*             → src/hooks/*
+@/services/*          → src/services/*
+@/lib/*               → src/lib/*
+@/types/*             → src/types/*
+@/providers/*         → src/providers/*
+@/layouts/*           → layouts/*
+
+Examples:
+  import { ClientsTab } from '@/features/trainer'
+  import { Button } from '@/components/ui'
+  import { useExercises } from '@/features/exercises'
+  import { TrainerLayout } from '@/layouts'
+
+================================================================================
+MIGRATION PHASES
+================================================================================
+
+PHASE 1: Create Structure ✓
+  - Create all directories
+  - Set up barrel exports
+
+PHASE 2: Move Features
+  - Trainer components, hooks, services → features/trainer/
+  - Routines components, hooks, services → features/routines/
+  - Students hooks, services → features/students/
+  - Exercises hooks, services → features/exercises/
+  - Auth services → features/auth/
+  - Dashboard components → features/dashboard/
+  - Landing components → features/landing/
+  - Settings components → features/settings/
+
+PHASE 3: Move Layouts
+  - TrainerLayout → layouts/
+  - Sidebar → layouts/
+  - TrainerHeader → layouts/
+
+PHASE 4: Consolidate Shared
+  - UI components stay in src/components/ui/
+  - Common components to src/components/common/
+  - Cross-feature hooks to src/hooks/
+
+PHASE 5: Update Imports
+  - Update all import statements throughout codebase
+  - Update tsconfig.json paths
+  - Update components.json aliases
+
+PHASE 6: Cleanup
+  - Remove duplicate files from root components/, hooks/, lib/
+  - Verify all imports work
+  - Run linter and tests
+
+================================================================================
+END OF DOCUMENTATION
+================================================================================
+

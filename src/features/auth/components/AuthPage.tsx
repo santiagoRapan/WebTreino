@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useAuth } from "@/features/auth"
+import { useAuth } from "../services/auth-context"
 import {
   Dumbbell,
   Loader2,
@@ -84,9 +84,6 @@ export default function AuthPage() {
           <div className="w-full max-w-md space-y-6">
             {/* Header */}
             <div className="text-center space-y-4">
-              <Badge className="bg-green-500 text-white border-green-600 font-bold">
-                ✅ MIGRATED - Auth Feature
-              </Badge>
               <Badge className="bg-primary/20 text-primary border-primary/30">
                 {isSignUp ? 'Crear Cuenta' : 'Iniciar Sesión'}
               </Badge>

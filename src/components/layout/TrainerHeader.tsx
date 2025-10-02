@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Bell, Moon, Sun, RefreshCw } from "lucide-react"
 import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
-import { useAuth } from "@/services/auth"
+import { useAuth } from "@/features/auth"
 import { useState } from "react"
 import { useTranslation } from "@/lib/i18n/LanguageProvider"
 

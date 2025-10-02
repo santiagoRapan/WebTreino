@@ -1,0 +1,114 @@
+
+
+├── app/                          # Next.js App Router (pages only)
+│   ├── dashboard/page.tsx
+│   ├── alumnos/page.tsx
+│   ├── rutinas/page.tsx
+│   ├── configuracion/page.tsx
+│   ├── auth/page.tsx
+│   ├── layout.tsx
+│   ├── page.tsx
+│   └── globals.css
+│
+├── layouts/                      # ⭐ ROOT-LEVEL layouts (your request)
+│   ├── TrainerLayout.tsx        # Main trainer dashboard layout
+│   ├── Sidebar.tsx              # Navigation sidebar
+│   ├── TrainerHeader.tsx        # Dashboard header with user menu
+│   └── index.ts                 # Barrel exports
+│
+├── src/
+│   ├── features/                # ⭐ Feature-based modules
+│   │   │
+│   │   ├── trainer/             # Trainer management feature
+│   │   │   ├── components/      # ClientsTab, ClientTable, etc.
+│   │   │   ├── hooks/           # useClientState, useUIState
+│   │   │   ├── services/        # clientHandlers.ts
+│   │   │   ├── types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── routines/            # Routine management feature
+│   │   │   ├── components/      # RoutinesTab, RoutineEditor
+│   │   │   ├── hooks/           # useRoutineState, useRoutineDatabase
+│   │   │   ├── services/        # routineHandlers.ts
+│   │   │   ├── types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── students/            # Student/Alumno feature
+│   │   │   ├── components/      # Student-specific components
+│   │   │   ├── hooks/           # useStudents, useStudentHistory
+│   │   │   ├── services/        # Student API calls
+│   │   │   ├── types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── exercises/           # Exercise catalog feature
+│   │   │   ├── components/      # Exercise selector, catalog
+│   │   │   ├── hooks/           # useExercises, useExerciseSearch
+│   │   │   ├── services/        # Exercise API
+│   │   │   ├── types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── auth/                # Authentication feature
+│   │   │   ├── components/      # Auth forms
+│   │   │   ├── hooks/           # Auth hooks
+│   │   │   ├── services/        # auth.ts, auth-context.tsx
+│   │   │   ├── types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── dashboard/           # Dashboard/Home feature
+│   │   │   ├── components/      # DashboardTab, StatsCards
+│   │   │   ├── hooks/           # useTrainerDashboard
+│   │   │   ├── types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── landing/             # Landing page feature
+│   │   │   ├── components/      # HeroSection, FeaturesSection
+│   │   │   └── index.ts
+│   │   │
+│   │   └── settings/            # Settings feature
+│   │       ├── components/      # SettingsTab
+│   │       └── index.ts
+│   │
+│   ├── components/              # ⭐ Shared components (NOT in "shared" folder)
+│   │   ├── ui/                  # shadcn/ui components
+│   │   └── common/              # ThemeProvider, ThemeToggle, etc.
+│   │
+│   ├── hooks/                   # Cross-feature hooks
+│   │   ├── use-toast.ts
+│   │   └── use-mobile.ts
+│   │
+│   ├── services/                # Global services
+│   │   ├── database/
+│   │   │   ├── supabaseClient.ts
+│   │   │   └── index.ts
+│   │   └── index.ts
+│   │
+│   ├── lib/                     # Utils, helpers, constants
+│   │   ├── utils/
+│   │   │   ├── utils.ts         # cn() and helpers
+│   │   │   └── index.ts
+│   │   ├── i18n/                # Internationalization
+│   │   │   ├── config.ts
+│   │   │   ├── LanguageProvider.tsx
+│   │   │   └── index.ts
+│   │   └── context/             # Global contexts
+│   │       ├── TrainerDashboardContext.tsx
+│   │       └── index.ts
+│   │
+│   ├── types/                   # Shared TypeScript types
+│   │   ├── common.ts
+│   │   └── index.ts
+│   │
+│   ├── providers/               # App-wide providers
+│   │   ├── QueryProvider.tsx
+│   │   └── index.ts
+│   │
+│   └── styles/
+│       └── globals.css
+│
+├── public/                      # Static assets
+│   └── images/
+│
+├── docs/                        # Documentation
+├── tsconfig.json
+├── package.json
+└── next.config.mjs

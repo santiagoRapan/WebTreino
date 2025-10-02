@@ -2,9 +2,9 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/services/auth"
+import { useAuth } from "@/features/auth"
 import { TrainerLayout } from "@/components/layout/TrainerLayout"
-import { ClientsTab } from "@/components/features/trainer/ClientsTab"
+import { ClientsTab } from "@/features/trainer"
 import { Loader2 } from "lucide-react"
 
 export default function AlumnosPage() {
@@ -34,7 +34,12 @@ export default function AlumnosPage() {
 
   return (
     <TrainerLayout>
-      <ClientsTab />
+      <div className="space-y-4">
+        <div className="bg-green-500 text-white px-4 py-2 rounded-md font-bold text-center">
+          ✅ MIGRATED - Trainer/Clients Feature
+        </div>
+        <ClientsTab />
+      </div>
     </TrainerLayout>
   )
 }

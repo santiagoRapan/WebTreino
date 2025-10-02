@@ -2,9 +2,9 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/services/auth"
+import { useAuth } from "@/features/auth"
 import { TrainerLayout } from "@/components/layout/TrainerLayout"
-import { DashboardTab } from "@/components/features/dashboard/DashboardTab"
+import { DashboardTab } from "@/features/dashboard"
 import { Loader2 } from "lucide-react"
 
 export default function DashboardPage() {
@@ -34,7 +34,12 @@ export default function DashboardPage() {
 
   return (
     <TrainerLayout>
-      <DashboardTab />
+      <div className="space-y-4">
+        <div className="bg-green-500 text-white px-4 py-2 rounded-md font-bold text-center">
+          ✅ MIGRATED - Dashboard Feature
+        </div>
+        <DashboardTab />
+      </div>
     </TrainerLayout>
   )
 }

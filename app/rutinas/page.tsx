@@ -2,9 +2,9 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/services/auth"
+import { useAuth } from "@/features/auth"
 import { TrainerLayout } from "@/components/layout/TrainerLayout"
-import { RoutinesTab } from "@/components/features/routines/RoutinesTab"
+import { RoutinesTab } from "@/features/routines"
 import { Loader2 } from "lucide-react"
 
 export default function RutinasPage() {
@@ -34,7 +34,12 @@ export default function RutinasPage() {
 
   return (
     <TrainerLayout>
-      <RoutinesTab />
+      <div className="space-y-4">
+        <div className="bg-green-500 text-white px-4 py-2 rounded-md font-bold text-center">
+          ✅ MIGRATED - Routines Feature
+        </div>
+        <RoutinesTab />
+      </div>
     </TrainerLayout>
   )
 }

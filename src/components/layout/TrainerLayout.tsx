@@ -1,6 +1,6 @@
 "use client"
 
-import { useTrainerDashboard } from "@/hooks/trainer/useTrainerDashboard"
+import { useTrainerDashboard } from "@/features/trainer"
 import { TrainerDashboardProvider } from "@/lib/context/TrainerDashboardContext"
 import { Sidebar } from "./Sidebar"
 import { TrainerHeader } from "./TrainerHeader"
