@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/services/database'
 import { RoutineTemplate, RoutineBlock } from '@/lib/types/trainer'
 import { toast } from '@/hooks/use-toast'
+import DataCacheManager from '@/lib/cache/dataCache'
 
 export interface DatabaseRoutine {
   id: number
@@ -38,6 +39,8 @@ export interface DatabaseBlockExercise {
 export function useRoutineDatabase() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [routines, setRoutines] = useState<RoutineTemplate[]>([])
+  const [lastUpdateEvent, setLastUpdateEvent] = useState<Date | null>(null)
 
   // Save a complete routine to the database
   const saveRoutineToDatabase = async (routine: RoutineTemplate, ownerId: string): Promise<number | null> => {
@@ -119,6 +122,12 @@ export function useRoutineDatabase() {
         description: `La rutina "${routine.name}" ha sido guardada en la base de datos.`,
       })
 
+      // ✅ Actualizar cache automáticamente
+      const newRoutineWithId = { ...routine, id: routineId }
+      setRoutines(prev => [newRoutineWithId, ...prev])
+      DataCacheManager.addCachedRoutine(ownerId, newRoutineWithId)
+      setLastUpdateEvent(new Date())
+
       return routineId
 
     } catch (err) {
@@ -130,14 +139,40 @@ export function useRoutineDatabase() {
     }
   }
 
-  // Load routines from database
-  const loadRoutinesFromDatabase = async (ownerId: string): Promise<RoutineTemplate[]> => {
+  // Load routines with cache-first strategy
+  const loadRoutinesFromDatabase = useCallback(async (ownerId: string, forceRefresh: boolean = false): Promise<RoutineTemplate[]> => {
     try {
+      // 🚀 CACHE-FIRST: Intentar cargar desde cache primero si no estamos forzando refresh
+      if (!forceRefresh) {
+        // 1. Verificar cache en memoria
+        if (routines.length > 0) {
+          console.log('🚀 Using in-memory cached routines')
+          return routines
+        }
+
+        // 2. Verificar cache persistente (localStorage)
+        const cachedRoutines = DataCacheManager.getCachedRoutines(ownerId)
+        if (cachedRoutines && cachedRoutines.length > 0) {
+          console.log('💾 Loading routines from persistent cache')
+          setRoutines(cachedRoutines)
+          setLastUpdateEvent(new Date())
+          
+          // Verificar actualizaciones en background (sin loading visible)
+          setTimeout(() => {
+            checkForUpdatesInBackground(ownerId, cachedRoutines)
+          }, 0)
+          
+          return cachedRoutines
+        }
+      }
+
+      // 📚 Si no hay cache o se forzó refresh, cargar desde base de datos
       setLoading(true)
       setError(null)
 
-      // Get routines with their blocks and exercises
-      const { data: routines, error: routinesError } = await supabase
+      console.log('📚 Loading routines from database...')
+
+      const { data: routinesData, error: routinesError } = await supabase
         .from('routines')
         .select(`
           *,
@@ -157,13 +192,15 @@ export function useRoutineDatabase() {
         return []
       }
 
-      if (!routines || routines.length === 0) {
+      if (!routinesData || routinesData.length === 0) {
         console.log('No routines found for user:', ownerId)
+        setRoutines([])
+        DataCacheManager.setCachedRoutines(ownerId, [])
         return []
       }
 
       // Transform database structure to our app structure
-      const transformedRoutines: RoutineTemplate[] = routines.map((routine: any) => ({
+      const transformedRoutines: RoutineTemplate[] = routinesData.map((routine: any) => ({
         id: routine.id,
         name: routine.name,
         description: routine.description,
@@ -186,6 +223,11 @@ export function useRoutineDatabase() {
           }))
       }))
 
+      // ✅ Actualizar both cache en memoria y persistente
+      setRoutines(transformedRoutines)
+      setLastUpdateEvent(new Date())
+      DataCacheManager.setCachedRoutines(ownerId, transformedRoutines)
+
       return transformedRoutines
 
     } catch (err) {
@@ -195,7 +237,48 @@ export function useRoutineDatabase() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [routines])
+
+  // 🔍 Verificar actualizaciones en background sin mostrar loading al usuario
+  const checkForUpdatesInBackground = useCallback(async (ownerId: string, cachedRoutines: RoutineTemplate[]) => {
+    try {
+      console.log('🔍 Checking for updates in background...')
+      
+      // Solo verificar metadatos para detectar cambios
+      const { data: routinesMetadata, error } = await supabase
+        .from('routines')
+        .select('id, name, created_on')
+        .eq('owner_id', ownerId)
+        .order('created_on', { ascending: false })
+
+      if (error) {
+        console.error('Background update check failed:', error)
+        return
+      }
+
+      // Comparar con cache para detectar cambios
+      if (!routinesMetadata || routinesMetadata.length !== cachedRoutines.length) {
+        console.log('🔄 Changes detected, refreshing data...')
+        await loadRoutinesFromDatabase(ownerId, true)
+        return
+      }
+
+      // Verificar si hay nuevas rutinas o cambios por ID
+      const cachedIds = cachedRoutines.map(r => r.id).sort()
+      const currentIds = routinesMetadata.map(r => r.id).sort()
+      const hasChanges = cachedIds.some((id, index) => id !== currentIds[index])
+
+      if (hasChanges) {
+        console.log('🔄 Routine changes detected, refreshing data...')
+        await loadRoutinesFromDatabase(ownerId, true)
+      } else {
+        console.log('✅ No changes detected, cache is up to date')
+      }
+
+    } catch (err) {
+      console.error('Error in background update check:', err)
+    }
+  }, [loadRoutinesFromDatabase])
 
   // Update an existing routine
   const updateRoutineInDatabase = async (routine: RoutineTemplate, ownerId: string): Promise<boolean> => {
@@ -286,6 +369,11 @@ export function useRoutineDatabase() {
         description: `La rutina "${routine.name}" ha sido actualizada en la base de datos.`,
       })
 
+      // ✅ Actualizar cache automáticamente
+      setRoutines(prev => prev.map(r => r.id === routine.id ? routine : r))
+      DataCacheManager.updateCachedRoutine(ownerId, routine)
+      setLastUpdateEvent(new Date())
+
       return true
 
     } catch (err) {
@@ -360,6 +448,11 @@ export function useRoutineDatabase() {
         description: "La rutina ha sido eliminada de la base de datos.",
       })
 
+      // ✅ Actualizar cache automáticamente
+      setRoutines(prev => prev.filter(r => r.id !== routineIdValue))
+      DataCacheManager.removeCachedRoutine(ownerId, routineIdValue)
+      setLastUpdateEvent(new Date())
+
       return true
 
     } catch (err) {
@@ -371,12 +464,21 @@ export function useRoutineDatabase() {
     }
   }
 
+  // 🔄 Función para forzar refresh
+  const refreshRoutines = useCallback(async (ownerId: string) => {
+    console.log('🔄 Refreshing routines cache...')
+    return loadRoutinesFromDatabase(ownerId, true)
+  }, [loadRoutinesFromDatabase])
+
   return {
     loading,
     error,
+    routines,
+    lastUpdateEvent,
     saveRoutineToDatabase,
     loadRoutinesFromDatabase,
     updateRoutineInDatabase,
-    deleteRoutineFromDatabase
+    deleteRoutineFromDatabase,
+    refreshRoutines
   }
 }

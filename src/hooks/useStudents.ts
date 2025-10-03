@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/services/database"
 import { toast } from "@/hooks/use-toast"
 import { useAuth } from "@/services/auth"
 import type { Client } from "@/lib/types/trainer"
+import DataCacheManager from "@/lib/cache/dataCache"
 
 export interface UseStudentsReturn {
   students: Client[]
@@ -12,6 +13,7 @@ export interface UseStudentsReturn {
   error: string | null
   refreshStudents: () => Promise<void>
   fetchStudentSessions: (studentId: string) => Promise<{ sessions: any[]; logs: any[] }>
+  lastUpdateEvent: Date | null
 }
 
 export function useStudents(): UseStudentsReturn {
@@ -20,14 +22,10 @@ export function useStudents(): UseStudentsReturn {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshTimeout, setRefreshTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [lastUpdateEvent, setLastUpdateEvent] = useState<Date | null>(null)
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async (forceRefresh: boolean = false) => {
     try {
-      setLoading(true)
-      setError(null)
-
-      console.log('📚 Loading roster and pending requests...')
-
       // Get current trainer id from auth context
       if (!authUser) {
         console.error('❌ No authenticated user')
@@ -35,6 +33,35 @@ export function useStudents(): UseStudentsReturn {
         return
       }
       const trainerId = authUser.id
+
+      // � CACHE-FIRST: Intentar cargar desde cache primero si no estamos forzando refresh
+      if (!forceRefresh) {
+        // 1. Verificar cache en memoria
+        if (students.length > 0) {
+          console.log('🚀 Using in-memory cached students')
+          return
+        }
+
+        // 2. Verificar cache persistente (localStorage)
+        const cachedStudents = DataCacheManager.getCachedStudents(trainerId)
+        if (cachedStudents && cachedStudents.length > 0) {
+          console.log('💾 Loading students from persistent cache')
+          setStudents(cachedStudents)
+          setLastUpdateEvent(new Date())
+          
+          // Verificar actualizaciones en background (sin loading visible)
+          setTimeout(() => {
+            checkForStudentUpdatesInBackground(trainerId, cachedStudents)
+          }, 0)
+          
+          return
+        }
+      }
+
+      setLoading(true)
+      setError(null)
+
+      console.log('📚 Loading roster and pending requests...')
 
       // 1) Fetch roster (trainer_student)
       const { data: rosterRows, error: rosterError } = await supabase
@@ -130,7 +157,11 @@ export function useStudents(): UseStudentsReturn {
 
       const combined = [...rosterClients, ...pendingClients]
       console.log(`✅ Loaded ${rosterClients.length} in roster, ${pendingClients.length} pending`)
+      
+      // ✅ Actualizar both cache en memoria y persistente
       setStudents(combined)
+      setLastUpdateEvent(new Date())
+      DataCacheManager.setCachedStudents(trainerId, combined)
 
     } catch (err) {
       console.error('❌ Error fetching students:', err)
@@ -143,22 +174,60 @@ export function useStudents(): UseStudentsReturn {
     } finally {
       setLoading(false)
     }
-  }
+  }, [authUser, students])
 
-  const refreshStudents = async () => {
-    await fetchStudents()
-  }
+  // 🔍 Verificar actualizaciones en background sin mostrar loading al usuario
+  const checkForStudentUpdatesInBackground = useCallback(async (trainerId: string, cachedStudents: Client[]) => {
+    try {
+      console.log('🔍 Checking for student updates in background...')
+      
+      // Verificar cambios en roster
+      const { data: rosterRows, error: rosterError } = await supabase
+        .from('trainer_student')
+        .select('student_id')
+        .eq('trainer_id', trainerId)
+
+      // Verificar cambios en requests pendientes
+      const { data: pendingRows, error: pendingError } = await supabase
+        .from('trainer_link_request')
+        .select('id, student_id')
+        .eq('trainer_id', trainerId)
+        .eq('status', 'pending')
+
+      if (rosterError || pendingError) {
+        console.error('Background update check failed:', rosterError || pendingError)
+        return
+      }
+
+      const currentStudentCount = (rosterRows?.length || 0) + (pendingRows?.length || 0)
+      
+      // Simple check: si el número de estudiantes cambió, actualizar
+      if (currentStudentCount !== cachedStudents.length) {
+        console.log('🔄 Student changes detected, refreshing data...')
+        await fetchStudents(true)
+      } else {
+        console.log('✅ No student changes detected, cache is up to date')
+      }
+
+    } catch (err) {
+      console.error('Error in background student update check:', err)
+    }
+  }, [fetchStudents])
+
+  const refreshStudents = useCallback(async () => {
+    await fetchStudents(true) // Force refresh
+  }, [fetchStudents])
 
   // Debounced refresh to prevent too many rapid API calls
-  const debouncedRefresh = () => {
+  const debouncedRefresh = useCallback(() => {
     if (refreshTimeout) {
       clearTimeout(refreshTimeout)
     }
     const newTimeout = setTimeout(() => {
-      fetchStudents()
+      fetchStudents(true) // Force refresh on real-time events
     }, 500) // Wait 500ms before refreshing
     setRefreshTimeout(newTimeout)
-  }
+  }, [fetchStudents, refreshTimeout])
 
   const fetchStudentSessions = async (studentId: string) => {
     // Get current trainer id from auth context
@@ -211,9 +280,9 @@ export function useStudents(): UseStudentsReturn {
 
   useEffect(() => {
     if (authUser) {
-      fetchStudents()
+      fetchStudents(false) // Initial load with cache-first
     }
-  }, [authUser])
+  }, [authUser, fetchStudents])
 
   // Real-time subscriptions for automatic updates
   useEffect(() => {
@@ -306,6 +375,7 @@ export function useStudents(): UseStudentsReturn {
     loading,
     error,
     refreshStudents,
-    fetchStudentSessions
+    fetchStudentSessions,
+    lastUpdateEvent
   }
 }
