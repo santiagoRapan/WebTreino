@@ -35,7 +35,6 @@ export function useTrainerDashboard() {
       { titleKey: "Alumnos Activos", value: activeClients.toString(), change: "", icon: Users, color: "text-primary" },
       { titleKey: "Rutinas Creadas", value: totalRoutines.toString(), change: "", icon: Dumbbell, color: "text-primary" },
       { titleKey: "Solicitudes de Alumnos", value: studentRequests.toString(), change: "", icon: UserPlus, color: "text-primary" },
-      { titleKey: "Solicitudes Enviadas", value: trainerRequests.toString(), change: "", icon: UserCheck, color: "text-primary" },
     ]
   }, [clientState.clients, routineState.routineFolders])
 
