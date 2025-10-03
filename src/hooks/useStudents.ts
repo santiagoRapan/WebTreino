@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "@/services/database"
 import { toast } from "@/hooks/use-toast"
 import { useAuth } from "@/services/auth"
@@ -21,11 +21,26 @@ export function useStudents(): UseStudentsReturn {
   const [students, setStudents] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [refreshTimeout, setRefreshTimeout] = useState<NodeJS.Timeout | null>(null)
   const [lastUpdateEvent, setLastUpdateEvent] = useState<Date | null>(null)
+  // Refs to avoid effect thrashing when timers change
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const realtimeFallbackIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const isFetchingRef = useRef(false)
+  const studentsRef = useRef<Client[]>([])
+
+  // Toggle verbose logs for this hook. Set to true only when debugging.
+  const DEBUG_STUDENTS = false
+  const dlog = (...args: any[]) => {
+    if (DEBUG_STUDENTS) console.log(...args)
+  }
 
   const fetchStudents = useCallback(async (forceRefresh: boolean = false) => {
     try {
+      if (isFetchingRef.current) {
+        dlog('⏳ fetchStudents already in progress, skipping')
+        return
+      }
+      isFetchingRef.current = true
       // Get current trainer id from auth context
       if (!authUser) {
         console.error('❌ No authenticated user')
@@ -34,18 +49,18 @@ export function useStudents(): UseStudentsReturn {
       }
       const trainerId = authUser.id
 
-      // � CACHE-FIRST: Intentar cargar desde cache primero si no estamos forzando refresh
+      // CACHE-FIRST: Intentar cargar desde cache primero si no estamos forzando refresh
       if (!forceRefresh) {
         // 1. Verificar cache en memoria
-        if (students.length > 0) {
-          console.log('🚀 Using in-memory cached students')
+        if (studentsRef.current.length > 0) {
+          dlog('🚀 Using in-memory cached students')
           return
         }
 
         // 2. Verificar cache persistente (localStorage)
         const cachedStudents = DataCacheManager.getCachedStudents(trainerId)
         if (cachedStudents && cachedStudents.length > 0) {
-          console.log('💾 Loading students from persistent cache')
+          dlog('💾 Loading students from persistent cache')
           setStudents(cachedStudents)
           setLastUpdateEvent(new Date())
           
@@ -61,7 +76,7 @@ export function useStudents(): UseStudentsReturn {
       setLoading(true)
       setError(null)
 
-      console.log('📚 Loading roster and pending requests...')
+      dlog('📚 Loading roster and pending requests...')
 
       // 1) Fetch roster (trainer_student)
       const { data: rosterRows, error: rosterError } = await supabase
@@ -155,11 +170,12 @@ export function useStudents(): UseStudentsReturn {
         }
       })
 
-      const combined = [...rosterClients, ...pendingClients]
-      console.log(`✅ Loaded ${rosterClients.length} in roster, ${pendingClients.length} pending`)
+  const combined = [...rosterClients, ...pendingClients]
+  dlog(`✅ Loaded ${rosterClients.length} in roster, ${pendingClients.length} pending`)
       
       // ✅ Actualizar both cache en memoria y persistente
       setStudents(combined)
+  studentsRef.current = combined
       setLastUpdateEvent(new Date())
       DataCacheManager.setCachedStudents(trainerId, combined)
 
@@ -172,14 +188,15 @@ export function useStudents(): UseStudentsReturn {
         variant: "destructive"
       })
     } finally {
+      isFetchingRef.current = false
       setLoading(false)
     }
-  }, [authUser, students])
+  }, [authUser])
 
   // 🔍 Verificar actualizaciones en background sin mostrar loading al usuario
   const checkForStudentUpdatesInBackground = useCallback(async (trainerId: string, cachedStudents: Client[]) => {
     try {
-      console.log('🔍 Checking for student updates in background...')
+      dlog('🔍 Checking for student updates in background...')
       
       // Verificar cambios en roster
       const { data: rosterRows, error: rosterError } = await supabase
@@ -203,10 +220,10 @@ export function useStudents(): UseStudentsReturn {
       
       // Simple check: si el número de estudiantes cambió, actualizar
       if (currentStudentCount !== cachedStudents.length) {
-        console.log('🔄 Student changes detected, refreshing data...')
+        dlog('🔄 Student changes detected, refreshing data...')
         await fetchStudents(true)
       } else {
-        console.log('✅ No student changes detected, cache is up to date')
+        dlog('✅ No student changes detected, cache is up to date')
       }
 
     } catch (err) {
@@ -220,14 +237,13 @@ export function useStudents(): UseStudentsReturn {
 
   // Debounced refresh to prevent too many rapid API calls
   const debouncedRefresh = useCallback(() => {
-    if (refreshTimeout) {
-      clearTimeout(refreshTimeout)
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current)
     }
-    const newTimeout = setTimeout(() => {
+    refreshTimeoutRef.current = setTimeout(() => {
       fetchStudents(true) // Force refresh on real-time events
     }, 500) // Wait 500ms before refreshing
-    setRefreshTimeout(newTimeout)
-  }, [fetchStudents, refreshTimeout])
+  }, [fetchStudents])
 
   const fetchStudentSessions = async (studentId: string) => {
     // Get current trainer id from auth context
@@ -282,13 +298,13 @@ export function useStudents(): UseStudentsReturn {
     if (authUser) {
       fetchStudents(false) // Initial load with cache-first
     }
-  }, [authUser, fetchStudents])
+  }, [authUser?.id])
 
   // Real-time subscriptions for automatic updates
   useEffect(() => {
     if (!authUser) return
 
-    console.log('🔔 Setting up real-time subscriptions for trainer:', authUser.id)
+    dlog('🔔 Setting up real-time subscriptions for trainer:', authUser.id)
 
     // Subscribe to trainer_link_request changes
     const requestsSubscription = supabase
@@ -302,18 +318,18 @@ export function useStudents(): UseStudentsReturn {
           filter: `trainer_id=eq.${authUser.id}`,
         },
         (payload) => {
-          console.log('🔔 Trainer link request change:', payload.eventType, payload)
+          dlog('🔔 Trainer link request change:', payload.eventType, payload)
           // Provide user feedback for new requests
           if (payload.eventType === 'INSERT') {
-            console.log('📥 Nueva solicitud de entrenador recibida!')
+            dlog('📥 Nueva solicitud de entrenador recibida!')
             toast({
               title: "Nueva solicitud recibida",
               description: "Un alumno ha solicitado conectar contigo. Revisa la pestaña de alumnos.",
             })
           } else if (payload.eventType === 'UPDATE') {
-            console.log('📝 Estado de solicitud actualizado')
+            dlog('📝 Estado de solicitud actualizado')
           } else if (payload.eventType === 'DELETE') {
-            console.log('🗑️ Solicitud eliminada')
+            dlog('🗑️ Solicitud eliminada')
           }
           // Refetch students data when requests change (debounced)
           debouncedRefresh()
@@ -321,9 +337,24 @@ export function useStudents(): UseStudentsReturn {
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Subscribed to trainer link requests')
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Error subscribing to trainer link requests')
+          dlog('✅ Subscribed to trainer link requests')
+          // Clear any fallback polling if active
+          if (realtimeFallbackIntervalRef.current) {
+            clearInterval(realtimeFallbackIntervalRef.current)
+            realtimeFallbackIntervalRef.current = null
+          }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('⚠️ Realtime subscribe issue (trainer link requests):', status)
+          // Start lightweight polling fallback if not already started
+          if (!realtimeFallbackIntervalRef.current) {
+            const interval = setInterval(() => {
+              fetchStudents(true)
+            }, 60_000) // poll every 60s as a fallback
+            realtimeFallbackIntervalRef.current = interval
+          }
+        } else if (status === 'CLOSED') {
+          // CLOSED often happens on cleanup/unmount or StrictMode double-invoke in dev
+          dlog('ℹ️ Realtime channel closed (trainer link requests)')
         }
       })
 
@@ -339,9 +370,9 @@ export function useStudents(): UseStudentsReturn {
           filter: `trainer_id=eq.${authUser.id}`,
         },
         (payload) => {
-          console.log('🔔 Trainer-student relationship change:', payload.eventType, payload)
+          dlog('🔔 Trainer-student relationship change:', payload.eventType, payload)
           if (payload.eventType === 'INSERT') {
-            console.log('🎉 Nuevo alumno añadido a la lista!')
+            dlog('🎉 Nuevo alumno añadido a la lista!')
             toast({
               title: "Alumno añadido",
               description: "Se ha establecido una nueva conexión con un alumno.",
@@ -353,22 +384,42 @@ export function useStudents(): UseStudentsReturn {
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Subscribed to trainer-student relationships')
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Error subscribing to trainer-student relationships')
+          dlog('✅ Subscribed to trainer-student relationships')
+          // Clear any fallback polling if active
+          if (realtimeFallbackIntervalRef.current) {
+            clearInterval(realtimeFallbackIntervalRef.current)
+            realtimeFallbackIntervalRef.current = null
+          }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('⚠️ Realtime subscribe issue (trainer-student relationships):', status)
+          // Start lightweight polling fallback if not already started
+          if (!realtimeFallbackIntervalRef.current) {
+            const interval = setInterval(() => {
+              fetchStudents(true)
+            }, 60_000) // poll every 60s as a fallback
+            realtimeFallbackIntervalRef.current = interval
+          }
+        } else if (status === 'CLOSED') {
+          // CLOSED often happens on cleanup/unmount or StrictMode double-invoke in dev
+          dlog('ℹ️ Realtime channel closed (trainer-student relationships)')
         }
       })
 
     // Cleanup subscriptions on unmount or auth change
     return () => {
-      console.log('🔕 Cleaning up real-time subscriptions')
-      if (refreshTimeout) {
-        clearTimeout(refreshTimeout)
+      dlog('🔕 Cleaning up real-time subscriptions')
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current)
+        refreshTimeoutRef.current = null
+      }
+      if (realtimeFallbackIntervalRef.current) {
+        clearInterval(realtimeFallbackIntervalRef.current)
+        realtimeFallbackIntervalRef.current = null
       }
       supabase.removeChannel(requestsSubscription)
       supabase.removeChannel(relationshipSubscription)
     }
-  }, [authUser])
+  }, [authUser?.id, fetchStudents])
 
   return {
     students,

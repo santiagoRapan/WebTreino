@@ -4,7 +4,7 @@ import { useAuth } from "@/services/auth"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { LogOut, User, Shield, Palette, Bell, RefreshCw, Globe } from "lucide-react"
+import { LogOut, User, Shield, Palette, Bell, Globe } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { useTheme } from "next-themes"
 import { useState } from "react"
@@ -12,11 +12,11 @@ import { useTranslation } from "@/lib/i18n/LanguageProvider"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 export function SettingsTab() {
-  const { signOut, authUser, customUser, refreshUserData } = useAuth()
+  const { signOut, authUser, customUser } = useAuth()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const { t, locale, setLocale } = useTranslation()
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  // refresh removed
 
   const handleLogout = async () => {
     try {
@@ -41,25 +41,7 @@ export function SettingsTab() {
     setTheme(theme === "light" ? "dark" : "light");
   };
 
-  const handleRefreshData = async () => {
-    try {
-      setIsRefreshing(true)
-      await refreshUserData()
-      toast({
-        title: t("settings.toasts.refreshSuccess.title"),
-        description: t("settings.toasts.refreshSuccess.description"),
-      })
-    } catch (error) {
-      console.error("Error refreshing user data:", error)
-      toast({
-        title: t("settings.toasts.error.title"),
-        description: t("settings.toasts.refreshError"),
-        variant: "destructive"
-      })
-    } finally {
-      setIsRefreshing(false)
-    }
-  };
+  // refresh removed
 
   return (
     <main className="p-6 space-y-6">
@@ -82,16 +64,7 @@ export function SettingsTab() {
                 </CardTitle>
                 <CardDescription>{t("settings.profile.description")}</CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefreshData}
-                disabled={isRefreshing}
-                className="flex items-center gap-2"
-              >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? t("settings.profile.refreshing") : t("settings.profile.refresh")}
-              </Button>
+              {/* refresh button removed */}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -103,27 +76,13 @@ export function SettingsTab() {
               <div>
                 <label className="text-sm font-medium text-muted-foreground">{t("settings.profile.name")}</label>
                 <p className="text-foreground">
-                  {isRefreshing ? (
-                    <span className="flex items-center gap-2">
-                      <RefreshCw className="w-3 h-3 animate-spin" />
-                      {t("settings.profile.loading")}
-                    </span>
-                  ) : (
-                    customUser?.name || t("settings.profile.notAvailable")
-                  )}
+                  {customUser?.name || t("settings.profile.notAvailable")}
                 </p>
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">{t("settings.profile.role")}</label>
                 <p className="text-foreground">
-                  {isRefreshing ? (
-                    <span className="flex items-center gap-2">
-                      <RefreshCw className="w-3 h-3 animate-spin" />
-                      {t("settings.profile.loading")}
-                    </span>
-                  ) : (
-                    customUser?.role || t("settings.profile.notAvailable")
-                  )}
+                  {customUser?.role || t("settings.profile.notAvailable")}
                 </p>
               </div>
             </div>
@@ -198,15 +157,6 @@ export function SettingsTab() {
               </div>
               <Button variant="outline" className="hover:bg-accent hover:text-accent-foreground transition-colors">
                 {t("settings.notifications.email.enabled")}
-              </Button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-foreground">{t("settings.notifications.push.title")}</p>
-                <p className="text-sm text-muted-foreground">{t("settings.notifications.push.description")}</p>
-              </div>
-              <Button variant="outline" className="hover:bg-accent hover:text-accent-foreground transition-colors">
-                {t("settings.notifications.push.disabled")}
               </Button>
             </div>
           </CardContent>

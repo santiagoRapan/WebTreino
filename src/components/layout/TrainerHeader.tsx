@@ -2,7 +2,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Bell, Moon, Sun, RefreshCw } from "lucide-react"
+import { Bell, Moon, Sun } from "lucide-react"
 import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
 import { useAuth } from "@/services/auth"
 import { useState } from "react"
@@ -16,8 +16,7 @@ export function TrainerHeader() {
     actions: { setTheme },
   } = useTrainerDashboard()
   
-  const { customUser, refreshUserData } = useAuth()
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const { customUser } = useAuth()
   const { t } = useTranslation()
 
   const getTabTitle = (tab: string) => {
@@ -32,16 +31,7 @@ export function TrainerHeader() {
 
   const title = getTabTitle(activeTab)
 
-  const handleRefreshData = async () => {
-    try {
-      setIsRefreshing(true)
-      await refreshUserData()
-    } catch (error) {
-      console.error("Error refreshing user data:", error)
-    } finally {
-      setIsRefreshing(false)
-    }
-  }
+  // refresh removed
 
   return (
     <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 w-full flex-shrink-0">
@@ -52,15 +42,7 @@ export function TrainerHeader() {
         <Button variant="outline" size="icon">
           <Bell className="w-4 h-4" />
         </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={handleRefreshData}
-          disabled={isRefreshing}
-          title={t("navigation.refreshData")}
-        >
-          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-        </Button>
+        {/* refresh removed */}
         <Button
           variant="outline"
           size="icon"

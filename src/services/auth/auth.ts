@@ -38,6 +38,15 @@ export const signInWithGoogle = async (redirectTo?: string): Promise<AuthRespons
 // Crear o actualizar usuario en la tabla users después del login
 export const createOrUpdateCustomUser = async (authUser: User): Promise<CustomUserResponse> => {
   try {
+    console.log('Creating/updating custom user for:', authUser.email, 'ID:', authUser.id)
+    
+    // First, check if user already exists
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', authUser.id)
+      .single()
+
     const userData: CreateUserData = {
       id: authUser.id,
       name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Usuario',
@@ -45,24 +54,80 @@ export const createOrUpdateCustomUser = async (authUser: User): Promise<CustomUs
       avatar_url: authUser.user_metadata?.avatar_url || null
     }
 
-    // Usar upsert para crear o actualizar
-    const { data, error } = await supabase
-      .from('users')
-      .upsert(userData, { 
-        onConflict: 'id',
-        ignoreDuplicates: false 
-      })
-      .select()
-      .single()
+    console.log('User data to process:', userData)
+    console.log('Existing user found:', !!existingUser)
+
+    let data, error
+    if (existingUser) {
+      // Update existing user
+      console.log('Updating existing user')
+      const updateResult = await supabase
+        .from('users')
+        .update({
+          name: userData.name,
+          avatar_url: userData.avatar_url
+          // Don't update role for existing users
+        })
+        .eq('id', authUser.id)
+        .select()
+
+      if (updateResult.error) {
+        console.error('Update failed:', updateResult.error)
+        error = updateResult.error
+        data = null
+      } else if (updateResult.data && updateResult.data.length > 0) {
+        data = updateResult.data[0]
+        error = null
+        console.log('Update successful')
+      } else {
+        // If update didn't affect any rows, just use the existing user data
+        console.log('No rows updated, using existing user data')
+        data = existingUser
+        error = null
+      }
+    } else {
+      // Insert new user - add a small delay to ensure auth context is ready
+      console.log('Creating new user (waiting for auth context)')
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      const insertResult = await supabase
+        .from('users')
+        .insert(userData)
+        .select()
+        .single()
+      
+      data = insertResult.data
+      error = insertResult.error
+    }
 
     if (error) {
-      console.error('Error creating/updating custom user:', error)
+      console.error('Supabase error creating/updating custom user:', {
+        error,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        userData,
+        operation: existingUser ? 'UPDATE' : 'INSERT'
+      })
       return { error }
     }
 
+    if (!data) {
+      console.error('No data returned from operation, but no error either')
+      return { error: 'No data returned from operation' }
+    }
+
+    console.log('Successfully created/updated custom user:', data)
     return { customUser: data as CustomUser }
   } catch (error) {
-    console.error('Error in createOrUpdateCustomUser:', error)
+    console.error('Exception in createOrUpdateCustomUser:', {
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      authUserId: authUser.id,
+      authUserEmail: authUser.email
+    })
     return { error }
   }
 }

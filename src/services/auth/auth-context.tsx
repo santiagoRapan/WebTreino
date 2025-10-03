@@ -5,6 +5,7 @@ import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../database/supabaseClient'
 import { signInWithGoogle as authSignInWithGoogle, signOut as authSignOut, createOrUpdateCustomUser, getFullUserData } from './auth'
 import { CustomUser, FullUserData } from '@/lib/types/user'
+import DataCacheManager from '@/lib/cache/dataCache'
 
 interface AuthContextType {
   authUser: User | null
@@ -105,6 +106,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('User signed out')
         setCustomUser(null)
         setFullUserData(null)
+        // Clear all cached data on logout to prevent stale data
+        DataCacheManager.clearAllCaches()
       } else if (event === 'TOKEN_REFRESHED' && session?.user) {
         console.log('Token refreshed')
         // Opcional: refrescar datos del usuario si es necesario
@@ -117,21 +120,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe()
     }
   }, [])
-
-  // Refresh user data when page becomes visible (handles tab switching)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && authUser && session) {
-        console.log('Page became visible, refreshing user data')
-        refreshUserData()
-      }
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [authUser, session])
 
   // Periodic refresh of user data (every 5 minutes when page is active)
   useEffect(() => {

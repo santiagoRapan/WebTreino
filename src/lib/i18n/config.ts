@@ -50,7 +50,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "navigation.clients": "Gestión de Alumnos", 
     "navigation.routines": "Rutinas",
     "navigation.settings": "Configuración",
-    "navigation.refreshData": "Actualizar datos",
+    
     "navigation.defaultUser": "Usuario",
     
     // Settings
@@ -62,9 +62,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "settings.profile.name": "Nombre",
     "settings.profile.role": "Rol",
     "settings.profile.notAvailable": "No disponible",
-    "settings.profile.refresh": "Actualizar",
-    "settings.profile.refreshing": "Actualizando...",
-    "settings.profile.loading": "Cargando...",
+    
     "settings.preferences.title": "Preferencias",
     "settings.preferences.description": "Personaliza tu experiencia",
     "settings.preferences.theme.title": "Tema de la aplicación",
@@ -89,9 +87,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "settings.toasts.logout.description": "Has cerrado sesión exitosamente.",
     "settings.toasts.error.title": "Error",
     "settings.toasts.logoutError": "Hubo un problema al cerrar sesión. Inténtalo de nuevo.",
-    "settings.toasts.refreshSuccess.title": "Datos actualizados",
-    "settings.toasts.refreshSuccess.description": "Tu información se ha actualizado correctamente.",
-    "settings.toasts.refreshError": "No se pudieron actualizar los datos. Inténtalo de nuevo.",
+    
     
     // Language names
     "language.es": "Español",
@@ -258,7 +254,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "navigation.clients": "Client Management",
     "navigation.routines": "Routines",
     "navigation.settings": "Settings",
-    "navigation.refreshData": "Refresh data",
+    
     "navigation.defaultUser": "User",
     
     // Settings
@@ -270,9 +266,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "settings.profile.name": "Name",
     "settings.profile.role": "Role",
     "settings.profile.notAvailable": "Not available",
-    "settings.profile.refresh": "Refresh",
-    "settings.profile.refreshing": "Refreshing...",
-    "settings.profile.loading": "Loading...",
+    
     "settings.preferences.title": "Preferences",
     "settings.preferences.description": "Customize your experience",
     "settings.preferences.theme.title": "Application theme",
@@ -297,9 +291,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "settings.toasts.logout.description": "You have successfully signed out.",
     "settings.toasts.error.title": "Error",
     "settings.toasts.logoutError": "There was a problem signing out. Please try again.",
-    "settings.toasts.refreshSuccess.title": "Data updated",
-    "settings.toasts.refreshSuccess.description": "Your information has been updated successfully.",
-    "settings.toasts.refreshError": "Could not update data. Please try again.",
+    
     
     // Language names
     "language.es": "Español",
@@ -466,7 +458,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "navigation.clients": "Gestão de Clientes",
     "navigation.routines": "Rotinas",
     "navigation.settings": "Configurações",
-    "navigation.refreshData": "Atualizar dados",
+    
     "navigation.defaultUser": "Usuário",
     
     // Settings
@@ -478,9 +470,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "settings.profile.name": "Nome",
     "settings.profile.role": "Função",
     "settings.profile.notAvailable": "Não disponível",
-    "settings.profile.refresh": "Atualizar",
-    "settings.profile.refreshing": "Atualizando...",
-    "settings.profile.loading": "Carregando...",
+    
     "settings.preferences.title": "Preferências",
     "settings.preferences.description": "Personalize sua experiência",
     "settings.preferences.theme.title": "Tema da aplicação",
@@ -505,9 +495,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "settings.toasts.logout.description": "Você saiu com sucesso.",
     "settings.toasts.error.title": "Erro",
     "settings.toasts.logoutError": "Houve um problema ao sair. Tente novamente.",
-    "settings.toasts.refreshSuccess.title": "Dados atualizados",
-    "settings.toasts.refreshSuccess.description": "Suas informações foram atualizadas com sucesso.",
-    "settings.toasts.refreshError": "Não foi possível atualizar os dados. Tente novamente.",
+    
     
     // Language names
     "language.es": "Español",

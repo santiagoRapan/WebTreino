@@ -1,9 +1,11 @@
 "use client"
 
-import { useMemo, useState, useRef, useCallback } from "react"
+import { useMemo, useState, useRef, useCallback, useEffect } from "react"
 import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
 import { useTranslation } from "@/lib/i18n/LanguageProvider"
 import { useExerciseSearch } from "@/hooks/useExerciseSearch"
+import { useAuth } from "@/services/auth"
+import { supabase } from "@/services/database"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -38,6 +40,7 @@ import {
 
 export function RoutinesTab() {
   const { t } = useTranslation()
+  const { authUser } = useAuth()
   
   // Optimized exercise search hook for exercise selector dialog
   const exerciseSearch = useExerciseSearch({ 
@@ -163,6 +166,38 @@ export function RoutinesTab() {
   )
 
   const [isSaving, setIsSaving] = useState(false);
+  // Track how many students have this routine assigned
+  const [assignedCounts, setAssignedCounts] = useState<Record<string, number>>({})
+
+  // Load assignment counts for routines owned by the trainer
+  useEffect(() => {
+    const loadAssignmentCounts = async () => {
+      if (!authUser?.id) return
+      try {
+        // Fetch trainee_routine rows for routines owned by this trainer
+        const { data, error } = await supabase
+          .from('trainee_routine')
+          .select('routine_id, routines!inner(owner_id)')
+          .eq('routines.owner_id', authUser.id)
+
+        if (error) {
+          console.warn('Unable to load assignment counts:', error)
+          return
+        }
+
+        const counts: Record<string, number> = {}
+        for (const row of (data as any[]) || []) {
+          const rid = String((row as any).routine_id)
+          counts[rid] = (counts[rid] || 0) + 1
+        }
+        setAssignedCounts(counts)
+      } catch (err) {
+        console.warn('Error computing assignment counts:', err)
+      }
+    }
+
+    loadAssignmentCounts()
+  }, [authUser?.id, routineFolders])
 
   const saveRoutine = async () => {
     setIsSaving(true);
@@ -326,6 +361,12 @@ export function RoutinesTab() {
                             {tpl.blocks.reduce((acc, block) => acc + block.exercises.length, 0)}
                           </p>
                         </div>
+                        <div className="p-3 rounded border border-border bg-background/80 shadow-sm">
+                          <p className="text-xs text-muted-foreground">Asignada a</p>
+                          <p className="text-lg font-semibold text-card-foreground">
+                            {assignedCounts[String(tpl.id)] || 0}
+                          </p>
+                        </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {tpl.blocks.map((block) => (
@@ -460,6 +501,11 @@ export function RoutinesTab() {
                                 title: 'Rutina enviada',
                                 description: `La rutina "${tpl.name}" ha sido enviada a ${selectedClient?.name}.`,
                               })
+                              // Optimistically bump assignment count for this routine
+                              setAssignedCounts(prev => ({
+                                ...prev,
+                                [String(tpl.id)]: (prev[String(tpl.id)] || 0) + 1
+                              }))
                               setRoutineAssignments(prev => {
                                 const next = { ...prev }
                                 delete next[String(tpl.id)]
