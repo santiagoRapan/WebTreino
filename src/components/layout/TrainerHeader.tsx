@@ -5,18 +5,18 @@ import { Button } from "@/components/ui/button"
 import { Bell, Moon, Sun } from "lucide-react"
 import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
 import { useAuth } from "@/services/auth"
-import { useState } from "react"
+import { useTheme } from "next-themes"
 import { useTranslation } from "@/lib/i18n/LanguageProvider"
 
 // Removed TAB_LABELS - now using translations
 
 export function TrainerHeader() {
   const {
-    state: { activeTab, theme },
-    actions: { setTheme },
+    state: { activeTab },
   } = useTrainerDashboard()
   
   const { customUser } = useAuth()
+  const { theme, setTheme } = useTheme()
   const { t } = useTranslation()
 
   const getTabTitle = (tab: string) => {

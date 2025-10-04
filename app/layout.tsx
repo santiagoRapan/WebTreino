@@ -6,6 +6,7 @@ import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from "@/services/auth"
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider"
+import { ThemeProvider } from "@/components/common/theme-provider"
 
 export const metadata: Metadata = {
   title: "Treino",
@@ -19,17 +20,24 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className="dark">
+    <html lang="es" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/images/treinologo.png" type="image/png" />
       </head>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}>
-        <LanguageProvider>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
-        </LanguageProvider>
-        <Toaster />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <LanguageProvider>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </LanguageProvider>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )

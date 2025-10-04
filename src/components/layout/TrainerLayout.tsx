@@ -19,7 +19,6 @@ export function TrainerLayout({ children }: TrainerLayoutProps) {
       // UI State
       activeTab: trainerData.activeTab,
       sidebarCollapsed: trainerData.sidebarCollapsed,
-      theme: trainerData.theme,
       searchTerm: trainerData.searchTerm,
       clientFilter: trainerData.clientFilter,
       isEditDialogOpen: trainerData.isEditDialogOpen,
@@ -65,7 +64,6 @@ export function TrainerLayout({ children }: TrainerLayoutProps) {
       // UI Actions
       setActiveTab: trainerData.setActiveTab,
       setSidebarCollapsed: trainerData.setSidebarCollapsed,
-      setTheme: trainerData.setTheme,
       setSearchTerm: trainerData.setSearchTerm,
       setClientFilter: trainerData.setClientFilter,
       setIsEditDialogOpen: trainerData.setIsEditDialogOpen,

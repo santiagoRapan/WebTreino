@@ -8,8 +8,6 @@ export interface UseUIStateReturn {
   setActiveTab: Dispatch<SetStateAction<string>>
   sidebarCollapsed: boolean
   setSidebarCollapsed: Dispatch<SetStateAction<boolean>>
-  theme: "dark" | "light"
-  setTheme: Dispatch<SetStateAction<"dark" | "light">>
   
   // Search and Filter States
   searchTerm: string
@@ -42,7 +40,6 @@ export function useUIState(): UseUIStateReturn {
   // Main UI State
   const [activeTab, setActiveTab] = useState<string>("dashboard")
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false)
-  const [theme, setTheme] = useState<"dark" | "light">("dark")
 
   // Search and Filter States
   const [searchTerm, setSearchTerm] = useState<string>("")
@@ -61,24 +58,13 @@ export function useUIState(): UseUIStateReturn {
   const [showArchived, setShowArchived] = useState<boolean>(false)
   // emoji picker state removed
 
-  // Theme Effect
-  useEffect(() => {
-    if (theme === "dark") {
-      document.documentElement.classList.remove("light")
-      document.documentElement.classList.add("dark")
-    } else {
-      document.documentElement.classList.remove("dark")
-      document.documentElement.classList.add("light")
-    }
-  }, [theme])
+
 
   return {
     activeTab,
     setActiveTab,
     sidebarCollapsed,
     setSidebarCollapsed,
-    theme,
-    setTheme,
     searchTerm,
     setSearchTerm,
     clientFilter,

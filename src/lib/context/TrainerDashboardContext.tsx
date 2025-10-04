@@ -18,7 +18,6 @@ export type PendingExerciseState = { exercise: Exercise; blockId: number } | nul
 export interface TrainerDashboardState {
   activeTab: string
   sidebarCollapsed: boolean
-  theme: "dark" | "light"
   searchTerm: string
   clientFilter: "all" | "active" | "pending"
   isEditDialogOpen: boolean
@@ -77,7 +76,6 @@ export interface TrainerDashboardData {
 export interface TrainerDashboardActions {
   setActiveTab: Dispatch<SetStateAction<string>>
   setSidebarCollapsed: Dispatch<SetStateAction<boolean>>
-  setTheme: Dispatch<SetStateAction<"dark" | "light">>
   setSearchTerm: Dispatch<SetStateAction<string>>
   setClientFilter: Dispatch<SetStateAction<"all" | "active" | "pending">>
   setIsEditDialogOpen: Dispatch<SetStateAction<boolean>>
