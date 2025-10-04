@@ -68,8 +68,6 @@ export interface UseRoutineStateReturn {
   // Exercise Selector State
   pendingExercise: { exercise: Exercise; blockId: number } | null
   setPendingExercise: (exercise: { exercise: Exercise; blockId: number } | null) => void
-  showNewRoutineInput: boolean
-  setShowNewRoutineInput: (show: boolean) => void
   newRoutineName: string
   setNewRoutineName: (name: string) => void
   newBlockName: string
@@ -180,7 +178,6 @@ export function useRoutineState(): UseRoutineStateReturn {
   const [restInput, setRestInput] = useState<string>("")
   const [restBlockId, setRestBlockId] = useState<number | null>(null)
   const [pendingExercise, setPendingExercise] = useState<{ exercise: Exercise; blockId: number } | null>(null)
-  const [showNewRoutineInput, setShowNewRoutineInput] = useState<boolean>(false)
   const [newRoutineName, setNewRoutineName] = useState<string>("")
   const [newBlockName, setNewBlockName] = useState<string>("")
 
@@ -268,8 +265,6 @@ export function useRoutineState(): UseRoutineStateReturn {
     setRestBlockId,
     pendingExercise,
     setPendingExercise,
-    showNewRoutineInput,
-    setShowNewRoutineInput,
     newRoutineName,
     setNewRoutineName,
     newBlockName,

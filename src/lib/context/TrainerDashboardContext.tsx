@@ -56,7 +56,6 @@ export interface TrainerDashboardState {
   restBlockId: number | null
   exerciseInputs: ExerciseInputsState
   pendingExercise: PendingExerciseState
-  showNewRoutineInput: boolean
   newRoutineName: string
   newBlockName: string
   // chatConversations removed
@@ -115,7 +114,6 @@ export interface TrainerDashboardActions {
   setRestBlockId: Dispatch<SetStateAction<number | null>>
   setExerciseInputs: Dispatch<SetStateAction<ExerciseInputsState>>
   setPendingExercise: Dispatch<SetStateAction<PendingExerciseState>>
-  setShowNewRoutineInput: Dispatch<SetStateAction<boolean>>
   setNewRoutineName: Dispatch<SetStateAction<string>>
   setNewBlockName: Dispatch<SetStateAction<string>>
   // setChatConversations removed

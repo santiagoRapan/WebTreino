@@ -37,7 +37,6 @@ export function createRoutineHandlers(
   return {
     handleCreateRoutine: () => {
       uiState.setActiveTab("routines")
-      routineState.setShowNewRoutineInput(true)
       // Asegurar que la carpeta principal esté seleccionada
       if (routineState.selectedFolderId == null) {
         routineState.setSelectedFolderId(1)
@@ -162,13 +161,19 @@ export function createRoutineHandlers(
     },
 
     handleCreateTemplate: () => {
-      if (!routineState.newRoutineName.trim()) return
 
       // Create a temporary routine that will be saved to database when edited and saved
       const newTemplate: RoutineTemplate = {
         id: `temp-${Date.now()}`, // Temporary ID until saved to database
-        name: routineState.newRoutineName,
-        blocks: []
+        name: '',
+        blocks: [{
+          id: 1,
+          name: 'Ejercicios',
+          exercises: [],
+          repetitions: 1,
+          restBetweenRepetitions: 60,
+          restAfterBlock: 90
+        }]
       }
 
       // Garantizar que exista la carpeta base
@@ -190,7 +195,6 @@ export function createRoutineHandlers(
 
         routineState.setRoutineFolders(updatedFolders)
         routineState.setNewRoutineName("")
-        routineState.setShowNewRoutineInput(false)
 
         // Open the routine editor immediately for the new routine
         routineState.setEditingRoutine(newTemplate)
@@ -198,7 +202,7 @@ export function createRoutineHandlers(
 
         toast({
           title: "Rutina creada",
-          description: `La rutina "${newTemplate.name}" ha sido creada. Agrega bloques y guárdala para persistir en la base de datos.`,
+          description: `La rutina ha sido creada. Agrega ejercicios y guárdala para persistir en la base de datos.`,
         })
       }
     },
@@ -343,8 +347,9 @@ export function createRoutineHandlers(
       })
     },
 
-    handleAddExerciseToBlock: (blockId: number) => {
-      routineState.setSelectedBlockId(blockId)
+    handleAddExerciseToBlock: (blockId?: number) => {
+      // Always use the first block (index 0)
+      routineState.setSelectedBlockId(1)
       routineState.setIsExerciseSelectorOpen(true)
     },
 
@@ -613,7 +618,7 @@ export function createRoutineHandlers(
           { header: 'Ejercicio', key: 'name', width: 40 },
           { header: 'Series', key: 'sets', width: 12 },
           { header: 'Repeticiones', key: 'reps', width: 16 },
-          { header: 'Descanso (s)', key: 'rest', width: 16 },
+          { header: 'Peso (kg)', key: 'rest', width: 16 },
         ]
 
         const addHeaderStyles = (rowNumber: number) => {
@@ -649,7 +654,7 @@ export function createRoutineHandlers(
 
         // Single table header
         const headerRow = worksheet.getRow(1)
-        headerRow.values = ['#', 'Ejercicio', 'Series', 'Repeticiones', 'Descanso (s)']
+        headerRow.values = ['#', 'Ejercicio', 'Series', 'Repeticiones', 'Peso (kg)']
         addHeaderStyles(1)
 
         let exerciseCounter = 1

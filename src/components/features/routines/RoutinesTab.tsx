@@ -60,7 +60,6 @@ export function RoutinesTab() {
       selectedFolderId,
       showNewFolderInput,
       newFolderName,
-      showNewRoutineInput,
       newRoutineName,
       routineSearch,
       editingRoutine,
@@ -86,7 +85,6 @@ export function RoutinesTab() {
       setSelectedFolderId,
       setShowNewFolderInput,
       setNewFolderName,
-      setShowNewRoutineInput,
       setNewRoutineName,
       setRoutineSearch,
       setEditingRoutine,
@@ -133,6 +131,9 @@ export function RoutinesTab() {
   
   // Estado para trackear asignaciones de clientes por rutina
   const [routineAssignments, setRoutineAssignments] = useState<Record<string, string>>({})
+
+  // Estado para GIF expandido
+  const [expandedGif, setExpandedGif] = useState<{ exerciseId: string; gifUrl: string } | null>(null)
 
   // Scroll container refs for infinite scroll
   const exerciseListRef = useRef<HTMLDivElement>(null)
@@ -199,6 +200,28 @@ export function RoutinesTab() {
     loadAssignmentCounts()
   }, [authUser?.id, routineFolders])
 
+  // Preload exercise data when routine editor opens
+  useEffect(() => {
+    if (isRoutineEditorOpen && editingRoutine?.blocks?.[0]?.exercises) {
+      // Check which exercises are missing from our loaded data
+      const missingExercises = editingRoutine.blocks[0].exercises.filter(exercise => {
+        const found = exerciseSearch.exercises.find(e => 
+          e.id.toString() === exercise.exerciseId.toString()
+        ) || catalogExerciseSearch.exercises.find(e => 
+          e.id.toString() === exercise.exerciseId.toString()
+        );
+        return !found;
+      });
+
+      // If we have missing exercises and no search is active, trigger a broader search
+      if (missingExercises.length > 0 && !exerciseSearch.loading && !catalogExerciseSearch.loading) {
+        // Reset and load more exercises to try to find the missing ones
+        exerciseSearch.setSearchTerm('');
+        catalogExerciseSearch.setSearchTerm('');
+      }
+    }
+  }, [isRoutineEditorOpen, editingRoutine, exerciseSearch, catalogExerciseSearch]);
+
   const saveRoutine = async () => {
     setIsSaving(true);
     try {
@@ -254,39 +277,11 @@ export function RoutinesTab() {
               {t('routines.actions.newFolder')}
             </Button>
           )}
-          {showNewRoutineInput ? (
-            <div className="flex gap-2 items-center">
-              <Input
-                type="text"
-                placeholder={t('routines.placeholders.routineName')}
-                value={newRoutineName}
-                onChange={(e) => setNewRoutineName(e.target.value)}
-                className="w-48"
-                autoFocus
-              />
-              <Button
-                onClick={handleCreateTemplate}
-                className="hover:bg-orange-500 transition-colors"
-                disabled={!newRoutineName.trim()}
-              >
-                {t('routines.actions.create')}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowNewRoutineInput(false)
-                  setNewRoutineName("")
-                }}
-              >
-                {t('routines.actions.cancel')}
-              </Button>
-            </div>
-          ) : (
-            <Button onClick={() => setShowNewRoutineInput(true)} className="hover:bg-orange-500 transition-colors">
+            <Button onClick={() => handleCreateTemplate()} className="hover:bg-orange-500 transition-colors">
               <Plus className="w-4 h-4 mr-2" />
               {t('routines.actions.newRoutine')}
             </Button>
-          )}
+          
         </div>
       </div>
 
@@ -350,11 +345,7 @@ export function RoutinesTab() {
                           </p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        <div className="p-3 rounded border border-border bg-background/80 shadow-sm">
-                          <p className="text-xs text-muted-foreground">Bloques</p>
-                          <p className="text-lg font-semibold text-card-foreground">{tpl.blocks.length}</p>
-                        </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         <div className="p-3 rounded border border-border bg-background/80 shadow-sm">
                           <p className="text-xs text-muted-foreground">{t('routines.templates.totalExercises')}</p>
                           <p className="text-lg font-semibold text-card-foreground">
@@ -369,11 +360,22 @@ export function RoutinesTab() {
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {tpl.blocks.map((block) => (
-                          <Badge key={block.id} variant="outline">
-                            {block.name}
+                        {tpl.blocks.length > 0 && tpl.blocks[0].exercises.slice(0, 3).map((exercise, idx) => {
+                          // Try to find exercise name from the exercise search data
+                          const exerciseData = exerciseSearch.exercises.find(e => 
+                            e.id.toString() === exercise.exerciseId.toString()
+                          );
+                          return (
+                            <Badge key={idx} variant="outline">
+                              {exerciseData?.name || `Ejercicio ${idx + 1}`}
+                            </Badge>
+                          );
+                        })}
+                        {tpl.blocks.length > 0 && tpl.blocks[0].exercises.length > 3 && (
+                          <Badge variant="outline">
+                            +{tpl.blocks[0].exercises.length - 3} más
                           </Badge>
-                        ))}
+                        )}
                       </div>
                     </div>
                     <div className="flex flex-col gap-2 min-w-[220px]">
@@ -1141,127 +1143,82 @@ export function RoutinesTab() {
                 />
               </div>
 
-              {/* Blocks Section */}
+              {/* Exercises Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">{t('routines.blocks.title')}</h3>
-                </div>
-
-                {/* Add Block Section */}
-                <div className="flex gap-2 items-center">
-                  <Input
-                    value={newBlockName}
-                    onChange={(e) => setNewBlockName(e.target.value)}
-                    placeholder={t('routines.placeholders.newBlockName')}
-                    className="flex-1"
-                  />
+                  <h3 className="text-lg font-semibold">Ejercicios</h3>
                   <Button
-                    onClick={handleAddBlock}
+                    onClick={() => handleAddExerciseToBlock(1)}
                     size="sm"
                     className="bg-primary hover:bg-primary/90"
-                    disabled={!newBlockName.trim()}
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    {t('routines.actions.addBlock')}
+                    Agregar Ejercicio
                   </Button>
                 </div>
 
-                {editingRoutine.blocks.length === 0 ? (
+                {editingRoutine.blocks.length === 0 || editingRoutine.blocks[0].exercises.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>No hay bloques de ejercicios</p>
-                    <p className="text-sm">{t('routines.blocks.clickToStart')}</p>
+                    <p>No hay ejercicios en esta rutina</p>
+                    <p className="text-sm">Haz clic en "Agregar Ejercicio" para comenzar</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {editingRoutine.blocks.map((block) => (
-                      <Card key={block.id} className="border">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    {editingRoutine.blocks[0].exercises.map((exercise, idx) => {
+                      // Try to find exercise in loaded exercises from both search results and catalog
+                      const exerciseData = exerciseSearch.exercises.find(e => 
+                        e.id.toString() === exercise.exerciseId.toString()
+                      ) || catalogExerciseSearch.exercises.find(e => 
+                        e.id.toString() === exercise.exerciseId.toString()
+                      );
+                      
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border"
+                        >
+                          <div className="flex items-center gap-3">
                             <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => toggleBlockExpansion(block.id)}
-                                className="p-1 h-auto"
-                              >
-                                {expandedBlocks.has(block.id) ? (
-                                  <ChevronDown className="w-4 h-4" />
-                                ) : (
-                                  <ChevronRight className="w-4 h-4" />
-                                )}
-                              </Button>
-                              <CardTitle className="text-base">{block.name}</CardTitle>
-                              <Badge variant="outline" className="text-xs">
-                                {block.exercises.length} ejercicio{block.exercises.length !== 1 ? 's' : ''}
-                              </Badge>
+                              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center text-sm font-semibold text-primary">
+                                {idx + 1}
+                              </div>
+                              {exerciseData?.gif_URL && (
+                                <div 
+                                  className="w-12 h-12 bg-muted rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                  onClick={() => setExpandedGif({ 
+                                    exerciseId: exercise.exerciseId.toString(), 
+                                    gifUrl: exerciseData.gif_URL 
+                                  })}
+                                >
+                                  <img 
+                                    src={exerciseData.gif_URL} 
+                                    alt={exerciseData.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              )}
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleAddExerciseToBlock(block.id)}
-                                className="text-xs"
-                              >
-                                <Plus className="w-3 h-3 mr-1" />
-                                Ejercicio
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteBlock(block.id)}
-                                className="text-xs text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">
+                                {exerciseData?.name || `Ejercicio ${idx + 1}`}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {exercise.sets} series × {exercise.reps} repeticiones · {exercise.restSec}s descanso
+                              </p>
                             </div>
                           </div>
-                        </CardHeader>
-
-                        {expandedBlocks.has(block.id) && (
-                          <CardContent className="pt-0">
-                            {block.exercises.length === 0 ? (
-                              <div className="text-center py-4 text-muted-foreground">
-                                <p className="text-sm">{t('routines.blocks.noExercises')}</p>
-                              </div>
-                            ) : (
-                              <div className="space-y-2">
-                                {block.exercises.map((exercise, idx) => {
-                                  // Try to find exercise in loaded exercises from search
-                                  const exerciseData = exerciseSearch.exercises.find(e => 
-                                    e.id.toString() === exercise.exerciseId.toString()
-                                  );
-                                  
-                                  return (
-                                    <div
-                                      key={idx}
-                                      className="flex items-center justify-between p-3 bg-muted/50 rounded-md"
-                                    >
-                                      <div className="flex-1">
-                                        <p className="font-medium text-sm">
-                                          {exerciseData?.name || `Ejercicio ID: ${exercise.exerciseId}`}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                          {exercise.sets} {t('routines.forms.sets').toLowerCase()} × {exercise.reps} {t('routines.forms.reps')} · {exercise.restSec}s {t('routines.forms.restShort')}
-                                        </p>
-                                      </div>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleDeleteExercise(block.id, idx)}
-                                        className="text-red-600 hover:text-red-700 p-1 h-auto"
-                                      >
-                                        <Trash2 className="w-3 h-3" />
-                                      </Button>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </CardContent>
-                        )}
-                      </Card>
-                    ))}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteExercise(editingRoutine.blocks[0].id, idx)}
+                            className="text-red-600 hover:text-red-700 p-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1291,6 +1248,34 @@ export function RoutinesTab() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Expanded GIF Modal */}
+      <Dialog open={expandedGif !== null} onOpenChange={() => setExpandedGif(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Vista ampliada del ejercicio</DialogTitle>
+          </DialogHeader>
+          <div className="relative">
+            {expandedGif && (
+              <>
+                <img 
+                  src={expandedGif.gifUrl} 
+                  alt="Ejercicio expandido"
+                  className="w-full h-auto max-h-[80vh] object-contain"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="absolute top-4 right-4 bg-background/80 hover:bg-background/90"
+                  onClick={() => setExpandedGif(null)}
+                >
+                  ×
+                </Button>
+              </>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </main>

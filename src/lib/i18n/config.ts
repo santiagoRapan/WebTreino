@@ -200,9 +200,9 @@ export const dictionaries: Record<Locale, Messages> = {
     "routines.forms.descriptionPlaceholder": "Describe cómo realizar el ejercicio, la técnica correcta, consejos importantes...",
     "routines.forms.sets": "Series",
     "routines.forms.repetitions": "Repeticiones",
-    "routines.forms.rest": "Descanso (seg)",
+    "routines.forms.rest": "Peso (seg)",
     "routines.forms.reps": "reps",
-    "routines.forms.restShort": "descanso",
+    "routines.forms.restShort": "Peso",
     "routines.forms.routineName": "Nombre de la Rutina",
     "routines.forms.routineDescription": "Descripción (opcional)",
     
@@ -608,9 +608,9 @@ export const dictionaries: Record<Locale, Messages> = {
     "routines.forms.descriptionPlaceholder": "Descreva como realizar o exercício, técnica correta, dicas importantes...",
     "routines.forms.sets": "Séries",
     "routines.forms.repetitions": "Repetições",
-    "routines.forms.rest": "Descanso (seg)",
+    "routines.forms.rest": "Peso (seg)",
     "routines.forms.reps": "reps",
-    "routines.forms.restShort": "descanso",
+    "routines.forms.restShort": "Peso",
     "routines.forms.routineName": "Nome da Rotina",
     "routines.forms.routineDescription": "Descrição (opcional)",
     
