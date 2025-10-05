@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState, useRef, useCallback, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
 import { useTranslation } from "@/lib/i18n/LanguageProvider"
 import { useExerciseSearch } from "@/hooks/useExerciseSearch"
@@ -38,9 +39,14 @@ import {
   Trash2,
 } from "lucide-react"
 
-export function RoutinesTab() {
+interface RoutinesTabProps {
+  action?: string | null
+}
+
+export function RoutinesTab({ action }: RoutinesTabProps) {
   const { t } = useTranslation()
   const { authUser } = useAuth()
+  const router = useRouter()
   
   // Optimized exercise search hook for exercise selector dialog
   const exerciseSearch = useExerciseSearch({ 
@@ -134,6 +140,19 @@ export function RoutinesTab() {
 
   // Estado para GIF expandido
   const [expandedGif, setExpandedGif] = useState<{ exerciseId: string; gifUrl: string } | null>(null)
+
+  // Handle action parameter to trigger specific actions
+  const [actionProcessed, setActionProcessed] = useState(false)
+  
+  useEffect(() => {
+    if (action === 'create' && !actionProcessed) {
+      // Trigger routine creation when accessed via URL parameter, but only once
+      setActionProcessed(true)
+      handleCreateTemplate()
+      // Clear the URL parameter to prevent issues
+      router.replace('/rutinas', { scroll: false })
+    }
+  }, [action, actionProcessed, handleCreateTemplate, router])
 
   // Scroll container refs for infinite scroll
   const exerciseListRef = useRef<HTMLDivElement>(null)
@@ -1188,7 +1207,7 @@ export function RoutinesTab() {
                                   className="w-12 h-12 bg-muted rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all"
                                   onClick={() => setExpandedGif({ 
                                     exerciseId: exercise.exerciseId.toString(), 
-                                    gifUrl: exerciseData.gif_URL 
+                                    gifUrl: exerciseData.gif_URL || '' 
                                   })}
                                 >
                                   <img 

@@ -32,14 +32,21 @@ export interface RoutineHandlers {
 
 export function createRoutineHandlers(
   routineState: any,
-  uiState: any
+  uiState: any,
+  router?: any
 ): RoutineHandlers {
   return {
     handleCreateRoutine: () => {
-      uiState.setActiveTab("routines")
-      // Asegurar que la carpeta principal esté seleccionada
-      if (routineState.selectedFolderId == null) {
-        routineState.setSelectedFolderId(1)
+      if (router) {
+        // Navigate to dedicated routines page with create action
+        router.push('/rutinas?action=create')
+      } else {
+        // Fallback to tab-based navigation
+        uiState.setActiveTab("routines")
+        // Asegurar que la carpeta principal esté seleccionada
+        if (routineState.selectedFolderId == null) {
+          routineState.setSelectedFolderId(1)
+        }
       }
     },
 

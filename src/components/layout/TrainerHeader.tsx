@@ -31,26 +31,20 @@ export function TrainerHeader() {
 
   const title = getTabTitle(activeTab)
 
-  // refresh removed
-
   return (
     <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 w-full flex-shrink-0">
       <div className="flex items-center gap-4">
         <h1 className="text-2xl font-bold text-foreground">{title}</h1>
       </div>
       <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon">
-          <Bell className="w-4 h-4" />
-        </Button>
-        {/* refresh removed */}
-        <Button
+{/*         <Button
           variant="outline"
           size="icon"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           className="bg-background border-border"
         >
           {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-        </Button>
+        </Button> */}
         <div className="flex items-center gap-2">
           <div className="text-right">
             <p className="text-sm font-medium text-foreground">

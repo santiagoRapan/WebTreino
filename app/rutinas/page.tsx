@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/services/auth"
 import { TrainerLayout } from "@/components/layout/TrainerLayout"
 import { RoutinesTab } from "@/components/features/routines/RoutinesTab"
@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react"
 export default function RutinasPage() {
   const { authUser, loading, isAuthenticated } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -34,7 +35,7 @@ export default function RutinasPage() {
 
   return (
     <TrainerLayout>
-      <RoutinesTab />
+      <RoutinesTab action={searchParams.get('action')} />
     </TrainerLayout>
   )
 }

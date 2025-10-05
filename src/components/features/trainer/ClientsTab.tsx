@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
 import { Card, CardContent } from "@/components/ui/card"
 import { ClientsHeader } from "./ClientsHeader"
@@ -9,12 +11,30 @@ import { EditClientDialog } from "./EditClientDialog"
 import { NewClientDialog } from "./NewClientDialog"
 import { ClientHistoryDialog } from "./ClientHistoryDialog"
 
-export function ClientsTab() {
+interface ClientsTabProps {
+  action?: string | null
+}
+
+export function ClientsTab({ action }: ClientsTabProps) {
+  const router = useRouter()
   const {
     state,
     data,
     actions,
   } = useTrainerDashboard()
+
+  const [actionProcessed, setActionProcessed] = useState(false)
+
+  // Handle action parameter to open specific dialogs
+  useEffect(() => {
+    if (action === 'new' && !actionProcessed) {
+      // Open the new client dialog when accessed via URL parameter, but only once
+      setActionProcessed(true)
+      actions.setIsNewClientDialogOpen(true)
+      // Clear the URL parameter to prevent reopening
+      router.replace('/alumnos', { scroll: false })
+    }
+  }, [action, actionProcessed, actions, router])
 
   return (
     <>

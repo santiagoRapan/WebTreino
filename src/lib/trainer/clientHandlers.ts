@@ -16,7 +16,8 @@ export interface ClientHandlers {
 
 export function createClientHandlers(
   clientState: any,
-  uiState: any
+  uiState: any,
+  router?: any
 ): ClientHandlers {
   return {
     handleEditClient: (client: Client) => {
@@ -47,16 +48,26 @@ export function createClientHandlers(
     },
 
     handleNewClient: () => {
-      // Navigate to clients tab first, then open the dialog
-      uiState.setActiveTab("clients")
-      // Use setTimeout to ensure the tab change is processed first
-      setTimeout(() => {
-        uiState.setIsNewClientDialogOpen(true)
-      }, 100)
+      if (router) {
+        // Navigate to dedicated clients page and open the dialog via URL search params
+        router.push('/alumnos?action=new')
+      } else {
+        // Fallback to tab-based navigation if no router provided
+        uiState.setActiveTab("clients")
+        setTimeout(() => {
+          uiState.setIsNewClientDialogOpen(true)
+        }, 100)
+      }
     },
 
     handleViewAllClients: () => {
-      uiState.setActiveTab("clients")
+      if (router) {
+        // Navigate to dedicated clients page
+        router.push('/alumnos')
+      } else {
+        // Fallback to tab-based navigation
+        uiState.setActiveTab("clients")
+      }
     },
 
     // chat handler removed

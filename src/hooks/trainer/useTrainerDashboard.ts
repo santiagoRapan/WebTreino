@@ -6,16 +6,18 @@ import { createRoutineHandlers } from '@/lib/trainer/routineHandlers'
 import { Users, Dumbbell, UserPlus, UserCheck } from 'lucide-react'
 import type { DashboardStat, RecentClient } from '@/lib/types/trainer'
 import { useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 
 export function useTrainerDashboard() {
   // Individual state hooks
   const uiState = useUIState()
   const clientState = useClientState()
   const routineState = useRoutineState()
+  const router = useRouter()
 
   // Create handlers with state dependencies
-  const clientHandlers = createClientHandlers(clientState, uiState)
-  const routineHandlers = createRoutineHandlers(routineState, uiState)
+  const clientHandlers = createClientHandlers(clientState, uiState, router)
+  const routineHandlers = createRoutineHandlers(routineState, uiState, router)
 
   // Computed data
   const filteredClients = clientState.getFilteredClients(uiState.searchTerm, uiState.clientFilter)
