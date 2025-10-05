@@ -33,7 +33,7 @@ CREATE TABLE exercises (
     target_muscles text[],
     body_parts text[],
     equipments text[],
-    secundary_muscles text[]
+    secondary_muscles text[]
 );
 
 -- Indexes for better performance
@@ -290,14 +290,16 @@ CREATE POLICY "Users can delete own routines" ON routines
 ### Routine Block Policies
 
 ```sql
--- Users can view blocks for routines they have access to
+-- Users can view blocks for routines they own OR are assigned to them
 CREATE POLICY "Users can view accessible routine blocks" ON routine_block
-    FOR SELECT USING (
+    FOR SELECT 
+    USING (
         EXISTS (
             SELECT 1 FROM routines 
             WHERE id = routine_block.routine_id 
             AND (
-                owner_id = auth.uid() OR
+                owner_id = auth.uid() 
+                OR 
                 EXISTS (
                     SELECT 1 FROM trainee_routine 
                     WHERE routine_id = routines.id 
@@ -307,9 +309,39 @@ CREATE POLICY "Users can view accessible routine blocks" ON routine_block
         )
     );
 
--- Users can manage blocks for their own routines
-CREATE POLICY "Users can manage own routine blocks" ON routine_block
-    FOR ALL USING (
+-- Users can INSERT blocks for their own routines
+CREATE POLICY "Users can insert own routine blocks" ON routine_block
+    FOR INSERT 
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM routines 
+            WHERE id = routine_id 
+            AND owner_id = auth.uid()
+        )
+    );
+
+-- Users can UPDATE blocks for their own routines
+CREATE POLICY "Users can update own routine blocks" ON routine_block
+    FOR UPDATE 
+    USING (
+        EXISTS (
+            SELECT 1 FROM routines 
+            WHERE id = routine_block.routine_id 
+            AND owner_id = auth.uid()
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM routines 
+            WHERE id = routine_id 
+            AND owner_id = auth.uid()
+        )
+    );
+
+-- Users can DELETE blocks for their own routines
+CREATE POLICY "Users can delete own routine blocks" ON routine_block
+    FOR DELETE 
+    USING (
         EXISTS (
             SELECT 1 FROM routines 
             WHERE id = routine_block.routine_id 
@@ -323,13 +355,15 @@ CREATE POLICY "Users can manage own routine blocks" ON routine_block
 ```sql
 -- Users can view exercises in blocks they have access to
 CREATE POLICY "Users can view accessible block exercises" ON block_exercise
-    FOR SELECT USING (
+    FOR SELECT 
+    USING (
         EXISTS (
             SELECT 1 FROM routine_block rb
             JOIN routines r ON r.id = rb.routine_id
             WHERE rb.id = block_exercise.block_id 
             AND (
-                r.owner_id = auth.uid() OR
+                r.owner_id = auth.uid() 
+                OR 
                 EXISTS (
                     SELECT 1 FROM trainee_routine 
                     WHERE routine_id = r.id 
@@ -339,9 +373,42 @@ CREATE POLICY "Users can view accessible block exercises" ON block_exercise
         )
     );
 
--- Users can manage exercises in their own routine blocks
-CREATE POLICY "Users can manage own block exercises" ON block_exercise
-    FOR ALL USING (
+-- Users can INSERT exercises in their own routine blocks
+CREATE POLICY "Users can insert own block exercises" ON block_exercise
+    FOR INSERT 
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM routine_block rb
+            JOIN routines r ON r.id = rb.routine_id
+            WHERE rb.id = block_id 
+            AND r.owner_id = auth.uid()
+        )
+    );
+
+-- Users can UPDATE exercises in their own routine blocks
+CREATE POLICY "Users can update own block exercises" ON block_exercise
+    FOR UPDATE 
+    USING (
+        EXISTS (
+            SELECT 1 FROM routine_block rb
+            JOIN routines r ON r.id = rb.routine_id
+            WHERE rb.id = block_exercise.block_id 
+            AND r.owner_id = auth.uid()
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM routine_block rb
+            JOIN routines r ON r.id = rb.routine_id
+            WHERE rb.id = block_id 
+            AND r.owner_id = auth.uid()
+        )
+    );
+
+-- Users can DELETE exercises in their own routine blocks
+CREATE POLICY "Users can delete own block exercises" ON block_exercise
+    FOR DELETE 
+    USING (
         EXISTS (
             SELECT 1 FROM routine_block rb
             JOIN routines r ON r.id = rb.routine_id
@@ -361,7 +428,7 @@ CREATE POLICY "Users can view own routine assignments" ON trainee_routine
 -- En trainee_routine, permitir INSERT solo si:
 --   1) la rutina pertenece al entrenador autenticado
 --   2) el alumno está en su roster (trainer_student)
-CREATE POLICY "entrenador asigna solo a su roster" ON trainee_routine
+CREATE POLICY "Trainer can only assign routine to his trainer_students" ON trainee_routine
     FOR INSERT WITH CHECK (
         EXISTS (
             SELECT 1 FROM routines r
@@ -501,8 +568,8 @@ CREATE POLICY "contraparte acepta/rechaza" ON trainer_link_request
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-    INSERT INTO public.users (id, name)
-    VALUES (new.id, new.raw_user_meta_data->>'full_name');
+    INSERT INTO public.users (id, name, avatar_url)
+    VALUES (new.id, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url');
     RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -550,6 +617,66 @@ AFTER UPDATE OF status ON public.trainer_link_request
 FOR EACH ROW
 WHEN (NEW.status = 'accepted' AND OLD.status IS DISTINCT FROM NEW.status)
 EXECUTE PROCEDURE public.handle_request_accepted();
+```
+
+### Function to cancel and delete a trainer request
+
+Securely deletes a pending trainer link request initiated by the current student.
+
+```sql
+CREATE OR REPLACE FUNCTION public.cancel_my_trainer_request(trainer_id_to_cancel uuid)
+RETURNS void AS $$
+DECLARE
+    student_id_to_cancel uuid := auth.uid();
+BEGIN
+    -- Abort if student is not authenticated
+    IF student_id_to_cancel IS NULL THEN
+        RAISE EXCEPTION 'User not authenticated';
+    END IF;
+
+    DELETE FROM public.trainer_link_request
+    WHERE
+        trainer_id = trainer_id_to_cancel
+        AND student_id = student_id_to_cancel
+        AND requested_by = 'alumno'
+        AND status = 'pending';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+### Function to unlink trainer from student
+
+Removes trainer-student link, associated requests, and routine assignments.
+
+```sql
+CREATE OR REPLACE FUNCTION public.unlink_trainer_and_routines(trainer_id_to_unlink uuid)
+RETURNS void AS $$
+DECLARE
+    student_id_to_unlink uuid := auth.uid();
+BEGIN
+    -- Abort if student is not authenticated
+    IF student_id_to_unlink IS NULL THEN
+        RAISE EXCEPTION 'User not authenticated';
+    END IF;
+
+    -- Step 1: Delete routine assignments from the specified trainer
+    DELETE FROM public.trainee_routine
+    WHERE
+        trainee_id = student_id_to_unlink
+        AND routine_id IN (
+            SELECT id FROM public.routines WHERE owner_id = trainer_id_to_unlink
+        );
+
+    -- Step 2: Delete the trainer-student relationship
+    DELETE FROM public.trainer_student
+    WHERE trainer_id = trainer_id_to_unlink AND student_id = student_id_to_unlink;
+
+    -- Step 3: Delete any associated link requests
+    DELETE FROM public.trainer_link_request
+    WHERE trainer_id = trainer_id_to_unlink AND student_id = student_id_to_unlink;
+
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
 ## Usage Examples

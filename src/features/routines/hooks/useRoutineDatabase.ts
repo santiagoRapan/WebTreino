@@ -6,33 +6,33 @@ import type { RoutineTemplate, RoutineBlock } from '../types'
 import { toast } from '@/hooks/use-toast'
 
 export interface DatabaseRoutine {
-  id: number
+  id: string
   owner_id: string
   name: string
-  description?: string
+  description?: string | null
   created_on: string
 }
 
 export interface DatabaseRoutineBlock {
-  id: number
-  routine_id: number
+  id: string
+  routine_id: string
   name: string
   block_order: number
-  notes?: string
+  notes?: string | null
 }
 
 export interface DatabaseBlockExercise {
-  id: number
-  block_id: number
+  id: string
+  block_id: string
   exercise_id: string
   display_order: number
-  sets: number
-  reps: number
-  load_target?: string
-  tempo?: string
-  rest_seconds: number
-  is_superset_group?: string
-  notes?: string
+  sets?: number | null
+  reps?: string | null
+  load_target?: string | null
+  tempo?: string | null
+  rest_seconds?: number | null
+  is_superset_group?: string | null
+  notes?: string | null
 }
 
 export function useRoutineDatabase() {
@@ -40,7 +40,7 @@ export function useRoutineDatabase() {
   const [error, setError] = useState<string | null>(null)
 
   // Save a complete routine to the database
-  const saveRoutineToDatabase = async (routine: RoutineTemplate, ownerId: string): Promise<number | null> => {
+  const saveRoutineToDatabase = async (routine: RoutineTemplate, ownerId: string): Promise<string | null> => {
     try {
       setLoading(true)
       setError(null)
@@ -88,8 +88,9 @@ export function useRoutineDatabase() {
         const blockId = blockData.id
 
         // Save each exercise in the block
-        for (let exerciseIndex = 0; exerciseIndex < block.exercises.length; exerciseIndex++) {
-          const exercise = block.exercises[exerciseIndex]
+        if (block.exercises) {
+          for (let exerciseIndex = 0; exerciseIndex < block.exercises.length; exerciseIndex++) {
+            const exercise = block.exercises[exerciseIndex]
           
           const { error: exerciseError } = await supabase
             .from('block_exercise')
@@ -111,6 +112,7 @@ export function useRoutineDatabase() {
             setError(exerciseError.message)
             return null
           }
+        }
         }
       }
 
@@ -171,7 +173,10 @@ export function useRoutineDatabase() {
           .sort((a: any, b: any) => a.block_order - b.block_order)
           .map((block: any) => ({
             id: block.id,
+            routine_id: block.routine_id,
             name: block.name,
+            block_order: block.block_order,
+            notes: block.notes,
             exercises: (block.block_exercise || [])
               .sort((a: any, b: any) => a.display_order - b.display_order)
               .map((exercise: any) => ({
@@ -179,10 +184,7 @@ export function useRoutineDatabase() {
                 sets: exercise.sets,
                 reps: exercise.reps,
                 restSec: exercise.rest_seconds
-              })),
-            repetitions: 1, // Default value
-            restBetweenRepetitions: 60, // Default value
-            restAfterBlock: 90 // Default value
+              }))
           }))
       }))
 
@@ -255,8 +257,9 @@ export function useRoutineDatabase() {
         const blockId = blockData.id
 
         // Save each exercise in the block
-        for (let exerciseIndex = 0; exerciseIndex < block.exercises.length; exerciseIndex++) {
-          const exercise = block.exercises[exerciseIndex]
+        if (block.exercises) {
+          for (let exerciseIndex = 0; exerciseIndex < block.exercises.length; exerciseIndex++) {
+            const exercise = block.exercises[exerciseIndex]
           
           const { error: exerciseError } = await supabase
             .from('block_exercise')
@@ -278,6 +281,7 @@ export function useRoutineDatabase() {
             setError(exerciseError.message)
             return false
           }
+        }
         }
       }
 

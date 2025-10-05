@@ -1,46 +1,65 @@
 // Trainer feature types
 import type { LucideIcon } from "lucide-react"
+import type { RequestStatus, RequestActor } from '@/features/students'
 
 /**
- * Client status type
+ * Client status type (for UI purposes)
  */
 export type ClientStatus = "active" | "pending" | "inactive"
 
 /**
- * Client data structure (real data from database)
+ * Client data structure matching database schema
  */
-export type Client = {
-  id: number
-  name: string
-  email: string
-  phone: string
+export interface Client {
+  id: string
+  name: string | null
+  email?: string
+  avatar_url?: string | null
+  role: 'alumno'
+  created_on?: string
+  // Relationship data
+  trainer_id?: string
+  joined_at?: string
+  request_status?: RequestStatus
+  requested_by?: RequestActor
+  // UI-specific fields
   status: ClientStatus
-  joinDate: string
-  lastSession: string
-  nextSession: string
-  progress: number
-  goal: string
-  avatar: string
-  sessionsCompleted: number
-  totalSessions: number
-  plan: string
-  // Supabase identifiers to support roster/requests
-  userId?: string
-  requestId?: string
-  requestedBy?: "alumno" | "entrenador"
+  lastSession?: string
+  nextSession?: string
+  progress?: number
+  goal?: string
+  sessionsCompleted?: number
+  totalSessions?: number
+  plan?: string
+}
+
+/**
+ * Trainer data structure (simplified for UI)
+ */
+export interface Trainer {
+  id: string
+  name: string | null
+  email?: string
+  avatar_url?: string | null
+  role: 'entrenador'
+  created_on?: string
+  // Statistics
+  totalStudents?: number
+  activeStudents?: number
+  pendingRequests?: number
 }
 
 /**
  * Calendar event structure (for future implementation)
  */
 export type CalendarEvent = {
-  id: number
+  id: string
   title: string
   description: string
   date: string
   time: string
   type: "training" | "routine_send" | "payment" | "custom"
-  clientId?: number
+  clientId?: string
   clientName?: string
   isPresential?: boolean
   status: "pending" | "completed" | "cancelled"
@@ -56,7 +75,7 @@ export type EventFormState = {
   date: string
   time: string
   type: CalendarEvent["type"]
-  clientId?: number
+  clientId?: string
   isPresential?: boolean
   status: CalendarEvent["status"]
   color: string
@@ -77,7 +96,7 @@ export type DashboardStat = {
  * Upcoming session data (for future implementation)
  */
 export type UpcomingSession = {
-  id: number
+  id: string
   client: string
   time: string
   type: string
@@ -88,7 +107,7 @@ export type UpcomingSession = {
  * Recent client data for dashboard
  */
 export type RecentClient = {
-  id: number
+  id: string
   name: string
   status: ClientStatus
   lastSession: string

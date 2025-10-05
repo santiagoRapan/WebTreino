@@ -5,37 +5,106 @@ import type { Exercise } from '@/features/exercises'
 export type { Exercise }
 
 /**
- * Routine block structure
+ * Routine structure matching database schema
  */
-export type RoutineBlock = {
-  id: number
+export interface Routine {
+  id: string
+  owner_id: string
   name: string
-  exercises: {
-    exerciseId: string
-    sets: number
-    reps: number
-    restSec: number
-  }[]
-  repetitions: number
-  restBetweenRepetitions: number
-  restAfterBlock: number
+  description?: string | null
+  created_on: string
 }
 
 /**
- * Routine template structure
+ * Routine block structure (includes exercises for UI purposes)
+ */
+export interface RoutineBlock {
+  id: string
+  routine_id: string
+  name: string
+  block_order: number
+  notes?: string | null
+  exercises?: Array<{
+    exerciseId: string
+    sets: number | null
+    reps: number | null
+    restSec: number | null
+  }>
+}
+
+/**
+ * Block exercise structure matching database schema
+ */
+export interface BlockExercise {
+  id: string
+  block_id: string
+  exercise_id: string
+  display_order: number
+  sets?: number | null
+  reps?: string | null // Can be ranges like "8-12" or specific numbers
+  load_target?: string | null // Target weight/resistance
+  tempo?: string | null // Exercise tempo (e.g., "3-1-2-1")
+  rest_seconds?: number | null
+  is_superset_group?: string | null // Groups exercises into supersets
+  notes?: string | null
+}
+
+/**
+ * Trainee routine assignment matching database schema
+ */
+export interface TraineeRoutine {
+  id: string
+  trainee_id: string
+  routine_id: string
+  assigned_on: string
+}
+
+/**
+ * Workout session matching database schema
+ */
+export interface WorkoutSession {
+  id: string
+  performer_id: string
+  routine_id?: string | null
+  started_at: string
+  completed_at?: string | null
+  notes?: string | null
+}
+
+/**
+ * Workout set log matching database schema
+ */
+export interface WorkoutSetLog {
+  id: string
+  session_id: string
+  exercise_id: string
+  block_id?: string | null
+  block_exercise_id?: string | null
+  set_index: number
+  reps?: number | null
+  weight?: number | null
+  rpe?: number | null // Rate of Perceived Exertion (1-10)
+  duration_sec?: number | null // For time-based exercises
+  rest_seconds?: number | null
+  notes?: string | null
+}
+
+/**
+ * Routine template structure (for UI purposes)
  */
 export type RoutineTemplate = {
-  id: number | string // Allow both number (database ID) and string (temp ID)
+  id: string
   name: string
-  description?: string
+  description?: string | null
   blocks: RoutineBlock[]
+  exercises?: BlockExercise[]
 }
 
 /**
- * Routine folder structure
+ * Routine folder structure (for UI organization)
  */
 export type RoutineFolder = {
-  id: number
+  id: string
   name: string
   templates: RoutineTemplate[]
 }
@@ -76,11 +145,12 @@ export type ExerciseFormState = {
  */
 export type PendingExercise = {
   exercise: Exercise
-  blockId: number
+  blockId: string
 } | null
 
 /**
- * Database block exercise structure
+ * Database block exercise structure (legacy - use BlockExercise instead)
+ * @deprecated Use BlockExercise interface instead
  */
 export interface DatabaseBlockExercise {
   exercise_id: string

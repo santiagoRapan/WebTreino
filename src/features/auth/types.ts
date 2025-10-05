@@ -6,8 +6,8 @@ import { User, Session, AuthError } from '@supabase/supabase-js'
  */
 export interface CustomUser {
   id: string
-  name: string
-  role: 'entrenador' | 'alumno'
+  name: string | null
+  role: 'entrenador' | 'alumno' | 'admin'
   avatar_url?: string | null
   created_on?: string
 }
@@ -17,8 +17,8 @@ export interface CustomUser {
  */
 export interface CreateUserData {
   id: string
-  name: string
-  role: 'entrenador' | 'alumno'
+  name: string | null
+  role: 'entrenador' | 'alumno' | 'admin'
   avatar_url?: string | null
 }
 
@@ -26,8 +26,8 @@ export interface CreateUserData {
  * Data for updating an existing user in the users table
  */
 export interface UpdateUserData {
-  name?: string
-  role?: 'entrenador' | 'alumno'
+  name?: string | null
+  role?: 'entrenador' | 'alumno' | 'admin'
   avatar_url?: string | null
 }
 

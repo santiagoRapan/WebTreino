@@ -5,13 +5,10 @@ import { toast } from '@/hooks/use-toast'
 import type { RoutineTemplate } from '../types'
 
 export interface RoutineAssignment {
-  id?: number
-  routine_id: number
-  student_id: string
-  assigned_by: string
-  assigned_at: string
-  status: 'active' | 'completed' | 'paused'
-  notes?: string
+  id?: string
+  trainee_id: string
+  routine_id: string
+  assigned_on: string
 }
 
 export function useRoutineAssignments() {
@@ -25,11 +22,10 @@ export function useRoutineAssignments() {
     try {
       // First check if this routine is already assigned to this student
       const { data: existingAssignment, error: checkError } = await supabase
-        .from('routine_assignments')
+        .from('trainee_routine')
         .select('id')
         .eq('routine_id', routine.id)
-        .eq('student_id', studentId)
-        .eq('status', 'active')
+        .eq('trainee_id', studentId)
         .single()
 
       if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
@@ -47,16 +43,13 @@ export function useRoutineAssignments() {
 
       // Create the assignment
       const assignmentData: Omit<RoutineAssignment, 'id'> = {
-        routine_id: Number(routine.id),
-        student_id: studentId,
-        assigned_by: trainerId,
-        assigned_at: new Date().toISOString(),
-        status: 'active',
-        notes: notes || undefined
+        trainee_id: studentId,
+        routine_id: routine.id,
+        assigned_on: new Date().toISOString()
       }
 
       const { error } = await supabase
-        .from('routine_assignments')
+        .from('trainee_routine')
         .insert([assignmentData])
 
       if (error) {
@@ -83,7 +76,7 @@ export function useRoutineAssignments() {
   const getStudentAssignments = async (studentId: string): Promise<RoutineAssignment[]> => {
     try {
       const { data, error } = await supabase
-        .from('routine_assignments')
+        .from('trainee_routine')
         .select(`
           *,
           routines (
@@ -92,8 +85,8 @@ export function useRoutineAssignments() {
             description
           )
         `)
-        .eq('student_id', studentId)
-        .order('assigned_at', { ascending: false })
+        .eq('trainee_id', studentId)
+        .order('assigned_on', { ascending: false })
 
       if (error) {
         throw error
@@ -106,10 +99,10 @@ export function useRoutineAssignments() {
     }
   }
 
-  const removeAssignment = async (assignmentId: number): Promise<boolean> => {
+  const removeAssignment = async (assignmentId: string): Promise<boolean> => {
     try {
       const { error } = await supabase
-        .from('routine_assignments')
+        .from('trainee_routine')
         .delete()
         .eq('id', assignmentId)
 
@@ -134,41 +127,9 @@ export function useRoutineAssignments() {
     }
   }
 
-  const updateAssignmentStatus = async (
-    assignmentId: number, 
-    status: 'active' | 'completed' | 'paused'
-  ): Promise<boolean> => {
-    try {
-      const { error } = await supabase
-        .from('routine_assignments')
-        .update({ status })
-        .eq('id', assignmentId)
-
-      if (error) {
-        throw error
-      }
-
-      toast({
-        title: "Estado actualizado",
-        description: `El estado de la asignación ha sido cambiado a ${status}.`,
-      })
-
-      return true
-    } catch (error) {
-      console.error('Error updating assignment status:', error)
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar el estado.",
-        variant: "destructive"
-      })
-      return false
-    }
-  }
-
   return {
     assignRoutineToStudent,
     getStudentAssignments,
-    removeAssignment,
-    updateAssignmentStatus
+    removeAssignment
   }
 }
