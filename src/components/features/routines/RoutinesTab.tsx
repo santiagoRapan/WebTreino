@@ -1065,7 +1065,7 @@ export function RoutinesTab({ action }: RoutinesTabProps) {
             {pendingExercise && (
               <div className="border-t pt-4">
                 <h4 className="font-medium mb-3">Configurar Ejercicio</h4>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
                     <Label htmlFor="sets">{t('routines.forms.sets')}</Label>
                     <Input
@@ -1086,14 +1086,26 @@ export function RoutinesTab({ action }: RoutinesTabProps) {
                       onChange={(e) => setExerciseInputs(prev => ({ ...prev, reps: e.target.value }))}
                     />
                   </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label htmlFor="rest">{t('routines.forms.rest')}</Label>
+                    <Label htmlFor="rest">Descanso (seg)</Label>
                     <Input
                       id="rest"
                       type="number"
                       placeholder="90"
                       value={exerciseInputs.restSec}
                       onChange={(e) => setExerciseInputs(prev => ({ ...prev, restSec: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="loadTarget">Peso (kg)</Label>
+                    <Input
+                      id="loadTarget"
+                      type="number"
+                      placeholder="20"
+                      value={exerciseInputs.loadTarget}
+                      onChange={(e) => setExerciseInputs(prev => ({ ...prev, loadTarget: e.target.value }))}
                     />
                   </div>
                 </div>
@@ -1224,6 +1236,7 @@ export function RoutinesTab({ action }: RoutinesTabProps) {
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 {exercise.sets} series × {exercise.reps} repeticiones · {exercise.restSec}s descanso
+                                {exercise.loadTarget && ` · ${exercise.loadTarget}kg`}
                               </p>
                             </div>
                           </div>

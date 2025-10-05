@@ -383,7 +383,8 @@ export function createRoutineHandlers(
         exerciseId: exercise.id.toString(), // Ensure it's a string
         sets: parseInt(routineState.exerciseInputs.sets),
         reps: parseInt(routineState.exerciseInputs.reps),
-        restSec: parseInt(routineState.exerciseInputs.restSec)
+        restSec: parseInt(routineState.exerciseInputs.restSec),
+        loadTarget: routineState.exerciseInputs.loadTarget ? parseInt(routineState.exerciseInputs.loadTarget) : undefined
       }
 
       const updatedRoutine = {
@@ -397,7 +398,7 @@ export function createRoutineHandlers(
 
       routineState.setEditingRoutine(updatedRoutine)
       routineState.setPendingExercise(null)
-      routineState.setExerciseInputs({ sets: '', reps: '', restSec: '' })
+      routineState.setExerciseInputs({ sets: '', reps: '', restSec: '', loadTarget: '' })
       routineState.setIsExerciseSelectorOpen(false)
 
       toast({
@@ -408,7 +409,7 @@ export function createRoutineHandlers(
 
     cancelAddExercise: () => {
       routineState.setPendingExercise(null)
-      routineState.setExerciseInputs({ sets: '', reps: '', restSec: '' })
+      routineState.setExerciseInputs({ sets: '', reps: '', restSec: '', loadTarget: '' })
       routineState.setIsExerciseSelectorOpen(false)
     },
 
@@ -510,7 +511,7 @@ export function createRoutineHandlers(
         routineState.setNewBlockName("")
         routineState.setExpandedBlocks(new Set())
         routineState.setSelectedBlockId(null)
-        routineState.setExerciseInputs({ sets: '', reps: '', restSec: '' })
+        routineState.setExerciseInputs({ sets: '', reps: '', restSec: '', loadTarget: '' })
         routineState.setPendingExercise(null)
         
       } catch (error) {
@@ -625,7 +626,8 @@ export function createRoutineHandlers(
           { header: 'Ejercicio', key: 'name', width: 40 },
           { header: 'Series', key: 'sets', width: 12 },
           { header: 'Repeticiones', key: 'reps', width: 16 },
-          { header: 'Peso (kg)', key: 'rest', width: 16 },
+          { header: 'Descanso (seg)', key: 'rest', width: 16 },
+          { header: 'Peso (kg)', key: 'loadTarget', width: 16 },
         ]
 
         const addHeaderStyles = (rowNumber: number) => {
@@ -661,7 +663,7 @@ export function createRoutineHandlers(
 
         // Single table header
         const headerRow = worksheet.getRow(1)
-        headerRow.values = ['#', 'Ejercicio', 'Series', 'Repeticiones', 'Peso (kg)']
+        headerRow.values = ['#', 'Ejercicio', 'Series', 'Repeticiones', 'Descanso (seg)', 'Peso (kg)']
         addHeaderStyles(1)
 
         let exerciseCounter = 1
@@ -681,6 +683,7 @@ export function createRoutineHandlers(
                 sets: ex.sets ?? '',
                 reps: ex.reps ?? '',
                 rest: ex.restSec ?? '',
+                loadTarget: ex.loadTarget ?? '',
               })
               row.getCell('A').alignment = { vertical: 'middle', horizontal: 'center' }
               addBodyBorders(row.number)

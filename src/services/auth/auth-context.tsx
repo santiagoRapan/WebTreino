@@ -53,9 +53,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('Usuario guardado exitosamente:', result.customUser)
         setCustomUser(result.customUser || null)
         
-        // Actualizar datos completos
+        // Actualizar datos completos y force refresh to get latest avatar
         const userData = await getFullUserData(user)
         setFullUserData(userData)
+        setCustomUser(userData.customUser)
+        console.log('User avatar URL after update:', userData.customUser?.avatar_url)
       }
     } catch (error) {
       console.error('Error en handleUserAuthenticated:', error)

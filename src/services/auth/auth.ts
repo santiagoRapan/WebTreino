@@ -47,19 +47,25 @@ export const createOrUpdateCustomUser = async (authUser: User): Promise<CustomUs
       .eq('id', authUser.id)
       .single()
 
+    // Process Google avatar URL for better compatibility
+    let avatarUrl = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || null
+    if (avatarUrl && avatarUrl.includes('googleusercontent.com')) {
+      // Convert Google avatar URL to a more reliable format
+      avatarUrl = avatarUrl.replace(/=s\d+(-c)?$/, '=s200-c')
+    }
+
     const userData: CreateUserData = {
       id: authUser.id,
       name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Usuario',
       role: 'entrenador', // Rol por defecto
-      avatar_url: authUser.user_metadata?.avatar_url || null
+      avatar_url: avatarUrl
     }
 
-    console.log('User data to process:', userData)
-    console.log('Existing user found:', !!existingUser)
+    console.log('Processing user:', authUser.email, 'Avatar URL:', userData.avatar_url)
 
     let data, error
     if (existingUser) {
-      // Update existing user
+      // Update existing user - always update to ensure fresh Google avatar
       console.log('Updating existing user')
       const updateResult = await supabase
         .from('users')
@@ -78,11 +84,15 @@ export const createOrUpdateCustomUser = async (authUser: User): Promise<CustomUs
       } else if (updateResult.data && updateResult.data.length > 0) {
         data = updateResult.data[0]
         error = null
-        console.log('Update successful')
+        console.log('Update successful, new avatar_url:', data.avatar_url)
       } else {
-        // If update didn't affect any rows, just use the existing user data
-        console.log('No rows updated, using existing user data')
-        data = existingUser
+        // Force update the avatar_url in existing user data
+        console.log('No rows updated, merging with fresh avatar data')
+        data = {
+          ...existingUser,
+          name: userData.name,
+          avatar_url: userData.avatar_url
+        }
         error = null
       }
     } else {

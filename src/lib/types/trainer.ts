@@ -67,6 +67,7 @@ export type RoutineBlock = {
     sets: number
     reps: number
     restSec: number
+    loadTarget?: number
   }[]
   repetitions: number
   restBetweenRepetitions: number
@@ -127,6 +128,7 @@ export type ExerciseInputsState = {
   sets: string
   reps: string
   restSec: string
+  loadTarget: string
 }
 
 export type ExerciseFilterState = {

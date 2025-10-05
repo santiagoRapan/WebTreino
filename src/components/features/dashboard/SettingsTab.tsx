@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { LogOut, User, Shield, Palette, Bell, Globe } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { useTheme } from "next-themes"
-import { useState } from "react"
 import { useTranslation } from "@/lib/i18n/LanguageProvider"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
@@ -16,7 +15,6 @@ export function SettingsTab() {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const { t, locale, setLocale } = useTranslation()
-  // refresh removed
 
   const handleLogout = async () => {
     try {
@@ -41,8 +39,6 @@ export function SettingsTab() {
     setTheme(theme === "light" ? "dark" : "light");
   };
 
-  // refresh removed
-
   return (
     <main className="p-6 space-y-6">
       <div className="flex flex-col gap-4">
@@ -56,16 +52,11 @@ export function SettingsTab() {
         {/* Profile Information */}
         <Card className="bg-card border-border">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2 text-card-foreground">
-                  <User className="w-5 h-5" />
-                  {t("settings.profile.title")}
-                </CardTitle>
-                <CardDescription>{t("settings.profile.description")}</CardDescription>
-              </div>
-              {/* refresh button removed */}
-            </div>
+            <CardTitle className="flex items-center gap-2 text-card-foreground">
+              <User className="w-5 h-5" />
+              {t("settings.profile.title")}
+            </CardTitle>
+            <CardDescription>{t("settings.profile.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 gap-4">

@@ -54,7 +54,6 @@ class DataCacheManager {
         return null
       }
 
-      console.log(`🚀 Loading data from cache for key: ${key}`)
       return parsedCache.data
 
     } catch (error) {
@@ -79,7 +78,6 @@ class DataCacheManager {
       }
 
       localStorage.setItem(key, JSON.stringify(cacheData))
-      console.log(`💾 Data cached successfully for key: ${key}`)
 
     } catch (error) {
       console.error(`❌ Error caching data for key: ${key}`, error)

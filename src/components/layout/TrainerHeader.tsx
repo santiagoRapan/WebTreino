@@ -55,7 +55,12 @@ export function TrainerHeader() {
             </p>
           </div>
           <Avatar>
-            <AvatarImage src={customUser?.avatar_url || "/images/trainer-profile.png"} />
+            {customUser?.avatar_url ? (
+              <AvatarImage 
+                src={customUser.avatar_url}
+                alt={`${customUser?.name || "User"} profile picture`}
+              />
+            ) : null}
             <AvatarFallback>
               {customUser?.name?.charAt(0)?.toUpperCase() || "U"}
             </AvatarFallback>

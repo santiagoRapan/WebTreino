@@ -148,13 +148,12 @@ export function useRoutineState(): UseRoutineStateReturn {
     category: ''
   })
 
-  const [exerciseInputs, setExerciseInputs] = useState<ExerciseInputsState>({ 
-    sets: '', 
-    reps: '', 
-    restSec: '' 
-  })
-  
-  // Routine Management
+  const [exerciseInputs, setExerciseInputs] = useState<ExerciseInputsState>({
+    sets: '',
+    reps: '',
+    restSec: '',
+    loadTarget: ''
+  })  // Routine Management
   const [routineFolders, setRoutineFolders] = useState<RoutineFolder[]>([])
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(1)
   const [routineSearch, setRoutineSearch] = useState<string>("")
@@ -196,7 +195,6 @@ export function useRoutineState(): UseRoutineStateReturn {
       }
       
       try {
-        console.log('Loading routines for user:', customUser.id)
         // Load routines from database using the authenticated user's ID
         const dbRoutines = await routineDatabase.loadRoutinesFromDatabase(customUser.id)
         

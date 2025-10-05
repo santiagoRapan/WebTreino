@@ -103,7 +103,7 @@ export function useRoutineDatabase() {
               sets: exercise.sets,
               reps: exercise.reps,
               rest_seconds: exercise.restSec,
-              load_target: null,
+              load_target: exercise.loadTarget || null,
               tempo: null,
               is_superset_group: null,
               notes: null
@@ -153,7 +153,6 @@ export function useRoutineDatabase() {
         // 2. Verificar cache persistente (localStorage)
         const cachedRoutines = DataCacheManager.getCachedRoutines(ownerId)
         if (cachedRoutines && cachedRoutines.length > 0) {
-          console.log('💾 Loading routines from persistent cache')
           setRoutines(cachedRoutines)
           setLastUpdateEvent(new Date())
           
@@ -169,8 +168,6 @@ export function useRoutineDatabase() {
       // 📚 Si no hay cache o se forzó refresh, cargar desde base de datos
       setLoading(true)
       setError(null)
-
-      console.log('📚 Loading routines from database...')
 
       const { data: routinesData, error: routinesError } = await supabase
         .from('routines')
@@ -215,7 +212,8 @@ export function useRoutineDatabase() {
                 exerciseId: exercise.exercise_id,
                 sets: exercise.sets,
                 reps: exercise.reps,
-                restSec: exercise.rest_seconds
+                restSec: exercise.rest_seconds,
+                loadTarget: exercise.load_target
               })),
             repetitions: 1, // Default value
             restBetweenRepetitions: 60, // Default value
@@ -242,8 +240,6 @@ export function useRoutineDatabase() {
   // 🔍 Verificar actualizaciones en background sin mostrar loading al usuario
   const checkForUpdatesInBackground = useCallback(async (ownerId: string, cachedRoutines: RoutineTemplate[]) => {
     try {
-      console.log('🔍 Checking for updates in background...')
-      
       // Solo verificar metadatos para detectar cambios
       const { data: routinesMetadata, error } = await supabase
         .from('routines')
@@ -269,10 +265,7 @@ export function useRoutineDatabase() {
       const hasChanges = cachedIds.some((id, index) => id !== currentIds[index])
 
       if (hasChanges) {
-        console.log('🔄 Routine changes detected, refreshing data...')
         await loadRoutinesFromDatabase(ownerId, true)
-      } else {
-        console.log('✅ No changes detected, cache is up to date')
       }
 
     } catch (err) {
@@ -350,7 +343,7 @@ export function useRoutineDatabase() {
               sets: exercise.sets,
               reps: exercise.reps,
               rest_seconds: exercise.restSec,
-              load_target: null,
+              load_target: exercise.loadTarget || null,
               tempo: null,
               is_superset_group: null,
               notes: null
