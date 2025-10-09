@@ -41,11 +41,12 @@ export const createOrUpdateCustomUser = async (authUser: User): Promise<CustomUs
     console.log('Creating/updating custom user for:', authUser.email, 'ID:', authUser.id)
     
     // First, check if user already exists
+    // MUERE EN ESTA REQUEST
     const { data: existingUser } = await supabase
       .from('users')
-      .select('*')
+      .select('id, name, role, avatar_url')
       .eq('id', authUser.id)
-      .single()
+      .maybeSingle()
 
     // Process Google avatar URL for better compatibility
     let avatarUrl = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || null

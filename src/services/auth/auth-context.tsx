@@ -45,6 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     try {
       // Crear o actualizar usuario en la tabla users con rol 'entrenador'
+      console.log(user)
       const result = await createOrUpdateCustomUser(user)
       
       if (result.error) {
