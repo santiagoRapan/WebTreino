@@ -22,105 +22,94 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [authUser, setAuthUser] = useState<User | null>(null)
-  const [customUser, setCustomUser] = useState<CustomUser | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [customUser, setCustomUser] = useState<CustomUser | null>(null)
   const [fullUserData, setFullUserData] = useState<FullUserData | null>(null)
+
+  // Computed value for authUser
+  const authUser = session?.user ?? null
+
+  // Función para cargar datos del usuario desde la BD
+  const loadUserData = async (user: User) => {
+    try {
+      console.log('Loading user data for:', user.email)
+      
+      // Get user data from database
+      const userData = await getFullUserData(user)
+      
+      // If user doesn't exist in custom table, create them
+      if (!userData.customUser) {
+        console.log('User not found in DB, creating...')
+        const result = await createOrUpdateCustomUser(user)
+        if (result.customUser) {
+          setCustomUser(result.customUser)
+          setFullUserData({ authUser: user, customUser: result.customUser, isAuthenticated: true })
+        }
+      } else {
+        // User exists, just set the data
+        setCustomUser(userData.customUser)
+        setFullUserData(userData)
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error)
+    }
+  }
 
   // Función para refrescar datos del usuario
   const refreshUserData = async () => {
     if (authUser) {
       console.log('Refreshing user data for:', authUser.email)
-      const userData = await getFullUserData(authUser)
-      setFullUserData(userData)
-      setCustomUser(userData.customUser)
-      console.log('User data refreshed:', userData)
+      await loadUserData(authUser)
     }
   }
 
-  // Función para manejar cuando un usuario se autentica
-  const handleUserAuthenticated = async (user: User) => {
-    console.log('Usuario autenticado, creando/actualizando en BD:', user.email)
-    
-    try {
-      // Crear o actualizar usuario en la tabla users con rol 'entrenador'
-      const result = await createOrUpdateCustomUser(user)
-      
-      if (result.error) {
-        console.error('Error guardando usuario en BD:', result.error)
-      } else {
-        console.log('Usuario guardado exitosamente:', result.customUser)
-        setCustomUser(result.customUser || null)
-        
-        // Actualizar datos completos y force refresh to get latest avatar
-        const userData = await getFullUserData(user)
-        setFullUserData(userData)
-        setCustomUser(userData.customUser)
-        console.log('User avatar URL after update:', userData.customUser?.avatar_url)
-      }
-    } catch (error) {
-      console.error('Error en handleUserAuthenticated:', error)
-    }
-  }
-
+  // Initialize session and listen to auth changes (like mobile version)
   useEffect(() => {
-    // Obtener sesión inicial
-    const getInitialSession = async () => {
+    // Fetch initial session
+    const fetchSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession()
         if (error) {
-          console.error('Error getting initial session:', error)
+          console.error('Failed to get session:', error)
         } else {
           setSession(session)
-          setAuthUser(session?.user ?? null)
-          
-          // Si hay un usuario, cargar sus datos existentes
+          // Load user data if session exists
           if (session?.user) {
-            console.log('Loading existing user data for:', session.user.email)
-            const userData = await getFullUserData(session.user)
-            setFullUserData(userData)
-            setCustomUser(userData.customUser)
+            await loadUserData(session.user)
           }
         }
       } catch (error) {
-        console.error('Error in getInitialSession:', error)
+        console.error('Error in fetchSession:', error)
       } finally {
         setLoading(false)
       }
     }
 
-    getInitialSession()
+    fetchSession()
 
-    // Escuchar cambios en el estado de autenticación
+    // Listen to auth state changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event)
+      console.log('Auth state changed:', event, 'session:', !!session)
       setSession(session)
-      setAuthUser(session?.user ?? null)
-      
-      // Manejar diferentes eventos de autenticación
-      if (event === 'SIGNED_IN' && session?.user) {
-        console.log('User signed in:', session.user.email)
-        await handleUserAuthenticated(session.user)
-      } else if (event === 'SIGNED_OUT') {
-        console.log('User signed out')
+
+      // Load user data when signed in
+      if (session?.user) {
+        await loadUserData(session.user)
+        setLoading(false) // Ensure loading is false after loading data
+      } else {
+        // Clear data when signed out
+        console.log('No session, clearing user data...')
         setCustomUser(null)
         setFullUserData(null)
-        // Clear all cached data on logout to prevent stale data
+        setLoading(false) // Important: Set loading to false when signed out
         DataCacheManager.clearAllCaches()
-      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-        console.log('Token refreshed')
-        // Opcional: refrescar datos del usuario si es necesario
       }
-      
-      setLoading(false)
     })
 
-    return () => {
-      subscription.unsubscribe()
-    }
+    return () => subscription.unsubscribe()
   }, [])
 
   // Periodic refresh of user data (every 5 minutes when page is active)
@@ -155,17 +144,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const handleSignOut = async () => {
     try {
-      setLoading(true)
+      console.log('Signing out...')
+      
+      // Sign out from Supabase
       const { error } = await authSignOut()
+      
       if (error) {
-        console.error('Sign out error:', error.message)
-        throw new Error(error.message)
+        console.error('Sign out error:', error)
       }
+      
+      // Clear local state immediately (before navigation)
+      setSession(null)
+      setCustomUser(null)
+      setFullUserData(null)
+      setLoading(false) // Important: Set loading to false BEFORE navigation
+      DataCacheManager.clearAllCaches()
+      
+      // Use router.push instead of window.location.href to avoid full reload
+      // The full reload will happen naturally, but state is already cleared
+      window.location.href = '/auth'
     } catch (error) {
       console.error('Error in handleSignOut:', error)
-      throw error
-    } finally {
+      // Clear state even on error
+      setSession(null)
+      setCustomUser(null)
+      setFullUserData(null)
       setLoading(false)
+      DataCacheManager.clearAllCaches()
+      window.location.href = '/auth'
     }
   }
 

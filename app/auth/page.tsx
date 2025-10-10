@@ -17,15 +17,30 @@ export default function AuthPage() {
   const searchParams = useSearchParams()
   const { signInWithGoogle, loading, isAuthenticated } = useAuth()
   const [isSigningIn, setIsSigningIn] = useState(false)
+  const [loadingTimeout, setLoadingTimeout] = useState(false)
   
   const isSignUp = searchParams.get('mode') === 'signup'
   const redirectTo = searchParams.get('redirect') || '/dashboard'
 
+  // Redirect to dashboard if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!loading && isAuthenticated) {
+      console.log('User already authenticated, redirecting to:', redirectTo)
       router.push(redirectTo)
     }
-  }, [isAuthenticated, router, redirectTo])
+  }, [isAuthenticated, loading, router, redirectTo])
+
+  // Timeout fallback to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn('Loading timeout reached, forcing auth page to show')
+        setLoadingTimeout(true)
+      }
+    }, 3000) // 3 second timeout
+
+    return () => clearTimeout(timeout)
+  }, [loading])
 
   const handleGoogleSignIn = async () => {
     try {
@@ -41,15 +56,21 @@ export default function AuthPage() {
     router.push('/')
   }
 
-  if (loading) {
+  // Show loading while checking authentication (with timeout fallback)
+  if (loading && !loadingTimeout) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex items-center space-x-2">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          <span className="text-muted-foreground">Cargando...</span>
+          <span className="text-muted-foreground">Verificando sesión...</span>
         </div>
       </div>
     )
+  }
+
+  // Don't show auth page if already authenticated (will redirect)
+  if (isAuthenticated && !loadingTimeout) {
+    return null
   }
 
   return (

@@ -145,10 +145,21 @@ export const createOrUpdateCustomUser = async (authUser: User): Promise<CustomUs
 // Cerrar sesión
 export const signOut = async (): Promise<{ error?: AuthError | null }> => {
   try {
-    const { error } = await supabase.auth.signOut()
-    return { error }
+    console.log('Starting sign out process...')
+    
+    // Sign out from Supabase with scope option to ensure complete logout
+    const { error } = await supabase.auth.signOut({ scope: 'global' })
+    
+    if (error) {
+      console.error('Supabase sign out error:', error)
+      // Even if there's an error, try to clean local state
+      return { error }
+    }
+    
+    console.log('Sign out successful')
+    return { error: null }
   } catch (error) {
-    console.error('Error signing out:', error)
+    console.error('Exception during sign out:', error)
     return { error: error as AuthError }
   }
 }
