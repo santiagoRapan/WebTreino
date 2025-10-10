@@ -45,7 +45,14 @@ export default function AuthPage() {
   const handleGoogleSignIn = async () => {
     try {
       setIsSigningIn(true)
-      await signInWithGoogle(`${window.location.origin}${redirectTo}`)
+      
+      // Detect Chrome browser and force account selection to prevent auto-login
+      const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor)
+      const forceAccountSelection = isChrome
+      
+      console.log('Browser detected:', isChrome ? 'Chrome' : 'Other', '- Force account selection:', forceAccountSelection)
+      
+      await signInWithGoogle(`${window.location.origin}${redirectTo}`, forceAccountSelection)
     } catch (error) {
       console.error('Error during Google sign in:', error)
       setIsSigningIn(false)

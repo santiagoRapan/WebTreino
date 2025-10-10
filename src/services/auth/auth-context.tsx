@@ -12,7 +12,7 @@ interface AuthContextType {
   customUser: CustomUser | null
   session: Session | null
   loading: boolean
-  signInWithGoogle: (redirectTo?: string) => Promise<void>
+  signInWithGoogle: (redirectTo?: string, forceAccountSelection?: boolean) => Promise<void>
   signOut: () => Promise<void>
   isAuthenticated: boolean
   fullUserData: FullUserData | null
@@ -126,10 +126,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval)
   }, [authUser, session])
 
-  const handleSignInWithGoogle = async (redirectTo?: string) => {
+  const handleSignInWithGoogle = async (redirectTo?: string, forceAccountSelection: boolean = false) => {
     try {
       setLoading(true)
-      const { error } = await authSignInWithGoogle(redirectTo)
+      const { error } = await authSignInWithGoogle(redirectTo, forceAccountSelection)
       if (error) {
         console.error('Authentication error:', error.message)
         throw new Error(error.message)

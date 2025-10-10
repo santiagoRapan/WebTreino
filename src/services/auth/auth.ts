@@ -13,13 +13,22 @@ export interface CustomUserResponse {
 }
 
 // Iniciar sesión con Google y crear/actualizar usuario en tabla custom
-export const signInWithGoogle = async (redirectTo?: string): Promise<AuthResponse> => {
+export const signInWithGoogle = async (redirectTo?: string, forceAccountSelection: boolean = false): Promise<AuthResponse> => {
   try {
+    const options: any = {
+      redirectTo: redirectTo || `${window.location.origin}/dashboard`
+    }
+
+    // Force account selection to prevent Chrome auto-login
+    if (forceAccountSelection) {
+      options.queryParams = {
+        prompt: 'select_account'
+      }
+    }
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: redirectTo || `${window.location.origin}/dashboard`
-      }
+      options
     })
     
     if (error) {
@@ -154,6 +163,27 @@ export const signOut = async (): Promise<{ error?: AuthError | null }> => {
       console.error('Supabase sign out error:', error)
       // Even if there's an error, try to clean local state
       return { error }
+    }
+    
+    // Additional cleanup for Chrome browsers
+    const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor)
+    if (isChrome) {
+      console.log('Chrome detected - performing additional cleanup')
+      
+      // Clear any Google-related localStorage items
+      try {
+        const keysToRemove = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (key && (key.includes('google') || key.includes('oauth') || key.includes('auth'))) {
+            keysToRemove.push(key)
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key))
+        console.log('Cleared Google-related localStorage items:', keysToRemove.length)
+      } catch (cleanupError) {
+        console.warn('Error during localStorage cleanup:', cleanupError)
+      }
     }
     
     console.log('Sign out successful')
