@@ -1,4 +1,5 @@
 // Student feature types
+import type { Client } from '@/features/trainer/types'
 
 /**
  * Request status enum matching database schema
@@ -85,11 +86,12 @@ export interface Student {
  * Return type for useStudents hook
  */
 export interface UseStudentsReturn {
-  students: Student[]
+  students: Client[]
   loading: boolean
   error: string | null
   refreshStudents: () => Promise<void>
   fetchStudentSessions: (studentId: string) => Promise<{ sessions: WorkoutSession[]; logs: WorkoutSetLog[] }>
+  lastUpdateEvent: Date | null
 }
 
 /**

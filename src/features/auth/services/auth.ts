@@ -40,7 +40,7 @@ export const createOrUpdateCustomUser = async (authUser: User): Promise<CustomUs
       .from('users')
       .upsert(userData, { 
         onConflict: 'id',
-        ignoreDuplicates: false 
+        ignoreDuplicates: true 
       })
       .select()
       .single()

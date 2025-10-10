@@ -45,6 +45,7 @@ interface RoutinesTemplatesListProps {
   allClients: Client[]
   loadingClients: boolean
   clientsError: string | null
+  assignedCounts: Record<string, number>
   translations: {
     templatesTitle: string
     templatesSubtitle: string
@@ -82,6 +83,7 @@ export function RoutinesTemplatesList({
   allClients,
   loadingClients,
   clientsError,
+  assignedCounts,
   translations,
 }: RoutinesTemplatesListProps) {
   const [routineAssignments, setRoutineAssignments] = useState<Record<string, string>>({})
@@ -138,6 +140,12 @@ export function RoutinesTemplatesList({
                       <p className="text-xs text-muted-foreground">{translations.totalExercises}</p>
                       <p className="text-lg font-semibold text-card-foreground">
                         {tpl.blocks.reduce((acc, block) => acc + block.exercises.length, 0)}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded border border-border bg-background/80 shadow-sm">
+                      <p className="text-xs text-muted-foreground">Asignada a</p>
+                      <p className="text-lg font-semibold text-card-foreground">
+                        {assignedCounts[String(tpl.id)] || 0}
                       </p>
                     </div>
                   </div>

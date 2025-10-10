@@ -1,9 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
 import { useTranslation } from "@/lib/i18n/LanguageProvider"
 import { useExerciseSearch } from "@/features/exercises"
+import { useAuth } from "@/features/auth"
+import { supabase } from "@/services/database"
 import { RoutinesHeader } from "./RoutinesHeader"
 import { RoutinesFoldersList } from "./RoutinesFoldersList"
 import { RoutinesTemplatesList } from "./RoutinesTemplatesList"
@@ -14,6 +16,7 @@ import { RoutineEditorDialog } from "./RoutineEditorDialog"
 
 export function RoutinesTab() {
   const { t } = useTranslation()
+  const { authUser } = useAuth()
   
   // Optimized exercise search hook for exercise selector dialog
   const exerciseSearch = useExerciseSearch({ 
@@ -85,8 +88,40 @@ export function RoutinesTab() {
   } = useTrainerDashboard()
 
   const [isSaving, setIsSaving] = useState(false)
+  // Track how many students have this routine assigned
+  const [assignedCounts, setAssignedCounts] = useState<Record<string, number>>({})
 
   const currentFolder = routineFolders.find((f) => f.id === selectedFolderId) || routineFolders[0]
+
+  // Load assignment counts for routines owned by the trainer
+  useEffect(() => {
+    const loadAssignmentCounts = async () => {
+      if (!authUser?.id) return
+      try {
+        // Fetch trainee_routine rows for routines owned by this trainer
+        const { data, error } = await supabase
+          .from('trainee_routine')
+          .select('routine_id, routines!inner(owner_id)')
+          .eq('routines.owner_id', authUser.id)
+
+        if (error) {
+          console.warn('Unable to load assignment counts:', error)
+          return
+        }
+
+        const counts: Record<string, number> = {}
+        for (const row of (data as any[]) || []) {
+          const rid = String((row as any).routine_id)
+          counts[rid] = (counts[rid] || 0) + 1
+        }
+        setAssignedCounts(counts)
+      } catch (err) {
+        console.warn('Error computing assignment counts:', err)
+      }
+    }
+
+    loadAssignmentCounts()
+  }, [authUser?.id, routineFolders])
 
   const saveRoutine = async () => {
     setIsSaving(true)
@@ -152,7 +187,21 @@ export function RoutinesTab() {
           onDeleteTemplate={handleDeleteTemplate}
           onExportToExcel={handleExportRoutineToExcel}
           onAssignToClient={handleAssignTemplateToClient}
-          onSendToClient={assignRoutineToClient}
+          onSendToClient={async (templateId: string | number, clientId: string) => {
+            try {
+              await assignRoutineToClient(templateId, clientId)
+              // Optimistically bump assignment count for this routine
+              setAssignedCounts(prev => ({
+                ...prev,
+                [String(templateId)]: (prev[String(templateId)] || 0) + 1
+              }))
+            } catch (error) {
+              // If assignment fails, we could revert the optimistic update here
+              console.error('Error assigning routine:', error)
+              throw error
+            }
+          }}
+          assignedCounts={assignedCounts}
           allClients={allClients}
           loadingClients={loadingClients}
           clientsError={clientsError}
