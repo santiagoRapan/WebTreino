@@ -1,77 +1,81 @@
-// Auth feature types
-import { User, Session, AuthError } from '@supabase/supabase-js'
+import type { User, Session, AuthError } from '@supabase/supabase-js';
+import type { PostgrestError } from '@supabase/postgrest-js';
+
+// Single source of truth for roles
+export type AppRole = 'entrenador' | 'alumno' | 'admin';
 
 /**
- * Custom user data from the users table
+ * Row as read from public.users
+ * (DB always has created_on once inserted)
  */
 export interface CustomUser {
-  id: string
-  name: string | null
-  role: 'entrenador' | 'alumno' | 'admin'
-  avatar_url?: string | null
-  created_on?: string
+  id: string;
+  name: string | null;
+  role: AppRole;
+  avatar_url: string | null;
+  created_on: string; // ISO timestamptz from DB
 }
 
 /**
- * Data for creating a new user in the users table
+ * Payload to create a new row (no created_on; DB fills it)
  */
 export interface CreateUserData {
-  id: string
-  name: string | null
-  role: 'entrenador' | 'alumno' | 'admin'
-  avatar_url?: string | null
+  id: string;
+  name: string | null;
+  role?: AppRole;            // optional if you want DB default; require it if you set 'entrenador'
+  avatar_url?: string | null;
 }
 
 /**
- * Data for updating an existing user in the users table
+ * Partial update payload
  */
 export interface UpdateUserData {
-  name?: string | null
-  role?: 'entrenador' | 'alumno' | 'admin'
-  avatar_url?: string | null
+  name?: string | null;
+  role?: AppRole;
+  avatar_url?: string | null;
 }
 
 /**
- * Combined auth and custom user data
+ * Combined auth + custom user snapshot
  */
 export interface FullUserData {
-  authUser: User | null
-  customUser: CustomUser | null
-  isAuthenticated: boolean
+  authUser: User | null;
+  customUser: CustomUser | null;
+  isAuthenticated: boolean;
+  session: Session | null;
 }
 
 /**
- * Auth response type
+ * Generic Result helpers to avoid optional fields
  */
-export interface AuthResponse {
-  user?: User | null
-  error?: AuthError | null
-}
+export type ResultOk<T> = { ok: true; data: T };
+export type ResultErr<E> = { ok: false; error: E };
+export type Result<T, E> = ResultOk<T> | ResultErr<E>;
 
 /**
- * Custom user response type
+ * Auth & DB results
  */
-export interface CustomUserResponse {
-  customUser?: CustomUser | null
-  error?: any
-}
+export type AuthResult = Result<User | null, AuthError>;
+export type CustomUserResult = Result<CustomUser | null, PostgrestError>;
 
 /**
- * Auth context type
+ * Auth context API
  */
 export interface AuthContextType {
-  authUser: User | null
-  customUser: CustomUser | null
-  session: Session | null
-  loading: boolean
-  signInWithGoogle: (redirectTo?: string) => Promise<void>
-  signOut: () => Promise<void>
-  isAuthenticated: boolean
-  fullUserData: FullUserData | null
-  refreshUserData: () => Promise<void>
+  authUser: User | null;
+  customUser: CustomUser | null;
+  session: Session | null;
+  loading: boolean;
+
+  signInWithGoogle: (redirectTo?: string) => Promise<void>;
+  signOut: () => Promise<void>;
+
+  isAuthenticated: boolean;
+  fullUserData: FullUserData | null;
+  refreshUserData: () => Promise<void>;
 }
 
 /**
- * Auth page mode
+ * Page mode for auth UI
  */
-export type AuthMode = 'signin' | 'signup'
+export type AuthMode = 'signin' | 'signup';

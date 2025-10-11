@@ -13,8 +13,6 @@ export type {
   CreateUserData,
   UpdateUserData,
   FullUserData,
-  AuthResponse,
-  CustomUserResponse,
   AuthContextType,
   AuthMode
 } from './types'
