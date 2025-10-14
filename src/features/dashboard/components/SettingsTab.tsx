@@ -153,36 +153,6 @@ export function SettingsTab() {
           </CardContent>
         </Card>
 
-        {/* Notifications */}
-        <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-card-foreground">
-              <Bell className="w-5 h-5" />
-              {t("settings.notifications.title")}
-            </CardTitle>
-            <CardDescription>{t("settings.notifications.description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-foreground">{t("settings.notifications.email.title")}</p>
-                <p className="text-sm text-muted-foreground">{t("settings.notifications.email.description")}</p>
-              </div>
-              <Button variant="outline" className="hover:bg-accent hover:text-accent-foreground transition-colors">
-                {t("settings.notifications.email.enabled")}
-              </Button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-foreground">{t("settings.notifications.push.title")}</p>
-                <p className="text-sm text-muted-foreground">{t("settings.notifications.push.description")}</p>
-              </div>
-              <Button variant="outline" className="hover:bg-accent hover:text-accent-foreground transition-colors">
-                {t("settings.notifications.push.disabled")}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Logout Section */}
         <Card className="bg-card border-border border-destructive/20">
