@@ -105,8 +105,6 @@ React context provider for authentication state.
 - `isAuthenticated` - Boolean auth status
 - `signInWithGoogle()` - Sign in with Google
 - `signOut()` - Sign out
-- `refreshUserData()` - Refresh user data
-
 **Usage:**
 ```tsx
 import { useAuth } from '@/features/auth'

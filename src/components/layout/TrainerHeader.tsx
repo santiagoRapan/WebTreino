@@ -32,35 +32,12 @@ export function TrainerHeader() {
 
   const title = getTabTitle(activeTab)
 
-  const handleRefreshData = async () => {
-    try {
-      setIsRefreshing(true)
-      await refreshUserData()
-    } catch (error) {
-      console.error("Error refreshing user data:", error)
-    } finally {
-      setIsRefreshing(false)
-    }
-  }
-
   return (
     <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 w-full flex-shrink-0">
       <div className="flex items-center gap-4">
         <h1 className="text-2xl font-bold text-foreground">{title}</h1>
       </div>
       <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon">
-          <Bell className="w-4 h-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={handleRefreshData}
-          disabled={isRefreshing}
-          title={t("navigation.refreshData")}
-        >
-          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-        </Button>
         <Button
           variant="outline"
           size="icon"

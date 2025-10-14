@@ -13,7 +13,7 @@ import { useTranslation } from "@/lib/i18n/LanguageProvider"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 export function SettingsTab() {
-  const { signOut, authUser, customUser, refreshUserData } = useAuth()
+  const { signOut, authUser, customUser } = useAuth()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const { t, locale, setLocale } = useTranslation()
@@ -42,25 +42,6 @@ export function SettingsTab() {
     setTheme(theme === "light" ? "dark" : "light");
   };
 
-  const handleRefreshData = async () => {
-    try {
-      setIsRefreshing(true)
-      await refreshUserData()
-      toast({
-        title: t("settings.toasts.refreshSuccess.title"),
-        description: t("settings.toasts.refreshSuccess.description"),
-      })
-    } catch (error) {
-      console.error("Error refreshing user data:", error)
-      toast({
-        title: t("settings.toasts.error.title"),
-        description: t("settings.toasts.refreshError"),
-        variant: "destructive"
-      })
-    } finally {
-      setIsRefreshing(false)
-    }
-  };
 
   return (
     <main className="p-6 space-y-6">
@@ -83,16 +64,6 @@ export function SettingsTab() {
                 </CardTitle>
                 <CardDescription>{t("settings.profile.description")}</CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefreshData}
-                disabled={isRefreshing}
-                className="flex items-center gap-2"
-              >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? t("settings.profile.refreshing") : t("settings.profile.refresh")}
-              </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
