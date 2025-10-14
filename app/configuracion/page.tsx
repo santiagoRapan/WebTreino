@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/features/auth"
+import { useAuth } from "@/features/auth/services/auth-context"
 import { TrainerLayout } from "@/components/layout/TrainerLayout"
 import { SettingsTab } from "@/features/dashboard"
 import { Loader2 } from "lucide-react"

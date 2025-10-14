@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/services/database"
 import { toast } from "@/hooks/use-toast"
-import { useAuth } from "@/features/auth"
+import { useAuth } from "@/features/auth/services/auth-context"
 import type { Client } from "@/features/trainer/types"
 import type { UseStudentsReturn } from '../types'
 import DataCacheManager from "@/lib/cache/dataCache"
@@ -20,7 +20,7 @@ export function useStudents(): UseStudentsReturn {
     try {
       // Get current trainer id from auth context
       if (!authUser) {
-        console.error('❌ No authenticated user')
+        // console.error('❌ No authenticated user')
         setError('No se pudo obtener el usuario autenticado')
         return
       }
@@ -30,14 +30,14 @@ export function useStudents(): UseStudentsReturn {
       if (!forceRefresh) {
         // 1. Verificar cache en memoria
         if (students.length > 0) {
-          console.log('🚀 Using in-memory cached students')
+          // console.log('🚀 Using in-memory cached students')
           return
         }
 
         // 2. Verificar cache persistente (localStorage)
         const cachedStudents = DataCacheManager.getCachedStudents(trainerId)
         if (cachedStudents && cachedStudents.length > 0) {
-          console.log('💾 Loading students from persistent cache')
+          // console.log('💾 Loading students from persistent cache')
           setStudents(cachedStudents)
           setLastUpdateEvent(new Date())
           
@@ -53,7 +53,7 @@ export function useStudents(): UseStudentsReturn {
       setLoading(true)
       setError(null)
 
-      console.log('📚 Loading roster and pending requests...')
+      // console.log('📚 Loading roster and pending requests...')
 
       // 1) Fetch roster (trainer_student)
       const { data: rosterRows, error: rosterError } = await supabase
@@ -148,7 +148,7 @@ export function useStudents(): UseStudentsReturn {
       })
 
       const combined = [...rosterClients, ...pendingClients]
-      console.log(`✅ Loaded ${rosterClients.length} in roster, ${pendingClients.length} pending`)
+      // console.log(`✅ Loaded ${rosterClients.length} in roster, ${pendingClients.length} pending`)
       
       // ✅ Actualizar both cache en memoria y persistente
       setStudents(combined)
@@ -171,7 +171,7 @@ export function useStudents(): UseStudentsReturn {
   // 🔍 Verificar actualizaciones en background sin mostrar loading al usuario
   const checkForStudentUpdatesInBackground = useCallback(async (trainerId: string, cachedStudents: Client[]) => {
     try {
-      console.log('🔍 Checking for student updates in background...')
+      // console.log('🔍 Checking for student updates in background...')
       
       // Verificar cambios en roster
       const { data: rosterRows, error: rosterError } = await supabase
@@ -195,10 +195,10 @@ export function useStudents(): UseStudentsReturn {
       
       // Simple check: si el número de estudiantes cambió, actualizar
       if (currentStudentCount !== cachedStudents.length) {
-        console.log('🔄 Student changes detected, refreshing data...')
+        // console.log('🔄 Student changes detected, refreshing data...')
         await fetchStudents(true)
       } else {
-        console.log('✅ No student changes detected, cache is up to date')
+        // console.log('✅ No student changes detected, cache is up to date')
       }
 
     } catch (err) {
@@ -280,11 +280,15 @@ export function useStudents(): UseStudentsReturn {
   useEffect(() => {
     if (!authUser) return
 
-    console.log('🔔 Setting up real-time subscriptions for trainer:', authUser.id)
+    // console.log('🔔 Setting up real-time subscriptions for trainer:', authUser.id)
 
     // Subscribe to trainer_link_request changes
     const requestsSubscription = supabase
-      .channel('trainer-link-requests')
+      .channel('trainer-link-requests', {
+        config: {
+          broadcast: { self: true },
+        },
+      })
       .on(
         'postgres_changes',
         {
@@ -294,18 +298,18 @@ export function useStudents(): UseStudentsReturn {
           filter: `trainer_id=eq.${authUser.id}`,
         },
         (payload) => {
-          console.log('🔔 Trainer link request change:', payload.eventType, payload)
+          // console.log('🔔 Trainer link request change:', payload.eventType, payload)
           // Provide user feedback for new requests
           if (payload.eventType === 'INSERT') {
-            console.log('📥 Nueva solicitud de entrenador recibida!')
+            // console.log('📥 Nueva solicitud de entrenador recibida!')
             toast({
               title: "Nueva solicitud recibida",
               description: "Un alumno ha solicitado conectar contigo. Revisa la pestaña de alumnos.",
             })
           } else if (payload.eventType === 'UPDATE') {
-            console.log('📝 Estado de solicitud actualizado')
+            // console.log('📝 Estado de solicitud actualizado')
           } else if (payload.eventType === 'DELETE') {
-            console.log('🗑️ Solicitud eliminada')
+            // console.log('🗑️ Solicitud eliminada')
           }
           // Refetch students data when requests change (debounced)
           debouncedRefresh()
@@ -316,12 +320,21 @@ export function useStudents(): UseStudentsReturn {
           console.log('✅ Subscribed to trainer link requests')
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌ Error subscribing to trainer link requests')
+          // Attempt to resubscribe after a delay
+          setTimeout(() => {
+            console.log('🔄 Attempting to resubscribe to trainer link requests...')
+            requestsSubscription.subscribe()
+          }, 3000)
         }
       })
 
     // Subscribe to trainer_student changes (when requests get accepted)
     const relationshipSubscription = supabase
-      .channel('trainer-student-relationships')
+      .channel('trainer-student-relationships', {
+        config: {
+          broadcast: { self: true },
+        },
+      })
       .on(
         'postgres_changes',
         {
@@ -331,9 +344,9 @@ export function useStudents(): UseStudentsReturn {
           filter: `trainer_id=eq.${authUser.id}`,
         },
         (payload) => {
-          console.log('🔔 Trainer-student relationship change:', payload.eventType, payload)
+          // console.log('🔔 Trainer-student relationship change:', payload.eventType, payload)
           if (payload.eventType === 'INSERT') {
-            console.log('🎉 Nuevo alumno añadido a la lista!')
+            // console.log('🎉 Nuevo alumno añadido a la lista!')
             toast({
               title: "Alumno añadido",
               description: "Se ha establecido una nueva conexión con un alumno.",
@@ -348,19 +361,38 @@ export function useStudents(): UseStudentsReturn {
           console.log('✅ Subscribed to trainer-student relationships')
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌ Error subscribing to trainer-student relationships')
+          // Attempt to resubscribe after a delay
+          setTimeout(() => {
+            console.log('🔄 Attempting to resubscribe to trainer-student relationships...')
+            relationshipSubscription.subscribe()
+          }, 3000)
         }
       })
 
+    // Handle page visibility to ensure subscriptions stay active
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('👁️ Tab visible - checking subscription status...')
+        // Force refresh data when tab becomes visible to ensure we have latest data
+        setTimeout(() => {
+          fetchStudents(true)
+        }, 500)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     // Cleanup subscriptions on unmount or auth change
     return () => {
-      console.log('🔕 Cleaning up real-time subscriptions')
+      // console.log('🔕 Cleaning up real-time subscriptions')
       if (refreshTimeout) {
         clearTimeout(refreshTimeout)
       }
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       supabase.removeChannel(requestsSubscription)
       supabase.removeChannel(relationshipSubscription)
     }
-  }, [authUser])
+  }, [authUser?.id])
 
   return {
     students,

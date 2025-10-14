@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from "react"
 import { useRoutineDatabase } from "./useRoutineDatabase"
-import { useAuth } from "@/features/auth"
+import { useAuth } from "@/features/auth/services/auth-context"
 import type { 
   Exercise, 
   ExerciseFormState, 
   ExerciseFilterState, 
   ExerciseInputsState,
   RoutineFolder, 
-  RoutineTemplate 
+  RoutineTemplate,
+  RoutineBlock,
+  BlockExercise
 } from "../types"
 
 export interface UseRoutineStateReturn {
@@ -27,8 +29,8 @@ export interface UseRoutineStateReturn {
   // Routine Management
   routineFolders: RoutineFolder[]
   setRoutineFolders: (folders: RoutineFolder[]) => void
-  selectedFolderId: number | null
-  setSelectedFolderId: (id: number | null) => void
+  selectedFolderId: string | null
+  setSelectedFolderId: (id: string | null) => void
   routineSearch: string
   setRoutineSearch: (search: string) => void
   exerciseFilter: ExerciseFilterState
@@ -41,12 +43,12 @@ export interface UseRoutineStateReturn {
   setIsRoutineEditorOpen: (open: boolean) => void
   isExerciseSelectorOpen: boolean
   setIsExerciseSelectorOpen: (open: boolean) => void
-  selectedBlockId: number | null
-  setSelectedBlockId: (id: number | null) => void
+  selectedBlockId: string | null
+  setSelectedBlockId: (id: string | null) => void
   exerciseSearchTerm: string
   setExerciseSearchTerm: (term: string) => void
-  expandedBlocks: Set<number>
-  setExpandedBlocks: (blocks: Set<number>) => void
+  expandedBlocks: Set<string>
+  setExpandedBlocks: (blocks: Set<string>) => void
   viewingRoutine: RoutineTemplate | null
   setViewingRoutine: (routine: RoutineTemplate | null) => void
   isRoutineViewerOpen: boolean
@@ -63,11 +65,11 @@ export interface UseRoutineStateReturn {
   setCatalogSearch: (search: string) => void
   restInput: string
   setRestInput: (input: string) => void
-  restBlockId: number | null
-  setRestBlockId: (id: number | null) => void
+  restBlockId: string | null
+  setRestBlockId: (id: string | null) => void
   // Exercise Selector State
-  pendingExercise: { exercise: Exercise; blockId: number } | null
-  setPendingExercise: (exercise: { exercise: Exercise; blockId: number } | null) => void
+  pendingExercise: { exercise: Exercise; blockId: string } | null
+  setPendingExercise: (exercise: { exercise: Exercise; blockId: string } | null) => void
   showNewRoutineInput: boolean
   setShowNewRoutineInput: (show: boolean) => void
   newRoutineName: string
@@ -79,7 +81,7 @@ export interface UseRoutineStateReturn {
   routineDatabase: {
     loading: boolean
     error: string | null
-    saveRoutineToDatabase: (routine: RoutineTemplate, ownerId: string) => Promise<number | null>
+    saveRoutineToDatabase: (routine: RoutineTemplate, ownerId: string) => Promise<string | null>
     loadRoutinesFromDatabase: (ownerId: string) => Promise<RoutineTemplate[]>
     updateRoutineInDatabase: (routine: RoutineTemplate, ownerId: string) => Promise<boolean>
     deleteRoutineFromDatabase: (routineId: number | string, ownerId: string) => Promise<boolean>
@@ -128,7 +130,7 @@ const FALLBACK_EXERCISES: Exercise[] = [
 
 export function useRoutineState(): UseRoutineStateReturn {
   // Auth context for user ID
-  const { customUser } = useAuth()
+  const { customUser, loading: authLoading } = useAuth()
   
   // Exercise Catalog State - Don't load exercises automatically
   // They will be loaded on-demand when user searches
@@ -158,7 +160,7 @@ export function useRoutineState(): UseRoutineStateReturn {
   
   // Routine Management
   const [routineFolders, setRoutineFolders] = useState<RoutineFolder[]>([])
-  const [selectedFolderId, setSelectedFolderId] = useState<number | null>(1)
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>('1')
   const [routineSearch, setRoutineSearch] = useState<string>("")
   const [exerciseFilter, setExerciseFilter] = useState<ExerciseFilterState>({})
   
@@ -166,9 +168,9 @@ export function useRoutineState(): UseRoutineStateReturn {
   const [editingRoutine, setEditingRoutine] = useState<RoutineTemplate | null>(null)
   const [isRoutineEditorOpen, setIsRoutineEditorOpen] = useState<boolean>(false)
   const [isExerciseSelectorOpen, setIsExerciseSelectorOpen] = useState<boolean>(false)
-  const [selectedBlockId, setSelectedBlockId] = useState<number | null>(null)
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
   const [exerciseSearchTerm, setExerciseSearchTerm] = useState<string>("")
-  const [expandedBlocks, setExpandedBlocks] = useState<Set<number>>(new Set())
+  const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set())
   const [viewingRoutine, setViewingRoutine] = useState<RoutineTemplate | null>(null)
   const [isRoutineViewerOpen, setIsRoutineViewerOpen] = useState<boolean>(false)
   
@@ -178,49 +180,77 @@ export function useRoutineState(): UseRoutineStateReturn {
   const [showExerciseCatalog, setShowExerciseCatalog] = useState<boolean>(false)
   const [catalogSearch, setCatalogSearch] = useState<string>("")
   const [restInput, setRestInput] = useState<string>("")
-  const [restBlockId, setRestBlockId] = useState<number | null>(null)
-  const [pendingExercise, setPendingExercise] = useState<{ exercise: Exercise; blockId: number } | null>(null)
+  const [restBlockId, setRestBlockId] = useState<string | null>(null)
+  const [pendingExercise, setPendingExercise] = useState<{ exercise: Exercise; blockId: string } | null>(null)
   const [showNewRoutineInput, setShowNewRoutineInput] = useState<boolean>(false)
   const [newRoutineName, setNewRoutineName] = useState<string>("")
   const [newBlockName, setNewBlockName] = useState<string>("")
 
     // Initialize routine folders
   useEffect(() => {
+    let cancelled = false;
+
     const initializeRoutineFolders = async () => {
-      // Use the authenticated user's ID, or skip if no user
-      if (!customUser?.id) {
-        console.log('No authenticated user found, using fallback data')
+      // Wait for auth to finish loading before attempting to load routines
+      if (authLoading) {
+        console.log('⏳ Auth is still loading, waiting...')
+        return
+      }
+
+      // Don't initialize until we have a customUser (if auth is in progress)
+      // customUser will be set after fetchCustomUser completes
+      if (!customUser) {
+        console.log('⚠️ No user authenticated, using empty routines')
         const defaultFolders: RoutineFolder[] = [
-          { id: 1, name: 'Mis rutinas', templates: [] }
+          { id: '1', name: 'Mis rutinas', templates: [] }
         ]
         setRoutineFolders(defaultFolders)
-        setSelectedFolderId(1)
+        setSelectedFolderId('1')
+        return
+      }
+
+      if (!customUser.id) {
+        console.log('⚠️ User missing ID, using fallback data')
+        const defaultFolders: RoutineFolder[] = [
+          { id: '1', name: 'Mis rutinas', templates: [] }
+        ]
+        setRoutineFolders(defaultFolders)
+        setSelectedFolderId('1')
         return
       }
       
       try {
-        console.log('Loading routines for user:', customUser.id)
+        console.log('✅ Loading routines for user:', customUser.id, customUser.name || 'Unknown')
         // Load routines from database using the authenticated user's ID
         const dbRoutines = await routineDatabase.loadRoutinesFromDatabase(customUser.id)
         
+        // Check if the effect was cancelled (component unmounted or deps changed)
+        if (cancelled) return;
+        
         const defaultFolders: RoutineFolder[] = [
-          { id: 1, name: 'Mis rutinas', templates: dbRoutines }
+          { id: '1', name: 'Mis rutinas', templates: dbRoutines }
         ]
         setRoutineFolders(defaultFolders)
-        setSelectedFolderId(1)
+        setSelectedFolderId('1')
+        console.log(`📚 Loaded ${dbRoutines.length} routines from database`)
       } catch (error) {
-        console.error('Error loading routines from database:', error)
+        if (cancelled) return;
+        console.error('❌ Error loading routines from database:', error)
         // Fallback to default folders
         const defaultFolders: RoutineFolder[] = [
-          { id: 1, name: 'Mis rutinas', templates: [] }
+          { id: '1', name: 'Mis rutinas', templates: [] }
         ]
         setRoutineFolders(defaultFolders)
-        setSelectedFolderId(1)
+        setSelectedFolderId('1')
       }
     }
 
     initializeRoutineFolders()
-  }, [customUser?.id]) // Re-run when user changes
+
+    return () => {
+      cancelled = true;
+    }
+  }, [authLoading, customUser?.id]) // Re-run when auth completes or user ID changes
 
   return {
     exercisesCatalog,
