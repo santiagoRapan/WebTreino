@@ -4,6 +4,7 @@ import {
   Activity,
   BarChart3,
   ChevronRight,
+  MessageSquare,
   Settings,
   Users,
 } from "lucide-react"
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
   { id: "dashboard", translationKey: "navigation.dashboard", icon: BarChart3, href: "/dashboard" },
   { id: "clients", translationKey: "navigation.clients", icon: Users, href: "/alumnos" },
   { id: "routines", translationKey: "navigation.routines", icon: Activity, href: "/rutinas" },
+  { id: "chat", translationKey: "navigation.chat", icon: MessageSquare, href: "/chat" },
   { id: "settings", translationKey: "navigation.settings", icon: Settings, href: "/configuracion" },
 ] as const
 

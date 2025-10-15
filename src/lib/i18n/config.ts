@@ -49,6 +49,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "navigation.dashboard": "Dashboard",
     "navigation.clients": "Gestión de Alumnos", 
     "navigation.routines": "Rutinas",
+    "navigation.chat": "Mensajes",
     "navigation.settings": "Configuración",
     "navigation.refreshData": "Actualizar datos",
     "navigation.defaultUser": "Usuario",
