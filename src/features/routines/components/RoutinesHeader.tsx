@@ -9,23 +9,23 @@ interface RoutinesHeaderProps {
   subtitle: string
   showNewFolderInput: boolean
   newFolderName: string
-  showNewRoutineInput: boolean
-  newRoutineName: string
+  showNewRoutineInput: boolean // Kept for compatibility but won't be used
+  newRoutineName: string // Kept for compatibility but won't be used
   onFolderNameChange: (name: string) => void
-  onRoutineNameChange: (name: string) => void
+  onRoutineNameChange: (name: string) => void // Kept for compatibility but won't be used
   onCreateFolder: () => void
-  onCreateRoutine: () => void
+  onCreateRoutine: () => void // Now directly opens dialog
   onToggleNewFolder: () => void
-  onToggleNewRoutine: () => void
+  onToggleNewRoutine: () => void // Now directly opens dialog
   onCancelNewFolder: () => void
-  onCancelNewRoutine: () => void
+  onCancelNewRoutine: () => void // Kept for compatibility but won't be used
   translations: {
     newFolder: string
     newRoutine: string
     create: string
     cancel: string
     folderPlaceholder: string
-    routinePlaceholder: string
+    routinePlaceholder: string // Kept for compatibility but won't be used
   }
 }
 
@@ -85,36 +85,14 @@ export function RoutinesHeader({
             {translations.newFolder}
           </Button>
         )}
-        {showNewRoutineInput ? (
-          <div className="flex gap-2 items-center">
-            <Input
-              type="text"
-              placeholder={translations.routinePlaceholder}
-              value={newRoutineName}
-              onChange={(e) => onRoutineNameChange(e.target.value)}
-              className="w-48"
-              autoFocus
-            />
-            <Button
-              onClick={onCreateRoutine}
-              className="hover:bg-orange-500 transition-colors"
-              disabled={!newRoutineName.trim()}
-            >
-              {translations.create}
-            </Button>
-            <Button variant="outline" onClick={onCancelNewRoutine}>
-              {translations.cancel}
-            </Button>
-          </div>
-        ) : (
-          <Button
-            onClick={onToggleNewRoutine}
-            className="hover:bg-orange-500 transition-colors"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            {translations.newRoutine}
-          </Button>
-        )}
+        {/* New Routine Button - Always just a button that opens dialog */}
+        <Button
+          onClick={onToggleNewRoutine}
+          className="hover:bg-orange-500 transition-colors"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          {translations.newRoutine}
+        </Button>
       </div>
     </div>
   )

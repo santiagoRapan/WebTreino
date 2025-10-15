@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
 import { useTranslation } from "@/lib/i18n/LanguageProvider"
@@ -88,21 +88,25 @@ export function RoutinesTab() {
   const [isSaving, setIsSaving] = useState(false)
   // Track how many students have this routine assigned
   const [assignedCounts, setAssignedCounts] = useState<Record<string, number>>({})
+  // Track if we've already handled the newRoutine action
+  const hasHandledNewRoutine = useRef(false)
 
   const currentFolder = routineFolders.find((f) => f.id === selectedFolderId) || routineFolders[0]
 
-  // Check for action parameter to open new routine input
+  // Check for action parameter to open new routine dialog directly
   useEffect(() => {
-    if (searchParams.get('action') === 'newRoutine') {
-      setShowNewRoutineInput(true)
+    if (searchParams.get('action') === 'newRoutine' && !hasHandledNewRoutine.current) {
+      hasHandledNewRoutine.current = true
       // Ensure main folder is selected
       if (selectedFolderId == null) {
         setSelectedFolderId("1")
       }
+      // Open the routine editor directly
+      handleCreateTemplate()
       // Clean up URL parameter
       router.replace('/rutinas', { scroll: false })
     }
-  }, [searchParams, setShowNewRoutineInput, selectedFolderId, setSelectedFolderId, router])
+  }, [searchParams, selectedFolderId, setSelectedFolderId, handleCreateTemplate, router])
 
   // Load assignment counts for routines owned by the trainer
   useEffect(() => {
@@ -158,7 +162,7 @@ export function RoutinesTab() {
         onCreateFolder={handleCreateFolder}
         onCreateRoutine={handleCreateTemplate}
         onToggleNewFolder={() => setShowNewFolderInput(true)}
-        onToggleNewRoutine={() => setShowNewRoutineInput(true)}
+        onToggleNewRoutine={handleCreateTemplate}
         onCancelNewFolder={() => {
                   setShowNewFolderInput(false)
                   setNewFolderName("")

@@ -156,12 +156,10 @@ export function createRoutineHandlers(
     },
 
     handleCreateTemplate: () => {
-      if (!routineState.newRoutineName.trim()) return
-
-      // Create a temporary routine that will be saved to database when edited and saved
+      // Create a new empty routine and open the editor directly
       const newTemplate: RoutineTemplate = {
         id: `temp-${Date.now()}`, // Temporary ID until saved to database
-        name: routineState.newRoutineName,
+        name: "", // Empty name - user will fill in the dialog
         exercises: []
       }
 
@@ -173,28 +171,9 @@ export function createRoutineHandlers(
         routineState.setSelectedFolderId('1')
       }
 
-      const selectedFolder = folders.find((f: RoutineFolder) => f.id === routineState.selectedFolderId) || folders[0]
-
-      if (selectedFolder) {
-        const updatedFolders = folders.map((folder: RoutineFolder) =>
-          folder.id === routineState.selectedFolderId
-            ? { ...folder, templates: [...folder.templates, newTemplate] }
-            : folder
-        )
-
-        routineState.setRoutineFolders(updatedFolders)
-        routineState.setNewRoutineName("")
-        routineState.setShowNewRoutineInput(false)
-
-        // Open the routine editor immediately for the new routine
-        routineState.setEditingRoutine(newTemplate)
-        routineState.setIsRoutineEditorOpen(true)
-
-        toast({
-          title: "Rutina creada",
-          description: `La rutina "${newTemplate.name}" ha sido creada. Agrega ejercicios y guárdala para persistir en la base de datos.`,
-        })
-      }
+      // Open the routine editor immediately for the new routine
+      routineState.setEditingRoutine(newTemplate)
+      routineState.setIsRoutineEditorOpen(true)
     },
 
     handleAssignTemplateToClient: (template: RoutineTemplate, client: Client) => {
@@ -367,6 +346,16 @@ export function createRoutineHandlers(
 
     handleSaveRoutine: async () => {
       if (!routineState.editingRoutine) return
+
+      // Validate routine name
+      if (!routineState.editingRoutine.name.trim()) {
+        toast({
+          title: "Error",
+          description: "El nombre de la rutina es obligatorio.",
+          variant: "destructive"
+        })
+        return
+      }
 
       try {
         // Get the user ID from the routine state (should be passed from context)
