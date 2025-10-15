@@ -47,16 +47,14 @@ export function createClientHandlers(
     },
 
     handleNewClient: () => {
-      // Navigate to clients tab first, then open the dialog
+      // Navigate to clients tab and pass action parameter to open dialog
       uiState.setActiveTab("clients")
-      // Use setTimeout to ensure the tab change is processed first
-      setTimeout(() => {
-        uiState.setIsNewClientDialogOpen(true)
-      }, 100)
+      window.location.href = "/alumnos?action=newClient"
     },
 
     handleViewAllClients: () => {
       uiState.setActiveTab("clients")
+      window.location.href = "/alumnos"
     },
 
     // chat handler removed

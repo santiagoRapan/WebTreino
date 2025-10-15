@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
 import { useTranslation } from "@/lib/i18n/LanguageProvider"
 import { useExerciseSearch } from "@/features/exercises"
@@ -17,6 +18,8 @@ import { RoutineEditorDialog } from "./RoutineEditorDialog"
 export function RoutinesTab() {
   const { t } = useTranslation()
   const { authUser } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   
   // Optimized exercise search hook for exercise selector dialog
   const exerciseSearch = useExerciseSearch({ 
@@ -87,6 +90,19 @@ export function RoutinesTab() {
   const [assignedCounts, setAssignedCounts] = useState<Record<string, number>>({})
 
   const currentFolder = routineFolders.find((f) => f.id === selectedFolderId) || routineFolders[0]
+
+  // Check for action parameter to open new routine input
+  useEffect(() => {
+    if (searchParams.get('action') === 'newRoutine') {
+      setShowNewRoutineInput(true)
+      // Ensure main folder is selected
+      if (selectedFolderId == null) {
+        setSelectedFolderId("1")
+      }
+      // Clean up URL parameter
+      router.replace('/rutinas', { scroll: false })
+    }
+  }, [searchParams, setShowNewRoutineInput, selectedFolderId, setSelectedFolderId, router])
 
   // Load assignment counts for routines owned by the trainer
   useEffect(() => {

@@ -35,11 +35,7 @@ export function createRoutineHandlers(
   return {
     handleCreateRoutine: () => {
       uiState.setActiveTab("routines")
-      routineState.setShowNewRoutineInput(true)
-      // Asegurar que la carpeta principal esté seleccionada
-      if (routineState.selectedFolderId == null) {
-        routineState.setSelectedFolderId(1)
-      }
+      window.location.href = "/rutinas?action=newRoutine"
     },
 
     handleCreateExercise: () => {

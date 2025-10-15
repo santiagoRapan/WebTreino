@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
 import { Card, CardContent } from "@/components/ui/card"
 import { ClientsHeader } from "./ClientsHeader"
@@ -10,11 +12,22 @@ import { NewClientDialog } from "./NewClientDialog"
 import { ClientHistoryDialog } from "./ClientHistoryDialog"
 
 export function ClientsTab() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const {
     state,
     data,
     actions,
   } = useTrainerDashboard()
+
+  // Check for action parameter to open new client dialog
+  useEffect(() => {
+    if (searchParams.get('action') === 'newClient') {
+      actions.setIsNewClientDialogOpen(true)
+      // Clean up URL parameter
+      router.replace('/alumnos', { scroll: false })
+    }
+  }, [searchParams, actions, router])
 
   return (
     <>
