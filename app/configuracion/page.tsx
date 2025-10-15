@@ -35,9 +35,7 @@ export default function ConfiguracionPage() {
   return (
     <TrainerLayout>
       <div className="space-y-4">
-        <div className="bg-green-500 text-white px-4 py-2 rounded-md font-bold text-center">
-          ✅ MIGRATED - Settings (Dashboard Feature)
-        </div>
+        
         <SettingsTab />
       </div>
     </TrainerLayout>

@@ -35,9 +35,7 @@ export default function DashboardPage() {
   return (
     <TrainerLayout>
       <div className="space-y-4">
-        <div className="bg-green-500 text-white px-4 py-2 rounded-md font-bold text-center">
-          ✅ MIGRATED - Dashboard Feature
-        </div>
+       
         <DashboardTab />
       </div>
     </TrainerLayout>
