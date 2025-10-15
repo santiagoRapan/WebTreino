@@ -28,14 +28,12 @@ export function useTrainerDashboard() {
   const stats: DashboardStat[] = useMemo(() => {
     const activeClients = clientState.clients.filter(c => c.status === 'active').length
     const studentRequests = clientState.clients.filter(c => c.status === 'pending' && c.requestedBy === 'alumno').length
-    const trainerRequests = clientState.clients.filter(c => c.status === 'pending' && c.requestedBy === 'entrenador').length
     const totalRoutines = routineState.routineFolders.reduce((acc, folder) => acc + folder.templates.length, 0)
 
     return [
       { titleKey: "Alumnos Activos", value: activeClients.toString(), change: "", icon: Users, color: "text-primary" },
       { titleKey: "Rutinas Creadas", value: totalRoutines.toString(), change: "", icon: Dumbbell, color: "text-primary" },
       { titleKey: "Solicitudes de Alumnos", value: studentRequests.toString(), change: "", icon: UserPlus, color: "text-primary" },
-      { titleKey: "Solicitudes Enviadas", value: trainerRequests.toString(), change: "", icon: UserCheck, color: "text-primary" },
     ]
   }, [clientState.clients, routineState.routineFolders])
 
