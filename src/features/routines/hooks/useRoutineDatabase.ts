@@ -67,34 +67,31 @@ export function useRoutineDatabase() {
 
       const routineId = routineData.id
 
-      // Save each block
-      for (let blockIndex = 0; blockIndex < routine.blocks.length; blockIndex++) {
-        const block = routine.blocks[blockIndex]
+      // Save a single default block (abstraction for the user)
+      const { data: blockData, error: blockError } = await supabase
+        .from('routine_block')
+        .insert({
+          routine_id: routineId,
+          name: 'Ejercicios', // Default block name
+          block_order: 1,
+          notes: null
+        })
+        .select()
+        .single()
+
+      if (blockError) {
+        console.error('Error saving block:', blockError)
+        setError(blockError.message)
+        return null
+      }
+
+      const blockId = blockData.id
+
+      // Save each exercise in the block
+      if (routine.exercises && routine.exercises.length > 0) {
+        for (let exerciseIndex = 0; exerciseIndex < routine.exercises.length; exerciseIndex++) {
+          const exercise = routine.exercises[exerciseIndex]
         
-        const { data: blockData, error: blockError } = await supabase
-          .from('routine_block')
-          .insert({
-            routine_id: routineId,
-            name: block.name,
-            block_order: blockIndex + 1,
-            notes: null
-          })
-          .select()
-          .single()
-
-        if (blockError) {
-          console.error('Error saving block:', blockError)
-          setError(blockError.message)
-          return null
-        }
-
-        const blockId = blockData.id
-
-        // Save each exercise in the block
-        if (block.exercises) {
-          for (let exerciseIndex = 0; exerciseIndex < block.exercises.length; exerciseIndex++) {
-            const exercise = block.exercises[exerciseIndex]
-          
           const { error: exerciseError } = await supabase
             .from('block_exercise')
             .insert({
@@ -103,11 +100,11 @@ export function useRoutineDatabase() {
               display_order: exerciseIndex + 1,
               sets: exercise.sets,
               reps: exercise.reps,
-              rest_seconds: exercise.restSec,
-              load_target: null,
-              tempo: null,
+              rest_seconds: exercise.rest_seconds,
+              load_target: exercise.load_target || null,
+              tempo: exercise.tempo || null,
               is_superset_group: null,
-              notes: null
+              notes: exercise.notes || null
             })
 
           if (exerciseError) {
@@ -115,7 +112,6 @@ export function useRoutineDatabase() {
             setError(exerciseError.message)
             return null
           }
-        }
         }
       }
 
@@ -203,28 +199,37 @@ export function useRoutineDatabase() {
       }
 
       // Transform database structure to our app structure
-      const transformedRoutines: RoutineTemplate[] = routinesData.map((routine: any) => ({
-        id: routine.id,
-        name: routine.name,
-        description: routine.description,
-        blocks: (routine.routine_block || [])
-          .sort((a: any, b: any) => a.block_order - b.block_order)
-          .map((block: any) => ({
-            id: block.id,
-            routine_id: block.routine_id,
-            name: block.name,
-            block_order: block.block_order,
-            notes: block.notes,
-            exercises: (block.block_exercise || [])
-              .sort((a: any, b: any) => a.display_order - b.display_order)
-              .map((exercise: any) => ({
-                exerciseId: exercise.exercise_id,
-                sets: exercise.sets,
-                reps: exercise.reps,
-                restSec: exercise.rest_seconds
-              }))
-          }))
-      }))
+      // Flatten blocks into a single exercises array
+      const transformedRoutines: RoutineTemplate[] = routinesData.map((routine: any) => {
+        const allExercises: any[] = []
+        
+        // Collect exercises from all blocks (though we only use one now)
+        if (routine.routine_block && routine.routine_block.length > 0) {
+          routine.routine_block.forEach((block: any) => {
+            if (block.block_exercise) {
+              const blockExercises = block.block_exercise
+                .sort((a: any, b: any) => a.display_order - b.display_order)
+                .map((exercise: any) => ({
+                  exerciseId: exercise.exercise_id,
+                  sets: exercise.sets,
+                  reps: exercise.reps,
+                  rest_seconds: exercise.rest_seconds,
+                  load_target: exercise.load_target,
+                  tempo: exercise.tempo,
+                  notes: exercise.notes
+                }))
+              allExercises.push(...blockExercises)
+            }
+          })
+        }
+
+        return {
+          id: routine.id,
+          name: routine.name,
+          description: routine.description,
+          exercises: allExercises
+        }
+      })
 
       // ✅ Actualizar both cache en memoria y persistente
       setRoutines(transformedRoutines)
@@ -317,34 +322,31 @@ export function useRoutineDatabase() {
         return false
       }
 
-      // Recreate blocks and exercises
-      for (let blockIndex = 0; blockIndex < routine.blocks.length; blockIndex++) {
-        const block = routine.blocks[blockIndex]
+      // Recreate single default block with all exercises
+      const { data: blockData, error: blockError } = await supabase
+        .from('routine_block')
+        .insert({
+          routine_id: routine.id,
+          name: 'Ejercicios', // Default block name
+          block_order: 1,
+          notes: null
+        })
+        .select()
+        .single()
+
+      if (blockError) {
+        console.error('Error creating block:', blockError)
+        setError(blockError.message)
+        return false
+      }
+
+      const blockId = blockData.id
+
+      // Save each exercise in the block
+      if (routine.exercises && routine.exercises.length > 0) {
+        for (let exerciseIndex = 0; exerciseIndex < routine.exercises.length; exerciseIndex++) {
+          const exercise = routine.exercises[exerciseIndex]
         
-        const { data: blockData, error: blockError } = await supabase
-          .from('routine_block')
-          .insert({
-            routine_id: routine.id,
-            name: block.name,
-            block_order: blockIndex + 1,
-            notes: null
-          })
-          .select()
-          .single()
-
-        if (blockError) {
-          console.error('Error creating block:', blockError)
-          setError(blockError.message)
-          return false
-        }
-
-        const blockId = blockData.id
-
-        // Save each exercise in the block
-        if (block.exercises) {
-          for (let exerciseIndex = 0; exerciseIndex < block.exercises.length; exerciseIndex++) {
-            const exercise = block.exercises[exerciseIndex]
-          
           const { error: exerciseError } = await supabase
             .from('block_exercise')
             .insert({
@@ -353,11 +355,11 @@ export function useRoutineDatabase() {
               display_order: exerciseIndex + 1,
               sets: exercise.sets,
               reps: exercise.reps,
-              rest_seconds: exercise.restSec,
-              load_target: null,
-              tempo: null,
+              rest_seconds: exercise.rest_seconds,
+              load_target: exercise.load_target || null,
+              tempo: exercise.tempo || null,
               is_superset_group: null,
-              notes: null
+              notes: exercise.notes || null
             })
 
           if (exerciseError) {
@@ -365,7 +367,6 @@ export function useRoutineDatabase() {
             setError(exerciseError.message)
             return false
           }
-        }
         }
       }
 

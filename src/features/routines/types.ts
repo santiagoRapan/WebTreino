@@ -90,14 +90,27 @@ export interface WorkoutSetLog {
 }
 
 /**
+ * Routine exercise for UI - simplified from BlockExercise
+ */
+export interface RoutineExercise {
+  exerciseId: string
+  sets: number | null
+  reps: string | null
+  rest_seconds: number | null
+  load_target?: string | null
+  tempo?: string | null
+  notes?: string | null
+}
+
+/**
  * Routine template structure (for UI purposes)
+ * Now uses a flat exercises array instead of blocks
  */
 export type RoutineTemplate = {
   id: string
   name: string
   description?: string | null
-  blocks: RoutineBlock[]
-  exercises?: BlockExercise[]
+  exercises: RoutineExercise[]
 }
 
 /**

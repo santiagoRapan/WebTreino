@@ -12,21 +12,18 @@ export interface RoutineHandlers {
   handleCreateExercise: () => void
   handleCreateFolder: () => void
   handleDeleteTemplate: (templateId: number | string) => Promise<void>
-  handleMoveTemplate: (templateId: number | string, targetFolderId: number) => void
+  handleMoveTemplate: (templateId: number | string, targetFolderId: string | number) => void
   handleCreateTemplate: () => void
   handleAssignTemplateToClient: (template: RoutineTemplate, client: Client) => void
   assignRoutineToClient: (routineId: number | string, traineeId: number | string) => Promise<void>
   handleEditRoutine: (template: RoutineTemplate) => void
-  handleAddBlock: () => void
-  handleAddExerciseToBlock: (blockId: number) => void
-  handleAddRest: (blockId: number) => void
+  handleAddExerciseToRoutine: () => void
   handleSelectExercise: (exercise: Exercise) => void
   confirmAddExercise: () => void
   cancelAddExercise: () => void
+  clearPendingExercise: () => void
   handleSaveRoutine: () => Promise<void>
-  handleDeleteExercise: (blockId: number, exerciseIndex: number) => void
-  handleDeleteBlock: (blockId: number) => void
-  toggleBlockExpansion: (blockId: number) => void
+  handleDeleteExercise: (exerciseIndex: number) => void
   handleExportRoutineToPDF: (template: RoutineTemplate) => Promise<void>
   handleExportRoutineToExcel: (template: RoutineTemplate) => Promise<void>
 }
@@ -53,7 +50,7 @@ export function createRoutineHandlers(
       if (!routineState.newFolderName.trim()) return
 
       const newFolder: RoutineFolder = {
-        id: Date.now(),
+        id: `folder-${Date.now()}`,
         name: routineState.newFolderName,
         templates: []
       }
@@ -129,7 +126,7 @@ export function createRoutineHandlers(
       }
     },
 
-    handleMoveTemplate: (templateId: number | string, targetFolderId: number) => {
+    handleMoveTemplate: (templateId: number | string, targetFolderId: string | number) => {
       let templateToMove: RoutineTemplate | null = null
 
       // Find and remove the template from its current folder
@@ -169,15 +166,15 @@ export function createRoutineHandlers(
       const newTemplate: RoutineTemplate = {
         id: `temp-${Date.now()}`, // Temporary ID until saved to database
         name: routineState.newRoutineName,
-        blocks: []
+        exercises: []
       }
 
       // Garantizar que exista la carpeta base
       let folders = routineState.routineFolders
       if (!folders || folders.length === 0) {
-        folders = [{ id: 1, name: 'Mis rutinas', templates: [] }]
+        folders = [{ id: '1', name: 'Mis rutinas', templates: [] }]
         routineState.setRoutineFolders(folders)
-        routineState.setSelectedFolderId(1)
+        routineState.setSelectedFolderId('1')
       }
 
       const selectedFolder = folders.find((f: RoutineFolder) => f.id === routineState.selectedFolderId) || folders[0]
@@ -199,7 +196,7 @@ export function createRoutineHandlers(
 
         toast({
           title: "Rutina creada",
-          description: `La rutina "${newTemplate.name}" ha sido creada. Agrega bloques y guárdala para persistir en la base de datos.`,
+          description: `La rutina "${newTemplate.name}" ha sido creada. Agrega ejercicios y guárdala para persistir en la base de datos.`,
         })
       }
     },
@@ -318,48 +315,14 @@ export function createRoutineHandlers(
       routineState.setIsRoutineEditorOpen(true)
     },
 
-    handleAddBlock: () => {
-      if (!routineState.editingRoutine || !routineState.newBlockName.trim()) return
-
-      const newBlock = {
-        id: Date.now(),
-        name: routineState.newBlockName,
-        exercises: [],
-        repetitions: 1,
-        restBetweenRepetitions: 60,
-        restAfterBlock: 90
-      }
-
-      const updatedRoutine = {
-        ...routineState.editingRoutine,
-        blocks: [...routineState.editingRoutine.blocks, newBlock]
-      }
-
-      routineState.setEditingRoutine(updatedRoutine)
-      routineState.setNewBlockName("")
-
-      toast({
-        title: "Bloque añadido",
-        description: `El bloque "${newBlock.name}" ha sido añadido.`,
-      })
-    },
-
-    handleAddExerciseToBlock: (blockId: number) => {
-      routineState.setSelectedBlockId(blockId)
+    handleAddExerciseToRoutine: () => {
       routineState.setIsExerciseSelectorOpen(true)
     },
 
-    handleAddRest: (blockId: number) => {
-      routineState.setRestBlockId(blockId)
-      // Show rest input dialog
-    },
-
     handleSelectExercise: (exercise: Exercise) => {
-      if (!routineState.selectedBlockId) return
-      
       routineState.setPendingExercise({ 
         exercise, 
-        blockId: routineState.selectedBlockId 
+        blockId: 1 // No longer used but kept for compatibility
       })
       // Show exercise inputs dialog
     },
@@ -367,21 +330,20 @@ export function createRoutineHandlers(
     confirmAddExercise: () => {
       if (!routineState.pendingExercise || !routineState.editingRoutine) return
 
-      const { exercise, blockId } = routineState.pendingExercise
-      const exerciseForBlock = {
-        exerciseId: exercise.id.toString(), // Ensure it's a string
-        sets: parseInt(routineState.exerciseInputs.sets),
-        reps: parseInt(routineState.exerciseInputs.reps),
-        restSec: parseInt(routineState.exerciseInputs.restSec)
+      const { exercise } = routineState.pendingExercise
+      const exerciseForRoutine = {
+        exerciseId: exercise.id.toString(),
+        sets: parseInt(routineState.exerciseInputs.sets) || null,
+        reps: routineState.exerciseInputs.reps || null,
+        rest_seconds: parseInt(routineState.exerciseInputs.restSec) || null,
+        load_target: routineState.exerciseInputs.loadTarget || null,
+        tempo: null,
+        notes: null
       }
 
       const updatedRoutine = {
         ...routineState.editingRoutine,
-        blocks: routineState.editingRoutine.blocks.map((block: any) =>
-          block.id === blockId
-            ? { ...block, exercises: [...block.exercises, exerciseForBlock] }
-            : block
-        )
+        exercises: [...routineState.editingRoutine.exercises, exerciseForRoutine]
       }
 
       routineState.setEditingRoutine(updatedRoutine)
@@ -391,7 +353,7 @@ export function createRoutineHandlers(
 
       toast({
         title: "Ejercicio añadido",
-        description: `${exercise.name} ha sido añadido al bloque.`,
+        description: `${exercise.name} ha sido añadido a la rutina.`,
       })
     },
 
@@ -399,6 +361,12 @@ export function createRoutineHandlers(
       routineState.setPendingExercise(null)
       routineState.setExerciseInputs({ sets: '', reps: '', restSec: '' })
       routineState.setIsExerciseSelectorOpen(false)
+    },
+
+    clearPendingExercise: () => {
+      routineState.setPendingExercise(null)
+      routineState.setExerciseInputs({ sets: '', reps: '', restSec: '' })
+      // Keep dialog open, just go back to exercise list
     },
 
     handleSaveRoutine: async () => {
@@ -446,7 +414,7 @@ export function createRoutineHandlers(
                 }
               }
               // If somehow not found, add to main folder
-              if (folder.id === 1) {
+              if (folder.id === '1') {
                 return { ...folder, templates: [...folder.templates, updatedRoutine] }
               }
               return folder
@@ -495,10 +463,7 @@ export function createRoutineHandlers(
         
         routineState.setIsRoutineEditorOpen(false)
         routineState.setEditingRoutine(null)
-        // Resetear estados adicionales para permitir crear/editar rutinas nuevamente
-        routineState.setNewBlockName("")
-        routineState.setExpandedBlocks(new Set())
-        routineState.setSelectedBlockId(null)
+        // Reset additional states
         routineState.setExerciseInputs({ sets: '', reps: '', restSec: '' })
         routineState.setPendingExercise(null)
         
@@ -512,53 +477,20 @@ export function createRoutineHandlers(
       }
     },
 
-    handleDeleteExercise: (blockId: number, exerciseIndex: number) => {
+    handleDeleteExercise: (exerciseIndex: number) => {
       if (!routineState.editingRoutine) return
 
       const updatedRoutine = {
         ...routineState.editingRoutine,
-        blocks: routineState.editingRoutine.blocks.map((block: any) =>
-          block.id === blockId
-            ? {
-                ...block,
-                exercises: block.exercises.filter((_: any, index: number) => index !== exerciseIndex)
-              }
-            : block
-        )
+        exercises: routineState.editingRoutine.exercises.filter((_: any, index: number) => index !== exerciseIndex)
       }
 
       routineState.setEditingRoutine(updatedRoutine)
 
       toast({
         title: "Ejercicio eliminado",
-        description: "El ejercicio ha sido eliminado del bloque.",
+        description: "El ejercicio ha sido eliminado de la rutina.",
       })
-    },
-
-    handleDeleteBlock: (blockId: number) => {
-      if (!routineState.editingRoutine) return
-
-      const updatedRoutine = {
-        ...routineState.editingRoutine,
-        blocks: routineState.editingRoutine.blocks.filter((block: any) => block.id !== blockId)
-      }
-
-      routineState.setEditingRoutine(updatedRoutine)
-
-      toast({
-        title: "Bloque eliminado",
-        description: "El bloque ha sido eliminado de la rutina.",
-      })
-    },
-
-    toggleBlockExpansion: (blockId: number) => {
-      const newExpanded = new Set(routineState.expandedBlocks)
-      if (newExpanded.has(blockId)) {
-        newExpanded.delete(blockId)
-      } else {
-        newExpanded.add(blockId)
-      }
-      routineState.setExpandedBlocks(newExpanded)
     },
 
     handleExportRoutineToPDF: async (template: RoutineTemplate) => {
@@ -568,17 +500,14 @@ export function createRoutineHandlers(
         pdf.text(template.name, 20, 30)
         
         let yPosition = 50
-        template.blocks.forEach((block: any) => {
-          pdf.setFontSize(16)
-          pdf.text(block.name, 20, yPosition)
-          yPosition += 20
-          
-          block.exercises.forEach((exercise: any) => {
-            pdf.setFontSize(12)
-            pdf.text(`${exercise.name} - ${exercise.sets}x${exercise.reps}`, 30, yPosition)
-            yPosition += 15
-          })
-          yPosition += 10
+        pdf.setFontSize(16)
+        pdf.text('Ejercicios', 20, yPosition)
+        yPosition += 20
+        
+        template.exercises.forEach((exercise: any, index: number) => {
+          pdf.setFontSize(12)
+          pdf.text(`${index + 1}. Ejercicio ID: ${exercise.exerciseId} - ${exercise.sets}x${exercise.reps}`, 30, yPosition)
+          yPosition += 15
         })
         
         pdf.save(`${template.name}.pdf`)
@@ -655,26 +584,22 @@ export function createRoutineHandlers(
 
         let exerciseCounter = 1
 
-        if (!template.blocks || template.blocks.length === 0) {
-          worksheet.addRow(['Sin bloques']).font = { italic: true, color: { argb: 'FF777777' } }
+        if (!template.exercises || template.exercises.length === 0) {
+          worksheet.addRow(['Sin ejercicios']).font = { italic: true, color: { argb: 'FF777777' } }
         } else {
-          template.blocks.forEach((block: any) => {
-            // Table rows
-            const exercises = block.exercises || []
-            exercises.forEach((ex: any) => {
-              const resolved = exercisesById.get(ex.exerciseId?.toString())
-              const name = resolved?.name || ex.name || `Ejercicio ${exerciseCounter}`
-              const row = worksheet.addRow({
-                idx: exerciseCounter,
-                name,
-                sets: ex.sets ?? '',
-                reps: ex.reps ?? '',
-                rest: ex.restSec ?? '',
-              })
-              row.getCell('A').alignment = { vertical: 'middle', horizontal: 'center' }
-              addBodyBorders(row.number)
-              exerciseCounter++
+          template.exercises.forEach((ex: any) => {
+            const resolved = exercisesById.get(ex.exerciseId?.toString())
+            const name = resolved?.name || ex.name || `Ejercicio ${exerciseCounter}`
+            const row = worksheet.addRow({
+              idx: exerciseCounter,
+              name,
+              sets: ex.sets ?? '',
+              reps: ex.reps ?? '',
+              rest: ex.rest_seconds ?? '',
             })
+            row.getCell('A').alignment = { vertical: 'middle', horizontal: 'center' }
+            addBodyBorders(row.number)
+            exerciseCounter++
           })
         }
 

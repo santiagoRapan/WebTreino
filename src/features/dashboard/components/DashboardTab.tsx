@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Activity, DollarSign, Users, ChevronRight } from "lucide-react"
+import { Activity, Users, ChevronRight } from "lucide-react"
 import { useTranslation } from "@/lib/i18n/LanguageProvider"
 
 export function DashboardTab() {
@@ -15,7 +15,6 @@ export function DashboardTab() {
       handleViewAllClients,
       handleNewClient,
       handleCreateRoutine,
-      handleRegisterPayment,
     },
   } = useTrainerDashboard()
   
@@ -110,14 +109,6 @@ export function DashboardTab() {
               <Activity className="w-6 h-6" />
               <span className="text-sm">{t('dashboard.quickActions.createRoutine')}</span>
             </Button>
-{/*             <Button
-              className="h-20 flex-col gap-2 bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors"
-              variant="outline"
-              onClick={handleRegisterPayment}
-            >
-              <DollarSign className="w-6 h-6" />
-              <span className="text-sm">Registrar Pago</span>
-            </Button> */}
           </div>
         </CardContent>
       </Card>

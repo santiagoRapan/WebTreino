@@ -22,13 +22,7 @@ import {
 } from "@/components/ui/select"
 import { toast } from "@/hooks/use-toast"
 import type { RoutineTemplate, RoutineFolder } from "@/features/routines/types"
-
-interface Client {
-  id: string
-  userId: string
-  name: string
-  email: string
-}
+import type { Client } from "@/features/trainer/types"
 
 interface RoutinesTemplatesListProps {
   currentFolder: RoutineFolder | undefined
@@ -37,7 +31,7 @@ interface RoutinesTemplatesListProps {
   searchTerm: string
   onSearchChange: (search: string) => void
   onEditRoutine: (template: RoutineTemplate) => void
-  onMoveTemplate: (templateId: string | number, folderId: number) => void
+  onMoveTemplate: (templateId: string | number, folderId: string | number) => void
   onDeleteTemplate: (templateId: string | number) => void
   onExportToExcel: (template: RoutineTemplate) => void
   onAssignToClient: (template: RoutineTemplate, client: Client) => void
@@ -131,15 +125,9 @@ export function RoutinesTemplatesList({
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     <div className="p-3 rounded border border-border bg-background/80 shadow-sm">
-                      <p className="text-xs text-muted-foreground">{translations.blocks}</p>
-                      <p className="text-lg font-semibold text-card-foreground">
-                        {tpl.blocks.length}
-                      </p>
-                    </div>
-                    <div className="p-3 rounded border border-border bg-background/80 shadow-sm">
                       <p className="text-xs text-muted-foreground">{translations.totalExercises}</p>
                       <p className="text-lg font-semibold text-card-foreground">
-                        {tpl.blocks.reduce((acc, block) => acc + block.exercises.length, 0)}
+                        {tpl.exercises?.length || 0}
                       </p>
                     </div>
                     <div className="p-3 rounded border border-border bg-background/80 shadow-sm">
@@ -148,13 +136,6 @@ export function RoutinesTemplatesList({
                         {assignedCounts[String(tpl.id)] || 0}
                       </p>
                     </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {tpl.blocks.map((block) => (
-                      <Badge key={block.id} variant="outline">
-                        {block.name}
-                      </Badge>
-                    ))}
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 min-w-[220px]">
@@ -166,7 +147,7 @@ export function RoutinesTemplatesList({
                         ...prev,
                         [String(tpl.id)]: clientId,
                       }))
-                      const client = allClients.find((c) => String(c.userId) === clientId)
+                      const client = allClients.find((c) => c.id === clientId)
                       if (client) {
                         onAssignToClient(tpl, client)
                       }
@@ -200,13 +181,13 @@ export function RoutinesTemplatesList({
                         </SelectItem>
                       ) : (
                         allClients.map((c) => (
-                          <SelectItem key={c.id} value={String(c.userId)}>
+                          <SelectItem key={c.id} value={c.id}>
                             <div className="flex items-center gap-2">
                               <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
-                                {c.name.charAt(0).toUpperCase()}
+                                {c.name?.charAt(0).toUpperCase() ?? "?"}
                               </div>
                               <div className="flex flex-col">
-                                <span className="font-medium">{c.name}</span>
+                                <span className="font-medium">{c.name ?? "Unknown"}</span>
                                 <span className="text-xs text-muted-foreground">{c.email}</span>
                               </div>
                             </div>
@@ -284,11 +265,11 @@ export function RoutinesTemplatesList({
                         try {
                           await onSendToClient(tpl.id, selectedClientId)
                           const selectedClient = allClients.find(
-                            (c) => String(c.userId) === selectedClientId
+                            (c) => c.id === selectedClientId
                           )
                           toast({
                             title: "Rutina enviada",
-                            description: `La rutina "${tpl.name}" ha sido enviada a ${selectedClient?.name}.`,
+                            description: `La rutina "${tpl.name}" ha sido enviada a ${selectedClient?.name ?? "el cliente"}.`,
                           })
                           setRoutineAssignments((prev) => {
                             const next = { ...prev }
@@ -312,10 +293,10 @@ export function RoutinesTemplatesList({
                       }
                       const selectedClientId = routineAssignments[String(tpl.id)]
                       const selectedClient = selectedClientId
-                        ? allClients.find((c) => String(c.userId) === selectedClientId)
+                        ? allClients.find((c) => c.id === selectedClientId)
                         : null
                       return selectedClient
-                        ? `${translations.sendTo} ${selectedClient.name}`
+                        ? `${translations.sendTo} ${selectedClient.name ?? "cliente"}`
                         : translations.selectStudent
                     })()}
                   </Button>

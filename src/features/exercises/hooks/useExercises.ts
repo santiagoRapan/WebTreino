@@ -34,9 +34,9 @@ export function useExercises(options: UseExercisesOptions = {}) {
         query = query.ilike('name', `%${searchTerm}%`)
       }
 
-      // Apply category filter
+      // Apply category filter - match against body_parts array
       if (category) {
-        query = query.or(`category.eq.${category},body_parts.cs.{${category}}`)
+        query = query.contains('body_parts', [category])
       }
 
       // Apply equipment filter
@@ -83,7 +83,7 @@ export function useExercises(options: UseExercisesOptions = {}) {
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, category, equipment, pageSize, exercises.length])
+  }, [searchTerm, category, equipment, pageSize])
 
   // Fetch exercises when filters change or on initial load
   useEffect(() => {
@@ -91,15 +91,7 @@ export function useExercises(options: UseExercisesOptions = {}) {
       setPage(0)
       fetchExercises(0, false)
     }
-  }, [searchTerm, category, equipment, initialLoad])
-
-  // Fetch exercises when filters change or on initial load
-  useEffect(() => {
-    if (initialLoad || searchTerm || category || equipment) {
-      setPage(0)
-      fetchExercises(0, false)
-    }
-  }, [searchTerm, category, equipment, initialLoad])
+  }, [searchTerm, category, equipment, initialLoad, fetchExercises])
 
   const loadMore = useCallback(() => {
     if (!loading && hasMore) {

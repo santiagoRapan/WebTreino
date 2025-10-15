@@ -6,8 +6,8 @@ import type { RoutineFolder } from "@/features/routines/types"
 
 interface RoutinesFoldersListProps {
   folders: RoutineFolder[]
-  selectedFolderId: number | null
-  onFolderSelect: (folderId: number) => void
+  selectedFolderId: string | null
+  onFolderSelect: (folderId: string) => void
   foldersTitle: string
   foldersDescription: string
 }

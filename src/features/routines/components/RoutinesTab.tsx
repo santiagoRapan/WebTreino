@@ -43,12 +43,10 @@ export function RoutinesTab() {
       isRoutineEditorOpen,
       isExerciseSelectorOpen,
       isCreateExerciseDialogOpen,
-      expandedBlocks,
       showExerciseCatalog,
       exerciseInputs,
       pendingExercise,
       newExerciseForm,
-      newBlockName,
     },
     data: { allClients, loadingClients, clientsError },
     actions: {
@@ -73,17 +71,14 @@ export function RoutinesTab() {
       handleAssignTemplateToClient,
       assignRoutineToClient,
       handleEditRoutine,
-      handleAddBlock,
-      handleAddExerciseToBlock,
+      handleAddExerciseToRoutine,
       confirmAddExercise,
       cancelAddExercise,
+      clearPendingExercise,
       handleSelectExercise,
       handleSaveRoutine,
       handleDeleteExercise,
-      handleDeleteBlock,
-      toggleBlockExpansion,
       handleExportRoutineToExcel,
-      setNewBlockName,
     },
   } = useTrainerDashboard()
 
@@ -293,6 +288,7 @@ export function RoutinesTab() {
         onSelectExercise={handleSelectExercise}
         onConfirmAdd={confirmAddExercise}
         onCancelAdd={cancelAddExercise}
+        onClearPendingExercise={clearPendingExercise}
         translations={{
           title: t("routines.dialogs.selectExercise.title"),
           description: t("routines.dialogs.selectExercise.description"),
@@ -320,13 +316,7 @@ export function RoutinesTab() {
         onOpenChange={setIsRoutineEditorOpen}
         routine={editingRoutine}
         onRoutineChange={setEditingRoutine}
-        newBlockName={newBlockName}
-        onNewBlockNameChange={setNewBlockName}
-        expandedBlocks={expandedBlocks}
-        onToggleBlockExpansion={toggleBlockExpansion}
-        onAddBlock={handleAddBlock}
-        onDeleteBlock={handleDeleteBlock}
-        onAddExerciseToBlock={handleAddExerciseToBlock}
+        onAddExercise={handleAddExerciseToRoutine}
         onDeleteExercise={handleDeleteExercise}
         onSaveRoutine={saveRoutine}
         isSaving={isSaving}
@@ -338,23 +328,19 @@ export function RoutinesTab() {
           routineNamePlaceholder: t("routines.placeholders.routineName"),
           routineDescription: t("routines.forms.routineDescription"),
           routineDescriptionPlaceholder: t("routines.placeholders.routineDescription"),
-          blocksTitle: t("routines.blocks.title"),
-          newBlockNamePlaceholder: t("routines.placeholders.newBlockName"),
-          addBlock: t("routines.actions.addBlock"),
-          noBlocks: "No hay bloques de ejercicios",
-          clickToStart: t("routines.blocks.clickToStart"),
+          exercisesTitle: "Ejercicios",
+          addExercise: "Agregar Ejercicio",
           noExercises: t("routines.blocks.noExercises"),
-          exercise: "Ejercicio",
-          exercises: "ejercicio",
+          clickToStart: t("routines.blocks.clickToStart"),
           sets: t("routines.forms.sets"),
           reps: t("routines.forms.reps"),
           restShort: t("routines.forms.restShort"),
           cancel: t("routines.actions.cancel"),
           saveRoutine: t("routines.actions.saveRoutine"),
           saving: t("routines.actions.saving"),
+          noGifAvailable: "GIF no disponible",
         }}
       />
     </main>
   )
 }
-

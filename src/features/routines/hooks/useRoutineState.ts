@@ -43,12 +43,8 @@ export interface UseRoutineStateReturn {
   setIsRoutineEditorOpen: (open: boolean) => void
   isExerciseSelectorOpen: boolean
   setIsExerciseSelectorOpen: (open: boolean) => void
-  selectedBlockId: string | null
-  setSelectedBlockId: (id: string | null) => void
   exerciseSearchTerm: string
   setExerciseSearchTerm: (term: string) => void
-  expandedBlocks: Set<string>
-  setExpandedBlocks: (blocks: Set<string>) => void
   viewingRoutine: RoutineTemplate | null
   setViewingRoutine: (routine: RoutineTemplate | null) => void
   isRoutineViewerOpen: boolean
@@ -63,10 +59,6 @@ export interface UseRoutineStateReturn {
   setShowExerciseCatalog: (show: boolean) => void
   catalogSearch: string
   setCatalogSearch: (search: string) => void
-  restInput: string
-  setRestInput: (input: string) => void
-  restBlockId: string | null
-  setRestBlockId: (id: string | null) => void
   // Exercise Selector State
   pendingExercise: { exercise: Exercise; blockId: string } | null
   setPendingExercise: (exercise: { exercise: Exercise; blockId: string } | null) => void
@@ -74,8 +66,6 @@ export interface UseRoutineStateReturn {
   setShowNewRoutineInput: (show: boolean) => void
   newRoutineName: string
   setNewRoutineName: (name: string) => void
-  newBlockName: string
-  setNewBlockName: (name: string) => void
 
   // Database Operations
   routineDatabase: {
@@ -168,9 +158,7 @@ export function useRoutineState(): UseRoutineStateReturn {
   const [editingRoutine, setEditingRoutine] = useState<RoutineTemplate | null>(null)
   const [isRoutineEditorOpen, setIsRoutineEditorOpen] = useState<boolean>(false)
   const [isExerciseSelectorOpen, setIsExerciseSelectorOpen] = useState<boolean>(false)
-  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
   const [exerciseSearchTerm, setExerciseSearchTerm] = useState<string>("")
-  const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set())
   const [viewingRoutine, setViewingRoutine] = useState<RoutineTemplate | null>(null)
   const [isRoutineViewerOpen, setIsRoutineViewerOpen] = useState<boolean>(false)
   
@@ -179,12 +167,9 @@ export function useRoutineState(): UseRoutineStateReturn {
   const [newFolderName, setNewFolderName] = useState<string>("")
   const [showExerciseCatalog, setShowExerciseCatalog] = useState<boolean>(false)
   const [catalogSearch, setCatalogSearch] = useState<string>("")
-  const [restInput, setRestInput] = useState<string>("")
-  const [restBlockId, setRestBlockId] = useState<string | null>(null)
   const [pendingExercise, setPendingExercise] = useState<{ exercise: Exercise; blockId: string } | null>(null)
   const [showNewRoutineInput, setShowNewRoutineInput] = useState<boolean>(false)
   const [newRoutineName, setNewRoutineName] = useState<string>("")
-  const [newBlockName, setNewBlockName] = useState<string>("")
 
     // Initialize routine folders
   useEffect(() => {
@@ -274,12 +259,8 @@ export function useRoutineState(): UseRoutineStateReturn {
     setIsRoutineEditorOpen,
     isExerciseSelectorOpen,
     setIsExerciseSelectorOpen,
-    selectedBlockId,
-    setSelectedBlockId,
     exerciseSearchTerm,
     setExerciseSearchTerm,
-    expandedBlocks,
-    setExpandedBlocks,
     viewingRoutine,
     setViewingRoutine,
     isRoutineViewerOpen,
@@ -292,18 +273,12 @@ export function useRoutineState(): UseRoutineStateReturn {
     setShowExerciseCatalog,
     catalogSearch,
     setCatalogSearch,
-    restInput,
-    setRestInput,
-    restBlockId,
-    setRestBlockId,
     pendingExercise,
     setPendingExercise,
     showNewRoutineInput,
     setShowNewRoutineInput,
     newRoutineName,
     setNewRoutineName,
-    newBlockName,
-    setNewBlockName,
     // Database operations
     routineDatabase,
     // Auth

@@ -22,20 +22,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ChevronDown } from "lucide-react"
-
-interface NewExerciseForm {
-  name: string
-  target_muscles: string[]
-  equipments: string[]
-  category: string
-  description?: string
-}
+import type { ExerciseFormState } from "@/features/routines/types"
 
 interface CreateExerciseDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  exerciseForm: NewExerciseForm
-  onFormChange: (form: NewExerciseForm) => void
+  exerciseForm: ExerciseFormState
+  onFormChange: (form: ExerciseFormState) => void
   onCreateExercise: () => void
   translations: {
     title: string

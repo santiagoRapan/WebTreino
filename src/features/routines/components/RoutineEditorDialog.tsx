@@ -12,24 +12,17 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ChevronDown, ChevronRight, Plus, Trash2, Activity } from "lucide-react"
+import { Plus, Activity } from "lucide-react"
 import type { RoutineTemplate, Exercise } from "@/features/routines/types"
+import { ExerciseListItem } from "./ExerciseListItem"
 
 interface RoutineEditorDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   routine: RoutineTemplate | null
   onRoutineChange: (routine: RoutineTemplate) => void
-  newBlockName: string
-  onNewBlockNameChange: (name: string) => void
-  expandedBlocks: Set<number>
-  onToggleBlockExpansion: (blockId: number) => void
-  onAddBlock: () => void
-  onDeleteBlock: (blockId: number) => void
-  onAddExerciseToBlock: (blockId: number) => void
-  onDeleteExercise: (blockId: number, exerciseIndex: number) => void
+  onAddExercise: () => void
+  onDeleteExercise: (exerciseIndex: number) => void
   onSaveRoutine: () => Promise<void>
   isSaving?: boolean
   exercises: Exercise[]
@@ -40,20 +33,17 @@ interface RoutineEditorDialogProps {
     routineNamePlaceholder: string
     routineDescription: string
     routineDescriptionPlaceholder: string
-    blocksTitle: string
-    newBlockNamePlaceholder: string
-    addBlock: string
-    noBlocks: string
-    clickToStart: string
+    exercisesTitle: string
+    addExercise: string
     noExercises: string
-    exercise: string
-    exercises: string
+    clickToStart: string
     sets: string
     reps: string
     restShort: string
     cancel: string
     saveRoutine: string
     saving: string
+    noGifAvailable: string
   }
 }
 
@@ -62,13 +52,7 @@ export function RoutineEditorDialog({
   onOpenChange,
   routine,
   onRoutineChange,
-  newBlockName,
-  onNewBlockNameChange,
-  expandedBlocks,
-  onToggleBlockExpansion,
-  onAddBlock,
-  onDeleteBlock,
-  onAddExerciseToBlock,
+  onAddExercise,
   onDeleteExercise,
   onSaveRoutine,
   isSaving = false,
@@ -111,130 +95,50 @@ export function RoutineEditorDialog({
             />
           </div>
 
-          {/* Blocks Section */}
+          {/* Exercises Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">{translations.blocksTitle}</h3>
-            </div>
-
-            {/* Add Block Section */}
-            <div className="flex gap-2 items-center">
-              <Input
-                value={newBlockName}
-                onChange={(e) => onNewBlockNameChange(e.target.value)}
-                placeholder={translations.newBlockNamePlaceholder}
-                className="flex-1"
-              />
+              <h3 className="text-lg font-semibold">{translations.exercisesTitle}</h3>
               <Button
-                onClick={onAddBlock}
+                onClick={onAddExercise}
                 size="sm"
                 className="bg-primary hover:bg-primary/90"
-                disabled={!newBlockName.trim()}
               >
                 <Plus className="w-4 h-4 mr-2" />
-                {translations.addBlock}
+                {translations.addExercise}
               </Button>
             </div>
 
-            {routine.blocks.length === 0 ? (
+            {routine.exercises.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>{translations.noBlocks}</p>
+                <p>{translations.noExercises}</p>
                 <p className="text-sm">{translations.clickToStart}</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {routine.blocks.map((block) => (
-                  <Card key={block.id} className="border">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onToggleBlockExpansion(block.id)}
-                            className="p-1 h-auto"
-                          >
-                            {expandedBlocks.has(block.id) ? (
-                              <ChevronDown className="w-4 h-4" />
-                            ) : (
-                              <ChevronRight className="w-4 h-4" />
-                            )}
-                          </Button>
-                          <CardTitle className="text-base">{block.name}</CardTitle>
-                          <Badge variant="outline" className="text-xs">
-                            {block.exercises.length} {translations.exercise}
-                            {block.exercises.length !== 1 ? "s" : ""}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onAddExerciseToBlock(block.id)}
-                            className="text-xs"
-                          >
-                            <Plus className="w-3 h-3 mr-1" />
-                            {translations.exercise}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onDeleteBlock(block.id)}
-                            className="text-xs text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
+              <div className="space-y-2">
+                {routine.exercises.map((exercise, idx) => {
+                  // Try to find exercise in loaded exercises
+                  const exerciseData = exercises.find(
+                    (e) => e.id.toString() === exercise.exerciseId.toString()
+                  )
 
-                    {expandedBlocks.has(block.id) && (
-                      <CardContent className="pt-0">
-                        {block.exercises.length === 0 ? (
-                          <div className="text-center py-4 text-muted-foreground">
-                            <p className="text-sm">{translations.noExercises}</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {block.exercises.map((exercise, idx) => {
-                              // Try to find exercise in loaded exercises from search
-                              const exerciseData = exercises.find(
-                                (e) => e.id.toString() === exercise.exerciseId.toString()
-                              )
-
-                              return (
-                                <div
-                                  key={idx}
-                                  className="flex items-center justify-between p-3 bg-muted/50 rounded-md"
-                                >
-                                  <div className="flex-1">
-                                    <p className="font-medium text-sm">
-                                      {exerciseData?.name || `Ejercicio ID: ${exercise.exerciseId}`}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {exercise.sets} {translations.sets.toLowerCase()} ×{" "}
-                                      {exercise.reps} {translations.reps} · {exercise.restSec}s{" "}
-                                      {translations.restShort}
-                                    </p>
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => onDeleteExercise(block.id, idx)}
-                                    className="text-red-600 hover:text-red-700 p-1 h-auto"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </CardContent>
-                    )}
-                  </Card>
-                ))}
+                  return (
+                    <ExerciseListItem
+                      key={idx}
+                      exercise={exercise}
+                      exerciseData={exerciseData}
+                      index={idx}
+                      onDelete={onDeleteExercise}
+                      translations={{
+                        sets: translations.sets,
+                        reps: translations.reps,
+                        restShort: translations.restShort,
+                        noGifAvailable: translations.noGifAvailable,
+                      }}
+                    />
+                  )
+                })}
               </div>
             )}
           </div>
@@ -263,4 +167,3 @@ export function RoutineEditorDialog({
     </Dialog>
   )
 }
-
