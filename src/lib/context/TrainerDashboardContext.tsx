@@ -118,7 +118,7 @@ export interface TrainerDashboardActions {
   // schedule handlers removed
   handleRegisterPayment: () => void
   // calendar handlers removed
-  handleCreateExercise: () => void
+  handleCreateExercise: () => Promise<void>
   handleExportRoutineToPDF: (template: RoutineTemplate) => Promise<void>
   handleExportRoutineToExcel: (template: RoutineTemplate) => Promise<void>
   handleCreateFolder: () => void

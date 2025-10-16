@@ -10,9 +10,12 @@ export interface Exercise {
   target_muscles: string[]
   body_parts: string[]
   equipments: string[]
+  secondary_muscles: string[]
+  instructions?: string
+  owner_id?: string
+  // Legacy/computed fields (not in database)
   description?: string
   category?: string
-  secondary_muscles: string[]
 }
 
 /**

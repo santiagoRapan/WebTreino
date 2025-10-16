@@ -26,20 +26,24 @@ ALTER TYPE request_actor RENAME VALUE 'trainer'  TO 'entrenador';
 Stores all available exercises in the system.
 
 ```sql
-CREATE TABLE exercises (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    name text NOT NULL,
-    gif_URL text,
-    target_muscles text[],
-    body_parts text[],
-    equipments text[],
-    secondary_muscles text[]
-);
+CREATE TABLE public.exercises (
+    id text not null,
+    name text null,
+    "gif_URL" text null,
+    target_muscles text[] null,
+    body_parts text[] null,
+    equipments text[] null,
+    secondary_muscles text[] null,
+    instructions text null,
+    owner_id uuid null,
+    constraint exercises_pkey primary key (id),
+    constraint exercises_owner_id_fkey foreign KEY (owner_id) references users (id) on delete set null
+) TABLESPACE pg_default;
 
 -- Indexes for better performance
-CREATE INDEX idx_exercises_name ON exercises(name);
-CREATE INDEX idx_exercises_target_muscles ON exercises USING GIN(target_muscles);
-CREATE INDEX idx_exercises_body_parts ON exercises USING GIN(body_parts);
+CREATE INDEX idx_exercises_name ON public.exercises(name);
+CREATE INDEX idx_exercises_target_muscles ON public.exercises USING GIN(target_muscles);
+CREATE INDEX idx_exercises_body_parts ON public.exercises USING GIN(body_parts);
 ```
 
 ### 2. routines
@@ -84,7 +88,7 @@ Links exercises to routine blocks with specific parameters.
 CREATE TABLE block_exercise (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     block_id uuid NOT NULL REFERENCES routine_block(id) ON DELETE CASCADE,
-    exercise_id uuid NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
+    exercise_id text NOT NULL REFERENCES public.exercises(id) ON DELETE CASCADE,
     display_order int4 NOT NULL,
     sets int4,
     reps text, -- Can be ranges like "8-12" or specific numbers
@@ -149,7 +153,7 @@ Records individual sets performed during workout sessions.
 CREATE TABLE workout_set_log (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     session_id uuid NOT NULL REFERENCES workout_session(id) ON DELETE CASCADE,
-    exercise_id uuid NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
+    exercise_id text NOT NULL REFERENCES public.exercises(id) ON DELETE CASCADE,
     block_id uuid REFERENCES routine_block(id) ON DELETE SET NULL,
     block_exercise_id uuid REFERENCES block_exercise(id) ON DELETE SET NULL,
     set_index int4 NOT NULL, -- Which set number (1, 2, 3, etc.)
@@ -258,6 +262,32 @@ CREATE POLICY "Entrenadors can manage exercises" ON exercises
             AND role IN ('entrenador', 'admin')
         )
     );
+```
+
+```sql
+-- Ensure RLS is enabled on the new table (run once)
+ALTER TABLE public.exercises ENABLE ROW LEVEL SECURITY;
+
+-- 1) Owners can view their own exercises
+CREATE POLICY exercises_select_own
+ON public.exercises
+FOR SELECT
+TO authenticated
+USING (owner_id = auth.uid());
+
+-- 2) Students can view their trainer's exercises
+CREATE POLICY exercises_select_if_student_of_owner
+ON public.exercises
+FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1
+    FROM public.trainer_student ts
+    WHERE ts.trainer_id = public.exercises.owner_id
+      AND ts.student_id = auth.uid()
+  )
+);
 ```
 
 ### Routines Policies

@@ -142,13 +142,19 @@ export type ExerciseFilterState = {
 /**
  * Exercise form state for creating new exercises
  */
+/**
+ * Form state for creating/editing exercises
+ * Matches the database schema for exercises table
+ */
 export type ExerciseFormState = {
   name: string
-  gif_URL: string
+  gif_URL?: string
   target_muscles: string[]
   body_parts: string[]
   equipments: string[]
   secondary_muscles: string[]
+  instructions?: string
+  // Legacy fields (not stored in database)
   description?: string
   category?: string
 }

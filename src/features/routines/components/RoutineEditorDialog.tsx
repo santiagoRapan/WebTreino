@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -13,6 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Activity } from "lucide-react"
+import { supabase } from "@/services/database"
 import type { RoutineTemplate, Exercise } from "@/features/routines/types"
 import { ExerciseListItem } from "./ExerciseListItem"
 
@@ -59,6 +61,54 @@ export function RoutineEditorDialog({
   exercises,
   translations,
 }: RoutineEditorDialogProps) {
+  // State to store fetched exercise data
+  const [fetchedExercises, setFetchedExercises] = useState<Record<string, Exercise>>({})
+  
+  // Reset fetched exercises when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setFetchedExercises({})
+    }
+  }, [open])
+  
+  // Fetch missing exercise data when routine changes
+  useEffect(() => {
+    if (!routine || !open) return
+    
+    const fetchMissingExercises = async () => {
+      const missingIds: string[] = []
+      
+      // Find exercise IDs that aren't in the exercises array or fetchedExercises
+      routine.exercises.forEach((ex) => {
+        const found = exercises.find((e) => e.id.toString() === ex.exerciseId.toString())
+        if (!found && !fetchedExercises[ex.exerciseId]) {
+          missingIds.push(ex.exerciseId)
+        }
+      })
+      
+      if (missingIds.length === 0) return
+      
+      // Fetch missing exercises from database
+      const { data, error } = await supabase
+        .from('exercises')
+        .select('*')
+        .in('id', missingIds)
+      
+      if (!error && data) {
+        setFetchedExercises((prev) => {
+          const updated = { ...prev }
+          data.forEach((ex) => {
+            updated[ex.id] = ex as Exercise
+          })
+          return updated
+        })
+      }
+    }
+    
+    fetchMissingExercises()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routine, exercises, open])
+  
   if (!routine) return null
 
   return (
@@ -118,10 +168,10 @@ export function RoutineEditorDialog({
             ) : (
               <div className="space-y-2">
                 {routine.exercises.map((exercise, idx) => {
-                  // Try to find exercise in loaded exercises
+                  // Try to find exercise in loaded exercises first, then in fetched exercises
                   const exerciseData = exercises.find(
                     (e) => e.id.toString() === exercise.exerciseId.toString()
-                  )
+                  ) || fetchedExercises[exercise.exerciseId]
 
                   return (
                     <ExerciseListItem
