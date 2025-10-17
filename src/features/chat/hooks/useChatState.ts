@@ -35,6 +35,7 @@ export interface ChatState {
   setLoadingConversations: (loading: boolean) => void
   setLoadingMessages: (loading: boolean) => void
   setSendingMessage: (sending: boolean) => void
+  appendMessage: (conversationId: string, message: Message) => void
   
   // Computed
   getActiveConversation: () => Conversation | null
@@ -66,6 +67,26 @@ export function useChatState(): ChatState {
       ...prev,
       [conversationId]: newMessages
     }))
+  }, [])
+
+  // Append helper with in-reducer dedup to avoid stale closures
+  const appendMessage = useCallback((conversationId: string, message: Message) => {
+    setMessagesMap(prev => {
+      const prevMsgs = prev[conversationId] || []
+      // Dedup: by id, or same sender+content within 15s
+      const exists = prevMsgs.some(x => (
+        x.id === message.id || (
+          x.senderId === message.senderId &&
+          x.content === message.content &&
+          Math.abs((x.timestamp?.getTime?.() || 0) - message.timestamp.getTime()) < 15000
+        )
+      ))
+      if (exists) return prev
+      return {
+        ...prev,
+        [conversationId]: [...prevMsgs, message]
+      }
+    })
   }, [])
   
   // Computed: Get active conversation
@@ -146,6 +167,7 @@ export function useChatState(): ChatState {
     setLoadingConversations,
     setLoadingMessages,
     setSendingMessage,
+  appendMessage,
     
     // Computed
     getActiveConversation,

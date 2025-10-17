@@ -7,7 +7,7 @@
 
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -25,6 +25,7 @@ import { MessageList } from './MessageList'
 import { MessageInput } from './MessageInput'
 import { useChatState } from '../hooks/useChatState'
 import { createChatHandlers } from '../services/chatHandlers'
+import { chatDatabase } from '../services/chatDatabase'
 import { useAuth } from '@/features/auth/services/auth-context'
 
 export function ChatTab() {
@@ -48,6 +49,71 @@ export function ChatTab() {
       setShowMobileMessages(true)
     }
   }, [chatState.activeConversationId])
+
+  // Realtime subscription for new messages on the active conversation
+  const unsubscribeRef = useRef<(() => void) | null>(null)
+  useEffect(() => {
+    // Cleanup previous subscription
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current()
+      unsubscribeRef.current = null
+    }
+
+    const conversationId = chatState.activeConversationId
+    if (!conversationId || !authUser?.id) return
+
+    // Si el id actual es sintético trainer:student, escuchar también el id real si logra resolverse
+    const idsToListen = [conversationId]
+    const active = chatState.getActiveConversation()
+    if (active && conversationId.includes(':')) {
+      // Nota: no esperamos, el resolve se hace durante el envío; por ahora escuchamos solo el sintético
+      // El servicio puede soportar array más adelante cuando tengamos el real.
+    }
+
+    unsubscribeRef.current = chatDatabase.subscribeToConversation(
+      idsToListen,
+      (dbMessage) => {
+        // Debug: confirma que llegó un evento
+        // console.log('[Realtime] new message payload:', dbMessage)
+
+        const m = {
+          id: dbMessage.id ?? `${dbMessage.sender_id}-${Date.now()}`,
+          conversationId: dbMessage.conversation_id,
+          senderId: dbMessage.sender_id,
+          senderName: dbMessage.sender_id === authUser.id ? 'Tú' : 'Contacto',
+          content: dbMessage.content,
+          timestamp: dbMessage.created_at ? new Date(dbMessage.created_at) : new Date(),
+          status: 'delivered' as const,
+          isOwnMessage: dbMessage.sender_id === authUser.id,
+        }
+
+        chatState.appendMessage(dbMessage.conversation_id, m)
+
+        // Update last message for conversation list ordering
+        const updatedConversations = chatState.conversations.map((conv) =>
+          conv.id === dbMessage.conversation_id
+            ? {
+                ...conv,
+                lastMessage: {
+                  content: m.content,
+                  timestamp: m.timestamp,
+                  senderId: m.senderId,
+                },
+                updatedAt: m.timestamp,
+              }
+            : conv
+        )
+        chatState.setConversations(updatedConversations)
+      }
+    )
+
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current()
+        unsubscribeRef.current = null
+      }
+    }
+  }, [chatState.activeConversationId, authUser?.id])
 
   const activeConversation = chatState.getActiveConversation()
   const activeMessages = chatState.getActiveMessages()

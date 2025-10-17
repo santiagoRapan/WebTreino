@@ -1,287 +1,424 @@
 /**
  * Chat Database Service
- * 
- * Handles all database operations for chat/messaging
- * TODO: Integrate with Supabase once database schema is ready
+ *
+ * Integrates with Supabase tables:
+ * - trainer_student: links trainer/student pairs ("conversation")
+ * - message: messages within a conversation, with fields: content, sender_id, conversation_id, created_at
  */
 
 import type { Conversation, Message, ChatUser } from '../types'
+import { supabase } from '@/services/database/supabaseClient'
+
+type TrainerStudentRow = {
+  id?: string
+  trainer_id: string
+  student_id: string
+  joined_at?: string
+}
+
+type DbMessage = {
+  id?: string
+  content: string
+  sender_id: string
+  conversation_id: string
+  created_at?: string
+}
 
 export class ChatDatabase {
+  private messageTableCache: 'message' | 'messages' | null = null
+
+  private logSupabaseError(context: string, error: any) {
+    try {
+      // PostgrestError fields: message, code, details, hint
+      const info = {
+        message: (error && (error.message || error.error_description)) || 'Unknown',
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+      }
+      console.error(`${context} error:`, info)
+    } catch {
+      console.error(`${context} error (raw):`, error)
+    }
+  }
+  
+  private async getMessageTable(): Promise<'message' | 'messages'> {
+    if (this.messageTableCache) return this.messageTableCache
+    // Try 'message'
+    const tryTable = async (name: 'message' | 'messages') => {
+      const { error } = await supabase
+        .from(name)
+        .select('*')
+        .limit(1)
+      return !error
+    }
+    if (await tryTable('message')) {
+      this.messageTableCache = 'message'
+    } else if (await tryTable('messages')) {
+      this.messageTableCache = 'messages'
+    } else {
+      // Default to 'message' to surface clearer errors downstream
+      this.messageTableCache = 'message'
+    }
+    return this.messageTableCache
+  }
   /**
-   * Fetch all conversations for the authenticated user
-   * TODO: Replace with Supabase query
+   * Fetch all conversations (trainer-student pairs) for the user, as trainer or student.
+   * Creates Conversation objects with last message (if any).
    */
   async fetchConversations(userId: string): Promise<Conversation[]> {
-    // PLACEHOLDER: This will be replaced with actual Supabase call
-    // Example query:
-    // const { data, error } = await supabase
-    //   .from('conversations')
-    //   .select('*, participants!inner(*)')
-    //   .eq('participants.user_id', userId)
-    //   .order('updated_at', { ascending: false })
-    
-    console.log('📡 [PLACEHOLDER] Fetching conversations for user:', userId)
-    
-    // Mock data for development - Only trainer-client conversations
-    return [
-      {
-        id: '1',
-        participantId: 'client-001',
-        participantName: 'María García',
-        participantAvatar: undefined,
-        participantRole: 'client',
-        lastMessage: {
-          content: '¿Cómo debo ajustar mi dieta para esta rutina?',
-          timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 min ago
-          senderId: 'client-001'
-        },
-        unreadCount: 2,
+    // Get all trainer_student rows where the user participates
+    const { data: pairs, error } = await supabase
+      .from('trainer_student')
+      .select('id, trainer_id, student_id, joined_at')
+      .or(`trainer_id.eq.${userId},student_id.eq.${userId}`)
+
+    if (error) {
+      console.error('fetchConversations error:', error)
+      return []
+    }
+
+    if (!pairs || pairs.length === 0) return []
+
+    // For each pair, determine the participant (the other user)
+    const participantIds = Array.from(
+      new Set(
+        pairs.map((p) => (p.trainer_id === userId ? p.student_id : p.trainer_id))
+      )
+    )
+
+    // Fetch participant profiles
+    const { data: users, error: usersErr } = await supabase
+      .from('users')
+      .select('id, name, avatar_url, role')
+      .in('id', participantIds)
+
+    if (usersErr) {
+      console.error('fetchConversations users error:', usersErr)
+    }
+
+    const userMap = new Map((users || []).map((u) => [u.id, u]))
+
+    // Nota: omitimos consulta de "último mensaje" para evitar dependencia de created_at.
+
+    const conversations: Conversation[] = pairs.map((p) => {
+      const conversationId = this.getConversationIdFromPair(p)
+      const participantId = p.trainer_id === userId ? p.student_id : p.trainer_id
+      const participant = userMap.get(participantId)
+      return {
+        id: conversationId,
+        participantId,
+        participantName: participant?.name || 'Usuario',
+        participantAvatar: participant?.avatar_url || undefined,
+        participantRole: 'client', // Desde perspectiva de entrenador; para alumno se mostrará igualmente como "Cliente"
+        lastMessage: undefined,
+        unreadCount: 0, // Sin soporte de leídos en el esquema actual
         status: 'active',
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), // 7 days ago
-        updatedAt: new Date(Date.now() - 1000 * 60 * 30)
-      },
-      {
-        id: '2',
-        participantId: 'client-002',
-        participantName: 'Carlos Rodríguez',
-        participantAvatar: undefined,
-        participantRole: 'client',
-        lastMessage: {
-          content: 'Gracias por la nueva rutina!',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-          senderId: 'client-002'
-        },
-        unreadCount: 0,
-        status: 'active',
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14),
-        updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 2)
-      },
-      {
-        id: '3',
-        participantId: 'client-003',
-        participantName: 'Ana Martínez',
-        participantAvatar: undefined,
-        participantRole: 'client',
-        lastMessage: {
-          content: 'Hola! Tengo una duda sobre el ejercicio de piernas',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
-          senderId: 'client-003'
-        },
-        unreadCount: 1,
-        status: 'active',
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 21),
-        updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 5)
+        createdAt: p.joined_at ? new Date(p.joined_at) : new Date(),
+        updatedAt: p.joined_at ? new Date(p.joined_at) : new Date(),
       }
-    ]
+    })
+
+    // Sort by updatedAt desc
+    conversations.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+    return conversations
   }
 
   /**
-   * Fetch messages for a specific conversation
-   * TODO: Replace with Supabase query
+   * Fetch messages for a specific conversation (trainer_student pair id or synthetic key)
    */
   async fetchMessages(conversationId: string, userId: string): Promise<Message[]> {
-    // PLACEHOLDER: This will be replaced with actual Supabase call
-    // Example query:
-    // const { data, error } = await supabase
-    //   .from('messages')
-    //   .select('*, sender:users(*)')
-    //   .eq('conversation_id', conversationId)
-    //   .order('timestamp', { ascending: true })
-    
-    console.log('📡 [PLACEHOLDER] Fetching messages for conversation:', conversationId)
-    
-    // Mock data - Trainer-client conversation
-    if (conversationId === '1') {
-      return [
-        {
-          id: 'm1',
-          conversationId: '1',
-          senderId: userId,
-          senderName: 'Tú',
-          content: 'Hola María! ¿Cómo vas con la rutina de esta semana?',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60), // 1 hour ago
-          status: 'read',
-          isOwnMessage: true
-        },
-        {
-          id: 'm2',
-          conversationId: '1',
-          senderId: 'client-001',
-          senderName: 'María García',
-          content: 'Hola! Muy bien, he completado 3 sesiones',
-          timestamp: new Date(Date.now() - 1000 * 60 * 45), // 45 min ago
-          status: 'read',
-          isOwnMessage: false
-        },
-        {
-          id: 'm3',
-          conversationId: '1',
-          senderId: 'client-001',
-          senderName: 'María García',
-          content: '¿Cómo debo ajustar mi dieta para esta rutina?',
-          timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 min ago
-          status: 'delivered',
-          isOwnMessage: false
+    const table = await this.getMessageTable()
+    // Intento A: underscore con created_at (si existe)
+    let rows: DbMessage[] = []
+    {
+      const { data, error } = await supabase
+        .from(table)
+        .select('content, sender_id, conversation_id, created_at')
+        .eq('conversation_id', conversationId)
+
+      if (!error && data) {
+        rows = (data as any) || []
+      } else {
+        if (error) this.logSupabaseError('fetchMessages (underscore with created_at)', error)
+        // Intento B: underscore sin created_at
+        const { data: dataB, error: errB } = await supabase
+          .from(table)
+          .select('content, sender_id, conversation_id')
+          .eq('conversation_id', conversationId)
+
+        if (!errB && dataB) {
+          rows = (dataB as any) || []
+        } else {
+          if (errB) this.logSupabaseError('fetchMessages (underscore minimal)', errB)
+          // Intento C: columnas con espacios
+          const { data: dataC, error: errC } = await supabase
+            .from(table)
+            .select('content, "sender id", "conversation id"')
+            .eq('"conversation id"', conversationId)
+
+          if (errC) {
+            this.logSupabaseError('fetchMessages (space cols)', errC)
+            rows = []
+          } else {
+            rows = (dataC as any[]).map((r) => ({
+              content: r.content,
+              sender_id: r['sender id'],
+              conversation_id: r['conversation id'],
+            }))
+          }
         }
-      ]
+      }
     }
-    
-    if (conversationId === '2') {
-      return [
-        {
-          id: 'm4',
-          conversationId: '2',
-          senderId: 'client-002',
-          senderName: 'Carlos Rodríguez',
-          content: 'Gracias por la nueva rutina!',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-          status: 'read',
-          isOwnMessage: false
-        },
-        {
-          id: 'm5',
-          conversationId: '2',
-          senderId: userId,
-          senderName: 'Tú',
-          content: 'De nada! Avísame si tienes dudas',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60), // 1 hour ago
-          status: 'read',
-          isOwnMessage: true
-        }
-      ]
-    }
-    
-    if (conversationId === '3') {
-      return [
-        {
-          id: 'm6',
-          conversationId: '3',
-          senderId: 'client-003',
-          senderName: 'Ana Martínez',
-          content: 'Hola! Tengo una duda sobre el ejercicio de piernas',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
-          status: 'delivered',
-          isOwnMessage: false
-        }
-      ]
-    }
-    
-    return []
+
+    const messages: Message[] = (rows || []).map((m) => ({
+      id: m.id ?? `${m.sender_id}-${Math.random().toString(36).slice(2)}`,
+      conversationId: m.conversation_id,
+      senderId: m.sender_id,
+      senderName: m.sender_id === userId ? 'Tú' : 'Contacto',
+      content: m.content,
+      timestamp: m.created_at ? new Date(m.created_at) : new Date(),
+      status: 'read',
+      isOwnMessage: m.sender_id === userId,
+    }))
+
+    return messages
   }
 
   /**
    * Send a new message
-   * TODO: Replace with Supabase insert
    */
   async sendMessage(
     conversationId: string,
     senderId: string,
     content: string
   ): Promise<Message> {
-    // PLACEHOLDER: This will be replaced with actual Supabase call
-    // Example mutation:
-    // const { data, error } = await supabase
-    //   .from('messages')
-    //   .insert({
-    //     conversation_id: conversationId,
-    //     sender_id: senderId,
-    //     content: content,
-    //     timestamp: new Date().toISOString()
-    //   })
-    //   .select()
-    //   .single()
-    
-    console.log('📡 [PLACEHOLDER] Sending message:', { conversationId, senderId, content })
-    
-    // Mock response
-    const newMessage: Message = {
-      id: `m-${Date.now()}`,
-      conversationId,
-      senderId,
-      senderName: 'Tú',
+    const payloadUnderscore: Record<string, any> = {
+      conversation_id: conversationId,
+      sender_id: senderId,
       content,
+    }
+    const payloadSpace: Record<string, any> = {
+      'conversation id': conversationId,
+      'sender id': senderId,
+      content,
+    }
+
+    const table = await this.getMessageTable()
+    // Intento 1: underscore con created_at
+    {
+      const { data: d1, error: e1 } = await supabase
+        .from(table)
+        .insert(payloadUnderscore)
+        .select('content, sender_id, conversation_id, created_at')
+        .single()
+
+      if (!e1 && d1) {
+        return {
+          id: `${senderId}-${Date.now()}`,
+          conversationId: (d1 as any).conversation_id,
+          senderId: (d1 as any).sender_id,
+          senderName: 'Tú',
+          content: (d1 as any).content,
+          timestamp: (d1 as any).created_at ? new Date((d1 as any).created_at) : new Date(),
+          status: 'sent',
+          isOwnMessage: true,
+        }
+      }
+      if (e1) this.logSupabaseError('sendMessage (underscore with created_at)', e1)
+    }
+
+    // Intento 2: underscore minimal
+    {
+      const { data: dB, error: eB } = await supabase
+        .from(table)
+        .insert(payloadUnderscore)
+        .select('content, sender_id, conversation_id')
+        .single()
+
+      if (!eB && dB) {
+        return {
+          id: `${senderId}-${Date.now()}`,
+          conversationId: (dB as any).conversation_id,
+          senderId: (dB as any).sender_id,
+          senderName: 'Tú',
+          content: (dB as any).content,
+          timestamp: new Date(),
+          status: 'sent',
+          isOwnMessage: true,
+        }
+      }
+      if (eB) this.logSupabaseError('sendMessage (underscore minimal)', eB)
+    }
+
+    // Intento 3: columnas con espacios
+    const { data: d2, error: e2 } = await supabase
+      .from(table)
+      .insert(payloadSpace)
+      .select('content, "sender id", "conversation id"')
+      .single()
+
+    if (e2) {
+      this.logSupabaseError('sendMessage (space payload)', e2)
+      throw e2
+    }
+
+    return {
+      id: `${senderId}-${Date.now()}`,
+      conversationId: (d2 as any)['conversation id'],
+      senderId: (d2 as any)['sender id'],
+      senderName: 'Tú',
+      content: (d2 as any).content,
       timestamp: new Date(),
       status: 'sent',
-      isOwnMessage: true
-    }
-    
-    return newMessage
-  }
-
-  /**
-   * Mark messages as read
-   * TODO: Replace with Supabase update
-   */
-  async markAsRead(conversationId: string, userId: string): Promise<void> {
-    // PLACEHOLDER: This will be replaced with actual Supabase call
-    // Example mutation:
-    // await supabase
-    //   .from('messages')
-    //   .update({ status: 'read' })
-    //   .eq('conversation_id', conversationId)
-    //   .neq('sender_id', userId)
-    //   .eq('status', 'delivered')
-    
-    console.log('📡 [PLACEHOLDER] Marking messages as read:', conversationId)
-  }
-
-  /**
-   * Create a new conversation
-   * TODO: Replace with Supabase insert
-   */
-  async createConversation(userId: string, participantId: string): Promise<Conversation> {
-    // PLACEHOLDER: This will be replaced with actual Supabase call
-    // Example mutation:
-    // const { data: conversation, error } = await supabase
-    //   .from('conversations')
-    //   .insert({ created_at: new Date().toISOString() })
-    //   .select()
-    //   .single()
-    //
-    // Then insert participants...
-    
-    console.log('📡 [PLACEHOLDER] Creating conversation:', { userId, participantId })
-    
-    // Mock response
-    return {
-      id: `conv-${Date.now()}`,
-      participantId,
-      participantName: 'New Contact',
-      participantRole: 'trainer',
-      unreadCount: 0,
-      status: 'active',
-      createdAt: new Date(),
-      updatedAt: new Date()
+      isOwnMessage: true,
     }
   }
 
   /**
-   * Archive a conversation
-   * TODO: Replace with Supabase update
+   * Mark messages as read - no-op as schema does not include read tracking
    */
-  async archiveConversation(conversationId: string): Promise<void> {
-    // PLACEHOLDER
-    console.log('📡 [PLACEHOLDER] Archiving conversation:', conversationId)
+  async markAsRead(_conversationId: string, _userId: string): Promise<void> {
+    return
   }
 
   /**
-   * Delete a conversation
-   * TODO: Replace with Supabase delete
+   * Conversations are defined by trainer_student relation; creation is out of scope.
+   * This method tries to ensure a pair exists and returns its conversation id.
    */
-  async deleteConversation(conversationId: string): Promise<void> {
-    // PLACEHOLDER
-    console.log('📡 [PLACEHOLDER] Deleting conversation:', conversationId)
+  async createConversation(_userId: string, _participantId: string): Promise<Conversation> {
+    throw new Error('La creación de conversaciones depende de la relación trainer_student. Crea el vínculo primero.')
   }
 
   /**
-   * Search for users to start a conversation
-   * TODO: Replace with Supabase query
+   * Archive a conversation - not supported at DB level; handled in UI only
    */
-  async searchUsers(query: string, currentUserId: string): Promise<ChatUser[]> {
-    // PLACEHOLDER
-    console.log('📡 [PLACEHOLDER] Searching users:', query)
-    return []
+  async archiveConversation(_conversationId: string): Promise<void> {
+    return
+  }
+
+  /**
+   * Delete a conversation - not supported (would imply deleting trainer_student)
+   */
+  async deleteConversation(_conversationId: string): Promise<void> {
+    return
+  }
+
+  /**
+   * Search users - simple search by name
+   */
+  async searchUsers(query: string, _currentUserId: string): Promise<ChatUser[]> {
+    const q = query.trim()
+    if (!q) return []
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, name, avatar_url, role')
+      .ilike('name', `%${q}%`)
+      .limit(10)
+
+    if (error) {
+      console.error('searchUsers error:', error)
+      return []
+    }
+
+    return (data || []).map((u) => ({
+      id: u.id,
+      name: u.name || 'Usuario',
+      avatar: u.avatar_url || undefined,
+      role: u.role === 'entrenador' ? 'trainer' : 'client',
+      online: false,
+    }))
+  }
+
+  /**
+   * Resolve real conversation id (trainer_student.id) for a pair of users.
+   */
+  async resolveConversationId(userId: string, participantId: string): Promise<string | null> {
+    // The pair can be (trainer=userId, student=participantId) or vice versa
+    const { data, error } = await supabase
+      .from('trainer_student')
+      .select('id, trainer_id, student_id')
+      .or(
+        `and(trainer_id.eq.${userId},student_id.eq.${participantId}),and(trainer_id.eq.${participantId},student_id.eq.${userId})`
+      )
+      .limit(1)
+      .maybeSingle()
+
+    if (error) {
+      this.logSupabaseError('resolveConversationId', error)
+      return null
+    }
+
+    return (data as any)?.id || null
+  }
+
+  /**
+   * Subscribe to realtime inserts on message table for a conversation_id
+   * Returns an unsubscribe function
+   */
+  subscribeToConversation(
+    conversationIds: string | string[],
+    onInsert: (dbMessage: DbMessage) => void
+  ): () => void {
+    const idSet = new Set(Array.isArray(conversationIds) ? conversationIds : [conversationIds])
+    // Suscribimos a ambas tablas por compatibilidad y filtramos client-side
+    const ch1 = supabase
+      .channel(`rt-message-${Array.from(idSet).join('|')}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'message' },
+        (payload) => {
+          const r = payload.new as any
+          const conv = r?.conversation_id ?? r?.['conversation id']
+          if (!idSet.has(String(conv))) return
+          const mapped: DbMessage = {
+            id: r?.id,
+            content: r?.content,
+            sender_id: r?.sender_id ?? r?.['sender id'],
+            conversation_id: conv,
+            created_at: r?.created_at,
+          }
+          onInsert(mapped)
+        }
+      )
+      .subscribe()
+
+    const ch2 = supabase
+      .channel(`rt-messages-${Array.from(idSet).join('|')}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          const r = payload.new as any
+          const conv = r?.conversation_id ?? r?.['conversation id']
+          if (!idSet.has(String(conv))) return
+          const mapped: DbMessage = {
+            id: r?.id,
+            content: r?.content,
+            sender_id: r?.sender_id ?? r?.['sender id'],
+            conversation_id: conv,
+            created_at: r?.created_at,
+          }
+          onInsert(mapped)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      try { supabase.removeChannel(ch1) } catch (e) { console.warn('Error removing channel 1', e) }
+      try { supabase.removeChannel(ch2) } catch (e) { console.warn('Error removing channel 2', e) }
+    }
+  }
+
+  /**
+   * Helper: derive conversation id string from trainer_student row.
+   * Prefer the row.id if present; otherwise build a stable synthetic key.
+   */
+  private getConversationIdFromPair(p: TrainerStudentRow): string {
+    if (p.id) return p.id
+    // Synthetic key ensures uniqueness even if table lacks id
+    return `${p.trainer_id}:${p.student_id}`
   }
 }
 

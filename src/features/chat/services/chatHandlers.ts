@@ -66,21 +66,44 @@ export function createChatHandlers(
       
       try {
         chatState.setSendingMessage(true)
-        
+        // Ensure we have a real trainer_student id for this conversation
+        let conversationId = chatState.activeConversationId
+        let baseMessages = chatState.messages[conversationId] || []
+        const active = chatState.getActiveConversation()
+        if (active && conversationId.includes(':')) {
+          const realId = await chatDatabase.resolveConversationId(userId, active.participantId)
+          if (realId) {
+            // Move messages state to real id if needed
+            const existing = chatState.messages[conversationId] || []
+            if (existing.length) {
+              chatState.setMessages(realId, existing)
+              baseMessages = existing
+            } else {
+              baseMessages = chatState.messages[realId] || []
+            }
+            // Update conversations array id
+            const updated = chatState.conversations.map((c) =>
+              c.id === conversationId ? { ...c, id: realId } : c
+            )
+            chatState.setConversations(updated)
+            chatState.setActiveConversationId(realId)
+            conversationId = realId
+          }
+        }
+
         // Send message to database
         const newMessage = await chatDatabase.sendMessage(
-          chatState.activeConversationId,
+          conversationId,
           userId,
           content.trim()
         )
         
-        // Add message to local state
-        const currentMessages = chatState.messages[chatState.activeConversationId] || []
-        chatState.setMessages(chatState.activeConversationId, [...currentMessages, newMessage])
+  // Add message using append helper to avoid races and preserve history
+  chatState.appendMessage(conversationId, newMessage)
         
         // Update conversation's last message
         const updatedConversations = chatState.conversations.map(conv =>
-          conv.id === chatState.activeConversationId
+          conv.id === conversationId
             ? {
                 ...conv,
                 lastMessage: {
