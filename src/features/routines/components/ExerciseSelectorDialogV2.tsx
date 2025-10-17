@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -20,9 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Activity } from "lucide-react"
+import { Search, Activity, Trash2, Plus } from "lucide-react"
 import { useInfiniteScroll } from "../hooks/useInfiniteScroll"
-import type { Exercise, PendingExercise } from "@/features/routines/types"
+import type { Exercise, PendingExercise, SetInputV2 } from "@/features/routines/types"
 
 interface ExerciseSearchHook {
   searchTerm: string
@@ -39,19 +40,18 @@ interface ExerciseSearchHook {
   uniqueEquipments: string[]
 }
 
-interface ExerciseInputs {
-  sets: string
-  reps: string
-  restSec: string
+interface ExerciseInputsV2 {
+  numSets: number
+  sets: SetInputV2[]
 }
 
-interface ExerciseSelectorDialogProps {
+interface ExerciseSelectorDialogV2Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   exerciseSearch: ExerciseSearchHook
-  pendingExercise: PendingExercise
-  exerciseInputs: ExerciseInputs
-  onExerciseInputsChange: (inputs: ExerciseInputs) => void
+  pendingExercise: PendingExercise | null
+  exerciseInputs: ExerciseInputsV2
+  onExerciseInputsChange: (inputs: ExerciseInputsV2) => void
   onSelectExercise: (exercise: Exercise) => void
   onConfirmAdd: () => void
   onCancelAdd: () => void
@@ -65,19 +65,25 @@ interface ExerciseSelectorDialogProps {
     filterByEquipment: string
     allEquipments: string
     configureExercise: string
+    numberOfSets: string
     sets: string
     repetitions: string
-    rest: string
+    load: string
+    unit: string
+    notes: string
     confirmAdd: string
     cancel: string
     close: string
     loadingMore: string
     noResults: string
     scrollForMore: string
+    addSet: string
+    removeSet: string
+    clickToChange: string
   }
 }
 
-export function ExerciseSelectorDialog({
+export function ExerciseSelectorDialogV2({
   open,
   onOpenChange,
   exerciseSearch,
@@ -89,16 +95,83 @@ export function ExerciseSelectorDialog({
   onCancelAdd,
   onClearPendingExercise,
   translations,
-}: ExerciseSelectorDialogProps) {
+}: ExerciseSelectorDialogV2Props) {
   const { containerRef, handleScroll } = useInfiniteScroll({
     hasMore: exerciseSearch.hasMore,
     loading: exerciseSearch.loading,
     onLoadMore: exerciseSearch.loadMore,
   })
 
+  // Update sets array when numSets changes
+  const handleNumSetsChange = (num: number) => {
+    const currentSets = exerciseInputs.sets
+    let newSets: SetInputV2[]
+
+    if (num > currentSets.length) {
+      // Add new sets
+      const lastSet = currentSets[currentSets.length - 1]
+      newSets = [
+        ...currentSets,
+        ...Array.from({ length: num - currentSets.length }, (_, i) => ({
+          set_index: currentSets.length + i + 1,
+          reps: lastSet?.reps || '10',
+          load_kg: lastSet?.load_kg || null,
+          unit: lastSet?.unit || 'kg'
+        }))
+      ]
+    } else {
+      // Remove sets
+      newSets = currentSets.slice(0, num)
+    }
+
+    onExerciseInputsChange({
+      numSets: num,
+      sets: newSets
+    })
+  }
+
+  const handleSetChange = (index: number, field: keyof SetInputV2, value: any) => {
+    const newSets = [...exerciseInputs.sets]
+    newSets[index] = {
+      ...newSets[index],
+      [field]: value
+    }
+    onExerciseInputsChange({
+      ...exerciseInputs,
+      sets: newSets
+    })
+  }
+
+  const addSet = () => {
+    const lastSet = exerciseInputs.sets[exerciseInputs.sets.length - 1]
+    const newSet: SetInputV2 = {
+      set_index: exerciseInputs.sets.length + 1,
+      reps: lastSet?.reps || '10',
+      load_kg: lastSet?.load_kg || null,
+      unit: lastSet?.unit || 'kg'
+    }
+    onExerciseInputsChange({
+      numSets: exerciseInputs.numSets + 1,
+      sets: [...exerciseInputs.sets, newSet]
+    })
+  }
+
+  const removeSet = (index: number) => {
+    if (exerciseInputs.sets.length <= 1) return
+    
+    const newSets = exerciseInputs.sets
+      .filter((_, i) => i !== index)
+      .map((set, i) => ({ ...set, set_index: i + 1 }))
+    
+    onExerciseInputsChange({
+      numSets: exerciseInputs.numSets - 1,
+      sets: newSets
+    })
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{translations.title}</DialogTitle>
           <DialogDescription>{translations.description}</DialogDescription>
@@ -237,7 +310,7 @@ export function ExerciseSelectorDialog({
               <Card 
                 className="bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors border-2 border-primary/20 hover:border-primary/40"
                 onClick={onClearPendingExercise || onCancelAdd}
-                title="Click to select a different exercise"
+                title={translations.clickToChange}
               >
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
@@ -262,60 +335,138 @@ export function ExerciseSelectorDialog({
                         ))}
                       </div>
                       <p className="text-xs text-muted-foreground mt-2 italic">
-                        Click card to change exercise
+                        {translations.clickToChange}
                       </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Exercise Configuration Form */}
+              {/* Exercise Configuration Form - V2 with per-set config */}
               <div className="border-t pt-4">
                 <h4 className="font-medium mb-3">{translations.configureExercise}</h4>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <Label htmlFor="sets">{translations.sets}</Label>
+                
+                {/* Number of sets selector */}
+                <div className="mb-4">
+                  <Label htmlFor="numSets">{translations.numberOfSets}</Label>
+                  <div className="flex items-center gap-2 mt-2">
                     <Input
-                      id="sets"
+                      id="numSets"
                       type="number"
-                      placeholder="4"
-                      value={exerciseInputs.sets}
-                      onChange={(e) =>
-                        onExerciseInputsChange({ ...exerciseInputs, sets: e.target.value })
-                      }
+                      min="1"
+                      max="20"
+                      value={exerciseInputs.numSets}
+                      onChange={(e) => handleNumSetsChange(parseInt(e.target.value) || 1)}
+                      className="w-24"
                     />
-                  </div>
-                  <div>
-                    <Label htmlFor="reps">{translations.repetitions}</Label>
-                    <Input
-                      id="reps"
-                      type="number"
-                      placeholder="12"
-                      value={exerciseInputs.reps}
-                      onChange={(e) =>
-                        onExerciseInputsChange({ ...exerciseInputs, reps: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="rest">{translations.rest}</Label>
-                    <Input
-                      id="rest"
-                      type="number"
-                      placeholder="90"
-                      value={exerciseInputs.restSec}
-                      onChange={(e) =>
-                        onExerciseInputsChange({ ...exerciseInputs, restSec: e.target.value })
-                      }
-                    />
+                    <span className="text-sm text-muted-foreground">
+                      {exerciseInputs.numSets} {exerciseInputs.numSets === 1 ? 'serie' : 'series'}
+                    </span>
                   </div>
                 </div>
+
+                {/* Individual set configurations */}
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                  {exerciseInputs.sets.map((set, index) => (
+                    <Card key={index} className="bg-muted/20">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <span className="font-medium text-sm">Serie {set.set_index}</span>
+                          {exerciseInputs.sets.length > 1 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeSet(index)}
+                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-3">
+                          {/* Reps */}
+                          <div>
+                            <Label htmlFor={`reps-${index}`} className="text-xs">
+                              {translations.repetitions}
+                            </Label>
+                            <Input
+                              id={`reps-${index}`}
+                              type="text"
+                              placeholder="10"
+                              value={set.reps}
+                              onChange={(e) => handleSetChange(index, 'reps', e.target.value)}
+                              className="h-9"
+                            />
+                          </div>
+
+                          {/* Load */}
+                          <div>
+                            <Label htmlFor={`load-${index}`} className="text-xs">
+                              {translations.load}
+                            </Label>
+                            <Input
+                              id={`load-${index}`}
+                              type="number"
+                              step="0.5"
+                              placeholder="0"
+                              value={set.load_kg || ''}
+                              onChange={(e) => handleSetChange(index, 'load_kg', e.target.value ? parseFloat(e.target.value) : null)}
+                              className="h-9"
+                            />
+                          </div>
+
+                          {/* Unit */}
+                          <div>
+                            <Label htmlFor={`unit-${index}`} className="text-xs">
+                              {translations.unit}
+                            </Label>
+                            <Select
+                              value={set.unit || 'kg'}
+                              onValueChange={(value) => handleSetChange(index, 'unit', value)}
+                            >
+                              <SelectTrigger className="h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="kg">kg</SelectItem>
+                                <SelectItem value="lb">lb</SelectItem>
+                                <SelectItem value="bw">Peso corporal</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* Notes (optional) */}
+                        <div className="mt-3">
+                          <Input
+                            placeholder={translations.notes}
+                            value={set.notes || ''}
+                            onChange={(e) => handleSetChange(index, 'notes', e.target.value)}
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Add set button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addSet}
+                  className="w-full mt-3"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {translations.addSet}
+                </Button>
+
+                {/* Action buttons */}
                 <div className="flex gap-2 mt-4">
                   <Button
                     onClick={onConfirmAdd}
-                    disabled={
-                      !exerciseInputs.sets || !exerciseInputs.reps || !exerciseInputs.restSec
-                    }
+                    disabled={exerciseInputs.sets.length === 0 || !exerciseInputs.sets.every(s => s.reps)}
                     className="flex-1"
                   >
                     {translations.confirmAdd}

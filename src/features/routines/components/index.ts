@@ -4,6 +4,7 @@ export { RoutinesFoldersList } from "./RoutinesFoldersList"
 export { RoutinesTemplatesList } from "./RoutinesTemplatesList"
 export { ExerciseCatalog } from "./ExerciseCatalog"
 export { CreateExerciseDialog } from "./CreateExerciseDialog"
-export { ExerciseSelectorDialog } from "./ExerciseSelectorDialog"
+export { ExerciseSelectorDialogV2 } from "./ExerciseSelectorDialogV2"
 export { RoutineEditorDialog } from "./RoutineEditorDialog"
+export { EditableExerciseCard } from "./EditableExerciseCard"
 

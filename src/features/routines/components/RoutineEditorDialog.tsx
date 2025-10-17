@@ -15,8 +15,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Activity } from "lucide-react"
 import { supabase } from "@/services/database"
-import type { RoutineTemplate, Exercise } from "@/features/routines/types"
-import { ExerciseListItem } from "./ExerciseListItem"
+import type { RoutineTemplate, Exercise, SetInputV2 } from "@/features/routines/types"
+import { EditableExerciseCard } from "./EditableExerciseCard"
 
 interface RoutineEditorDialogProps {
   open: boolean
@@ -28,6 +28,8 @@ interface RoutineEditorDialogProps {
   onSaveRoutine: () => Promise<void>
   isSaving?: boolean
   exercises: Exercise[]
+  exerciseV2Data?: Record<string, SetInputV2[]>
+  onUpdateExerciseSets?: (exerciseId: string, sets: SetInputV2[]) => void
   translations: {
     title: string
     description: string
@@ -41,6 +43,11 @@ interface RoutineEditorDialogProps {
     clickToStart: string
     sets: string
     reps: string
+    load: string
+    unit: string
+    notes: string
+    addSet: string
+    delete: string
     restShort: string
     cancel: string
     saveRoutine: string
@@ -59,6 +66,8 @@ export function RoutineEditorDialog({
   onSaveRoutine,
   isSaving = false,
   exercises,
+  exerciseV2Data = {},
+  onUpdateExerciseSets,
   translations,
 }: RoutineEditorDialogProps) {
   // State to store fetched exercise data
@@ -166,24 +175,45 @@ export function RoutineEditorDialog({
                 <p className="text-sm">{translations.clickToStart}</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {routine.exercises.map((exercise, idx) => {
                   // Try to find exercise in loaded exercises first, then in fetched exercises
                   const exerciseData = exercises.find(
                     (e) => e.id.toString() === exercise.exerciseId.toString()
                   ) || fetchedExercises[exercise.exerciseId]
 
+                  // Get V2 sets data or create default sets
+                  const setsData = exerciseV2Data[exercise.exerciseId] || [
+                    {
+                      set_index: 1,
+                      reps: exercise.reps?.toString() || '10',
+                      load_kg: null,
+                      unit: 'kg',
+                      notes: undefined
+                    }
+                  ]
+
                   return (
-                    <ExerciseListItem
+                    <EditableExerciseCard
                       key={idx}
                       exercise={exercise}
                       exerciseData={exerciseData}
                       index={idx}
+                      setsData={setsData}
                       onDelete={onDeleteExercise}
+                      onUpdateSets={(index, sets) => {
+                        if (onUpdateExerciseSets) {
+                          onUpdateExerciseSets(exercise.exerciseId, sets)
+                        }
+                      }}
                       translations={{
                         sets: translations.sets,
                         reps: translations.reps,
-                        restShort: translations.restShort,
+                        load: translations.load,
+                        unit: translations.unit,
+                        notes: translations.notes,
+                        addSet: translations.addSet,
+                        delete: translations.delete,
                         noGifAvailable: translations.noGifAvailable,
                       }}
                     />

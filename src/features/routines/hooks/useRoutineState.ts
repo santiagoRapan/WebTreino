@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRoutineDatabase } from "./useRoutineDatabase"
+import { useRoutineDatabaseV2 } from "./useRoutineDatabaseV2"
 import { useAuth } from "@/features/auth/services/auth-context"
 import type { 
   Exercise, 
@@ -67,16 +67,6 @@ export interface UseRoutineStateReturn {
   newRoutineName: string
   setNewRoutineName: (name: string) => void
 
-  // Database Operations
-  routineDatabase: {
-    loading: boolean
-    error: string | null
-    saveRoutineToDatabase: (routine: RoutineTemplate, ownerId: string) => Promise<string | null>
-    loadRoutinesFromDatabase: (ownerId: string) => Promise<RoutineTemplate[]>
-    updateRoutineInDatabase: (routine: RoutineTemplate, ownerId: string) => Promise<boolean>
-    deleteRoutineFromDatabase: (routineId: number | string, ownerId: string) => Promise<boolean>
-  }
-
   // Auth
   customUser: any // User from auth context
 }
@@ -128,7 +118,7 @@ export function useRoutineState(): UseRoutineStateReturn {
   const [loadingExercises, setLoadingExercises] = useState(false)
   
   // Database operations for routines
-  const routineDatabase = useRoutineDatabase()
+  const routineDatabase = useRoutineDatabaseV2()
   
   // Exercise Forms
   const [newExerciseForm, setNewExerciseForm] = useState<ExerciseFormState>({
@@ -207,17 +197,43 @@ export function useRoutineState(): UseRoutineStateReturn {
       try {
         console.log('✅ Loading routines for user:', customUser.id, customUser.name || 'Unknown')
         // Load routines from database using the authenticated user's ID
-        const dbRoutines = await routineDatabase.loadRoutinesFromDatabase(customUser.id)
+        const v2Routines = await routineDatabase.loadRoutinesV2(customUser.id)
         
         // Check if the effect was cancelled (component unmounted or deps changed)
         if (cancelled) return;
         
+        // Transform V2 routines to RoutineTemplate format
+        const transformedTemplates: RoutineTemplate[] = v2Routines.map(routine => {
+          const allExercises: any[] = []
+          
+          // Flatten blocks and exercises
+          routine.blocks.forEach(block => {
+            block.exercises?.forEach(exercise => {
+              const firstSet = exercise.sets[0]
+              allExercises.push({
+                exerciseId: exercise.exercise_id,
+                sets: exercise.sets.length,
+                reps: firstSet?.reps || '10',
+                rest_seconds: 90,
+                load_target: firstSet?.load_kg ? `${firstSet.load_kg}${firstSet.unit || 'kg'}` : null
+              })
+            })
+          })
+          
+          return {
+            id: routine.id,
+            name: routine.name,
+            description: routine.description,
+            exercises: allExercises
+          }
+        })
+        
         const defaultFolders: RoutineFolder[] = [
-          { id: '1', name: 'Mis rutinas', templates: dbRoutines }
+          { id: '1', name: 'Mis rutinas', templates: transformedTemplates }
         ]
         setRoutineFolders(defaultFolders)
         setSelectedFolderId('1')
-        console.log(`📚 Loaded ${dbRoutines.length} routines from database`)
+        console.log(`📚 Loaded ${transformedTemplates.length} routines from database`)
       } catch (error) {
         if (cancelled) return;
         console.error('❌ Error loading routines from database:', error)
@@ -279,8 +295,6 @@ export function useRoutineState(): UseRoutineStateReturn {
     setShowNewRoutineInput,
     newRoutineName,
     setNewRoutineName,
-    // Database operations
-    routineDatabase,
     // Auth
     customUser
   }

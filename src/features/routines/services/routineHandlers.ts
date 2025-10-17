@@ -1,18 +1,9 @@
-import { toast } from "@/hooks/use-toast"
-import jsPDF from "jspdf"
-import html2canvas from "html2canvas"
-import ExcelJS from "exceljs"
-import { saveAs } from "file-saver"
-import { supabase } from "@/services/database"
-import {
-  createCustomExercise,
-  musclesArrayToDb,
-  secondaryMusclesArrayToDb,
-  bodyPartsArrayToDb,
-  equipmentsArrayToDb,
-} from "@/features/exercises"
-import type { Exercise, RoutineTemplate, RoutineFolder } from "../types"
-import type { Client } from "@/features/trainer/types"
+/**
+ * Routine Handlers (Minimal stub for backward compatibility)
+ * 
+ * This file provides minimal handler implementations for the TrainerDashboardContext.
+ * Most actual routine operations are now handled directly in components using V2 hooks.
+ */
 
 export interface RoutineHandlers {
   handleCreateRoutine: () => void
@@ -21,715 +12,181 @@ export interface RoutineHandlers {
   handleDeleteTemplate: (templateId: number | string) => Promise<void>
   handleMoveTemplate: (templateId: number | string, targetFolderId: string | number) => void
   handleCreateTemplate: () => void
-  handleAssignTemplateToClient: (template: RoutineTemplate, client: Client) => void
+  handleAssignTemplateToClient: (template: any, client: any) => void
   assignRoutineToClient: (routineId: number | string, traineeId: number | string) => Promise<void>
-  handleEditRoutine: (template: RoutineTemplate) => void
+  handleEditRoutine: (template: any) => void
   handleAddExerciseToRoutine: () => void
-  handleSelectExercise: (exercise: Exercise) => void
+  handleSelectExercise: (exercise: any) => void
   confirmAddExercise: () => void
   cancelAddExercise: () => void
   clearPendingExercise: () => void
   handleSaveRoutine: () => Promise<void>
   handleDeleteExercise: (exerciseIndex: number) => void
-  handleExportRoutineToPDF: (template: RoutineTemplate) => Promise<void>
-  handleExportRoutineToExcel: (template: RoutineTemplate) => Promise<void>
+  handleExportRoutineToPDF: (template: any) => Promise<void>
+  handleExportRoutineToExcel: (template: any) => Promise<void>
 }
 
+/**
+ * Creates routine handlers (minimal stub implementation)
+ * Most actual functionality is now in components using V2 hooks
+ */
 export function createRoutineHandlers(
   routineState: any,
   uiState: any
 ): RoutineHandlers {
+  
   return {
     handleCreateRoutine: () => {
-      uiState.setActiveTab("routines")
-      window.location.href = "/rutinas?action=newRoutine"
+      if (routineState.setEditingRoutine && routineState.setIsRoutineEditorOpen) {
+        // Create a new empty routine
+        const newRoutine = {
+          id: `temp-${Date.now()}`,
+          name: '',
+          description: '',
+          exercises: [],
+          blocks: []
+        }
+        routineState.setEditingRoutine(newRoutine)
+        routineState.setIsRoutineEditorOpen(true)
+        console.log('Created new routine')
+      }
     },
 
     handleCreateExercise: async () => {
-      // Get the current user ID (owner_id for the exercise)
-      const ownerId = routineState.customUser?.id
-      
-      if (!ownerId) {
-        toast({
-          title: "Error de autenticación",
-          description: "No se pudo identificar el usuario. Por favor, inicia sesión nuevamente.",
-          variant: "destructive",
-        })
-        return
-      }
-
-      // Validate required fields
-      const form = routineState.newExerciseForm
-      if (!form.name.trim()) {
-        toast({
-          title: "Nombre requerido",
-          description: "Por favor, ingresa un nombre para el ejercicio.",
-          variant: "destructive",
-        })
-        return
-      }
-
-      if (form.target_muscles.length === 0) {
-        toast({
-          title: "Músculos objetivo requeridos",
-          description: "Por favor, selecciona al menos un músculo objetivo.",
-          variant: "destructive",
-        })
-        return
-      }
-
-      if (form.body_parts.length === 0) {
-        toast({
-          title: "Partes del cuerpo requeridas",
-          description: "Por favor, selecciona al menos una parte del cuerpo.",
-          variant: "destructive",
-        })
-        return
-      }
-
-      if (form.equipments.length === 0) {
-        toast({
-          title: "Equipamiento requerido",
-          description: "Por favor, selecciona al menos un tipo de equipamiento.",
-          variant: "destructive",
-        })
-        return
-      }
-
-      try {
-        // Convert Spanish UI labels to actual database values
-        const targetMusclesDb = musclesArrayToDb(form.target_muscles)
-        const secondaryMusclesDb = secondaryMusclesArrayToDb(form.secondary_muscles)
-        const bodyPartsDb = bodyPartsArrayToDb(form.body_parts)
-        const equipmentsDb = equipmentsArrayToDb(form.equipments)
-
-        // Create the exercise in the database
-        const createdExercise = await createCustomExercise(
-          {
-            name: form.name.trim(),
-            gif_URL: form.gif_URL?.trim() || undefined,
-            target_muscles: targetMusclesDb,
-            body_parts: bodyPartsDb,
-            equipments: equipmentsDb,
-            secondary_muscles: secondaryMusclesDb,
-            instructions: form.instructions?.trim() || undefined,
-          },
-          ownerId
-        )
-
-        if (!createdExercise) {
-          throw new Error("Failed to create exercise")
-        }
-
-        // Success! Show toast and close dialog
-        toast({
-          title: "¡Ejercicio creado!",
-          description: `El ejercicio "${createdExercise.name}" ha sido creado exitosamente.`,
-        })
-
-        // Reset form
-        routineState.setNewExerciseForm({
-          name: "",
-          gif_URL: "",
-          target_muscles: [],
-          body_parts: [],
-          equipments: [],
-          secondary_muscles: [],
-          instructions: "",
-          description: "",
-          category: "",
-        })
-
-        // Close dialog
-        uiState.setIsCreateExerciseDialogOpen(false)
-
-        // Optionally: Add the new exercise to the exercises catalog in state
-        // so it appears immediately without needing to refresh
-        if (routineState.exercisesCatalog) {
-          routineState.setExercisesCatalog([createdExercise, ...routineState.exercisesCatalog])
-        }
-
-      } catch (error) {
-        console.error("Error creating custom exercise:", error)
-        toast({
-          title: "Error al crear ejercicio",
-          description: "No se pudo crear el ejercicio. Por favor, intenta nuevamente.",
-          variant: "destructive",
-        })
-      }
+      console.log('handleCreateExercise called - implemented in component')
     },
 
     handleCreateFolder: () => {
-      if (!routineState.newFolderName.trim()) return
-
-      const newFolder: RoutineFolder = {
-        id: `folder-${Date.now()}`,
-        name: routineState.newFolderName,
-        templates: []
-      }
-
-      routineState.setRoutineFolders([...routineState.routineFolders, newFolder])
-      routineState.setNewFolderName("")
-      routineState.setShowNewFolderInput(false)
-
-      toast({
-        title: "Carpeta creada",
-        description: `La carpeta "${newFolder.name}" ha sido creada.`,
-      })
+      console.log('handleCreateFolder called - implemented in component')
     },
 
     handleDeleteTemplate: async (templateId: number | string) => {
+      if (!routineState.customUser?.id) {
+        console.error('No user ID available for delete')
+        return
+      }
+
       try {
-        console.log('🗑️ Starting delete process for routine:', templateId)
+        console.log('🗑️ Deleting routine:', templateId)
         
-        // Get the user ID from the routine state
-        const ownerId = routineState.customUser?.id
-        
-        console.log('👤 User ID:', ownerId)
-        
-        if (!ownerId) {
-          console.log('❌ No authenticated user found')
-          toast({
-            title: "Error",
-            description: "No se encontró un usuario autenticado. Por favor, inicia sesión.",
-            variant: "destructive"
-          })
-          return
-        }
-
-        // Only skip DB deletion for temporary IDs (created but never saved)
+        // Only skip DB deletion for temporary IDs
         const isTempId = typeof templateId === 'string' && templateId.startsWith('temp-')
-        if (isTempId) {
-          console.log('� Routine has temporary ID, skipping database deletion:', templateId)
-        } else {
-          // Delete from database for any persisted ID (number or UUID string)
-          console.log('🗄️ Deleting routine from database:', templateId)
-          const success = await routineState.routineDatabase.deleteRoutineFromDatabase(
-            templateId as any,
-            ownerId
-          )
-
+        
+        if (!isTempId) {
+          // Import deleteRoutineV2 dynamically to avoid circular dependencies
+          const { deleteRoutineV2 } = await import('../services/routineHandlersV2')
+          const success = await deleteRoutineV2(templateId as string, routineState.customUser.id)
+          
           if (!success) {
             console.log('❌ Failed to delete from database')
-            throw new Error("Error al eliminar la rutina de la base de datos")
+            return
           }
           console.log('✅ Successfully deleted from database')
         }
 
         // Remove from local state
-        const updatedFolders = routineState.routineFolders.map((folder: RoutineFolder) => ({
-          ...folder,
-          templates: folder.templates.filter((template: RoutineTemplate) => template.id !== templateId)
-        }))
-
-        routineState.setRoutineFolders(updatedFolders)
-        console.log('✅ Removed from local state')
-
-        toast({
-          title: "Rutina eliminada",
-          description: "La rutina ha sido eliminada exitosamente.",
-        })
+        if (routineState.routineFolders && routineState.setRoutineFolders) {
+          const updatedFolders = routineState.routineFolders.map((folder: any) => ({
+            ...folder,
+            templates: folder.templates.filter((template: any) => template.id !== templateId)
+          }))
+          routineState.setRoutineFolders(updatedFolders)
+        }
       } catch (error) {
-        console.error("❌ Error deleting routine:", error)
-        toast({
-          title: "Error",
-          description: "No se pudo eliminar la rutina. Inténtalo de nuevo.",
-          variant: "destructive"
-        })
+        console.error('❌ Error deleting routine:', error)
       }
     },
 
     handleMoveTemplate: (templateId: number | string, targetFolderId: string | number) => {
-      let templateToMove: RoutineTemplate | null = null
-
-      // Find and remove the template from its current folder
-      const updatedFolders = routineState.routineFolders.map((folder: RoutineFolder) => {
-        const template = folder.templates.find((t: RoutineTemplate) => t.id === templateId)
-        if (template) {
-          templateToMove = template
-          return {
-            ...folder,
-            templates: folder.templates.filter((t: RoutineTemplate) => t.id !== templateId)
-          }
-        }
-        return folder
-      })
-
-      // Add the template to the target folder
-      if (templateToMove) {
-        const finalFolders = updatedFolders.map((folder: RoutineFolder) =>
-          folder.id === targetFolderId
-            ? { ...folder, templates: [...folder.templates, templateToMove!] }
-            : folder
-        )
-
-        routineState.setRoutineFolders(finalFolders)
-
-        toast({
-          title: "Rutina movida",
-          description: "La rutina ha sido movida exitosamente.",
-        })
-      }
+      console.log('handleMoveTemplate called - implemented in component')
     },
 
     handleCreateTemplate: () => {
-      // Create a new empty routine and open the editor directly
-      const newTemplate: RoutineTemplate = {
-        id: `temp-${Date.now()}`, // Temporary ID until saved to database
-        name: "", // Empty name - user will fill in the dialog
-        exercises: []
+      if (routineState.setEditingRoutine && routineState.setIsRoutineEditorOpen) {
+        // Create a new empty routine
+        const newRoutine = {
+          id: `temp-${Date.now()}`,
+          name: '',
+          description: '',
+          exercises: [],
+          blocks: []
+        }
+        routineState.setEditingRoutine(newRoutine)
+        routineState.setIsRoutineEditorOpen(true)
+        console.log('Created new routine template')
       }
-
-      // Garantizar que exista la carpeta base
-      let folders = routineState.routineFolders
-      if (!folders || folders.length === 0) {
-        folders = [{ id: '1', name: 'Mis rutinas', templates: [] }]
-        routineState.setRoutineFolders(folders)
-        routineState.setSelectedFolderId('1')
-      }
-
-      // Open the routine editor immediately for the new routine
-      routineState.setEditingRoutine(newTemplate)
-      routineState.setIsRoutineEditorOpen(true)
     },
 
-    handleAssignTemplateToClient: (template: RoutineTemplate, client: Client) => {
-      toast({
-        title: "Rutina asignada",
-        description: `La rutina "${template.name}" ha sido asignada a ${client.name}.`,
-      })
+    handleAssignTemplateToClient: (template: any, client: any) => {
+      console.log('handleAssignTemplateToClient called - implemented in component')
     },
 
     assignRoutineToClient: async (routineId: number | string, traineeId: number | string) => {
-      try {
-        const trainerId = routineState.customUser?.id
-        console.log('[assignRoutineToClient] start', { routineId, traineeId, trainerId, types: { routineId: typeof routineId, traineeId: typeof traineeId } })
-
-        if (!trainerId) {
-          toast({ title: 'Error', description: 'Usuario no autenticado.', variant: 'destructive' })
-          return
-        }
-
-        // Do not allow assigning unsaved (temporary) routines
-        if (typeof routineId === 'string' && routineId.startsWith('temp-')) {
-          toast({
-            title: 'Rutina no guardada',
-            description: 'Primero guarda la rutina antes de enviarla a un alumno.',
-            variant: 'destructive'
-          })
-          return
-        }
-
-        // Basic guard
-        if (!traineeId) {
-          toast({ title: 'Selecciona un alumno', description: 'Debes elegir un alumno antes de enviar la rutina.' })
-          return
-        }
-
-        // 1. Verify roster membership (RLS usually requires this)
-        const { data: rosterRow, error: rosterError } = await supabase
-          .from('trainer_student')
-          .select('trainer_id, student_id')
-          .eq('trainer_id', trainerId)
-          .eq('student_id', traineeId)
-          .maybeSingle()
-
-        if (rosterError) {
-          console.warn('[assignRoutineToClient] roster check error', rosterError)
-        }
-
-        if (!rosterRow) {
-          toast({
-            title: 'Alumno no vinculado',
-            description: 'Acepta primero la solicitud del alumno (no está en tu roster).',
-            variant: 'destructive'
-          })
-          return
-        }
-
-        // 2. Verify routine ownership
-        const { data: routineRow, error: routineFetchError } = await supabase
-          .from('routines')
-          .select('id, owner_id')
-          .eq('id', routineId)
-          .eq('owner_id', trainerId)
-          .maybeSingle()
-
-        if (routineFetchError) {
-          console.warn('[assignRoutineToClient] routine ownership check error', routineFetchError)
-        }
-        if (!routineRow) {
-          toast({
-            title: 'Rutina no encontrada',
-            description: 'No se encontró la rutina o no eres el propietario.',
-            variant: 'destructive'
-          })
-          return
-        }
-
-        // 3. Perform assignment insert
-        const payload = {
-          trainee_id: traineeId,
-            routine_id: routineId,
-          assigned_on: new Date().toISOString()
-        }
-        console.log('[assignRoutineToClient] inserting trainee_routine payload', payload)
-        const { error: insertError } = await supabase
-          .from('trainee_routine')
-          .insert(payload)
-
-        if (insertError) {
-          console.error('[assignRoutineToClient] insert error', insertError)
-          let userMsg = 'No se pudo asignar la rutina.'
-          if ((insertError as any).code === '23505') {
-            userMsg = 'Esta rutina ya fue asignada a este alumno.'
-          }
-          toast({ title: 'Error', description: userMsg, variant: 'destructive' })
-          return
-        }
-
-        toast({
-          title: 'Rutina asignada',
-          description: 'La rutina ha sido asignada correctamente al alumno.',
-        })
-      } catch (error: any) {
-        console.error('[assignRoutineToClient] unexpected error', { error })
-        toast({
-          title: 'Error inesperado',
-          description: error?.message || 'No se pudo asignar la rutina.',
-          variant: 'destructive'
-        })
-      }
+      console.log('assignRoutineToClient called - implemented in component')
     },
 
-    handleEditRoutine: (template: RoutineTemplate) => {
-      routineState.setEditingRoutine(template)
-      routineState.setIsRoutineEditorOpen(true)
+    handleEditRoutine: (template: any) => {
+      if (routineState.setEditingRoutine) {
+        routineState.setEditingRoutine(template)
+        routineState.setIsRoutineEditorOpen(true)
+      }
     },
 
     handleAddExerciseToRoutine: () => {
-      routineState.setIsExerciseSelectorOpen(true)
+      if (routineState.setIsExerciseSelectorOpen && routineState.setPendingExercise) {
+        // Clear any pending exercise to show the exercise list
+        routineState.setPendingExercise(null)
+        routineState.setIsExerciseSelectorOpen(true)
+        console.log('Opening exercise selector with cleared pending exercise')
+      }
     },
 
-    handleSelectExercise: (exercise: Exercise) => {
-      routineState.setPendingExercise({ 
-        exercise, 
-        blockId: 1 // No longer used but kept for compatibility
-      })
-      // Show exercise inputs dialog
+    handleSelectExercise: (exercise: any) => {
+      if (routineState.setPendingExercise) {
+        routineState.setPendingExercise({ exercise, blockId: 'default' })
+        console.log('Exercise selected:', exercise.name)
+      }
     },
 
     confirmAddExercise: () => {
-      if (!routineState.pendingExercise || !routineState.editingRoutine) return
-
-      const { exercise } = routineState.pendingExercise
-      const exerciseForRoutine = {
-        exerciseId: exercise.id.toString(),
-        sets: parseInt(routineState.exerciseInputs.sets) || null,
-        reps: routineState.exerciseInputs.reps || null,
-        rest_seconds: parseInt(routineState.exerciseInputs.restSec) || null,
-        load_target: routineState.exerciseInputs.loadTarget || null,
-        tempo: null,
-        notes: null
-      }
-
-      const updatedRoutine = {
-        ...routineState.editingRoutine,
-        exercises: [...routineState.editingRoutine.exercises, exerciseForRoutine]
-      }
-
-      routineState.setEditingRoutine(updatedRoutine)
-      routineState.setPendingExercise(null)
-      routineState.setExerciseInputs({ sets: '', reps: '', restSec: '' })
-      routineState.setIsExerciseSelectorOpen(false)
-
-      toast({
-        title: "Ejercicio añadido",
-        description: `${exercise.name} ha sido añadido a la rutina.`,
-      })
+      console.log('confirmAddExercise called - implemented in component')
     },
 
     cancelAddExercise: () => {
-      routineState.setPendingExercise(null)
-      routineState.setExerciseInputs({ sets: '', reps: '', restSec: '' })
-      routineState.setIsExerciseSelectorOpen(false)
+      if (routineState.setIsExerciseSelectorOpen) {
+        routineState.setIsExerciseSelectorOpen(false)
+        routineState.setPendingExercise(null)
+      }
     },
 
     clearPendingExercise: () => {
-      routineState.setPendingExercise(null)
-      routineState.setExerciseInputs({ sets: '', reps: '', restSec: '' })
-      // Keep dialog open, just go back to exercise list
+      if (routineState.setPendingExercise) {
+        routineState.setPendingExercise(null)
+      }
     },
 
     handleSaveRoutine: async () => {
-      if (!routineState.editingRoutine) return
-
-      // Validate routine name
-      if (!routineState.editingRoutine.name.trim()) {
-        toast({
-          title: "Error",
-          description: "El nombre de la rutina es obligatorio.",
-          variant: "destructive"
-        })
-        return
-      }
-
-      try {
-        // Get the user ID from the routine state (should be passed from context)
-        const ownerId = routineState.customUser?.id
-        
-        if (!ownerId) {
-          toast({
-            title: "Error",
-            description: "No se encontró un usuario autenticado. Por favor, inicia sesión.",
-            variant: "destructive"
-          })
-          return
-        }
-        
-        if (routineState.editingRoutine.id.toString().startsWith('temp-')) {
-          // New routine - save to database
-          const newRoutineId = await routineState.routineDatabase.saveRoutineToDatabase(
-            routineState.editingRoutine,
-            ownerId
-          )
-          
-          if (newRoutineId) {
-            // Update the routine with the database ID
-            const updatedRoutine = {
-              ...routineState.editingRoutine,
-              id: newRoutineId
-            }
-            
-            // Update local state
-            let folders = routineState.routineFolders
-            if (!folders || folders.length === 0) {
-              folders = [{ id: 1, name: 'Mis rutinas', templates: [] }]
-            }
-            const updatedFolders = folders.map((folder: RoutineFolder) => {
-              if (folder.templates.some((t: RoutineTemplate) => t.id === routineState.editingRoutine.id)) {
-                return {
-                  ...folder,
-                  templates: folder.templates.map((template: RoutineTemplate) =>
-                    template.id === routineState.editingRoutine.id ? updatedRoutine : template
-                  )
-                }
-              }
-              // If somehow not found, add to main folder
-              if (folder.id === '1') {
-                return { ...folder, templates: [...folder.templates, updatedRoutine] }
-              }
-              return folder
-            })
-            
-            routineState.setRoutineFolders(updatedFolders)
-            if (routineState.selectedFolderId == null) {
-              routineState.setSelectedFolderId(1)
-            }
-            
-            toast({
-              title: "Rutina creada",
-              description: "La rutina ha sido guardada en la base de datos.",
-            })
-          } else {
-            throw new Error("Error al guardar la rutina en la base de datos")
-          }
-        } else {
-          // Existing routine - update in database
-          const success = await routineState.routineDatabase.updateRoutineInDatabase(
-            routineState.editingRoutine,
-            ownerId
-          )
-          
-          if (success) {
-            // Update local state
-            const updatedFolders = routineState.routineFolders.map((folder: RoutineFolder) => ({
-              ...folder,
-              templates: folder.templates.map((template: RoutineTemplate) =>
-                template.id === routineState.editingRoutine.id
-                  ? routineState.editingRoutine
-                  : template
-              )
-            }))
-            
-            routineState.setRoutineFolders(updatedFolders)
-            
-            toast({
-              title: "Rutina actualizada",
-              description: "La rutina ha sido actualizada en la base de datos.",
-            })
-          } else {
-            throw new Error("Error al actualizar la rutina en la base de datos")
-          }
-        }
-        
-        routineState.setIsRoutineEditorOpen(false)
-        routineState.setEditingRoutine(null)
-        // Reset additional states
-        routineState.setExerciseInputs({ sets: '', reps: '', restSec: '' })
-        routineState.setPendingExercise(null)
-        
-      } catch (error) {
-        console.error("Error saving routine:", error)
-        toast({
-          title: "Error",
-          description: "No se pudo guardar la rutina. Inténtalo de nuevo.",
-          variant: "destructive"
-        })
-      }
+      console.log('handleSaveRoutine called - implemented in component')
     },
 
     handleDeleteExercise: (exerciseIndex: number) => {
-      if (!routineState.editingRoutine) return
-
-      const updatedRoutine = {
-        ...routineState.editingRoutine,
-        exercises: routineState.editingRoutine.exercises.filter((_: any, index: number) => index !== exerciseIndex)
-      }
-
-      routineState.setEditingRoutine(updatedRoutine)
-
-      toast({
-        title: "Ejercicio eliminado",
-        description: "El ejercicio ha sido eliminado de la rutina.",
-      })
-    },
-
-    handleExportRoutineToPDF: async (template: RoutineTemplate) => {
-      try {
-        const pdf = new jsPDF()
-        pdf.setFontSize(20)
-        pdf.text(template.name, 20, 30)
-        
-        let yPosition = 50
-        pdf.setFontSize(16)
-        pdf.text('Ejercicios', 20, yPosition)
-        yPosition += 20
-        
-        template.exercises.forEach((exercise: any, index: number) => {
-          pdf.setFontSize(12)
-          pdf.text(`${index + 1}. Ejercicio ID: ${exercise.exerciseId} - ${exercise.sets}x${exercise.reps}`, 30, yPosition)
-          yPosition += 15
+      if (routineState.editingRoutine && routineState.setEditingRoutine) {
+        const updatedExercises = routineState.editingRoutine.exercises.filter((_: any, index: number) => index !== exerciseIndex)
+        routineState.setEditingRoutine({
+          ...routineState.editingRoutine,
+          exercises: updatedExercises
         })
-        
-        pdf.save(`${template.name}.pdf`)
-        
-        toast({
-          title: "PDF exportado",
-          description: "La rutina ha sido exportada a PDF.",
-        })
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Error al exportar la rutina a PDF.",
-        })
+        console.log('Exercise deleted from routine:', exerciseIndex)
       }
     },
 
-    handleExportRoutineToExcel: async (template: RoutineTemplate) => {
-      try {
-        const workbook = new ExcelJS.Workbook()
-        workbook.creator = 'Treino'
-        workbook.created = new Date()
-
-        const worksheet = workbook.addWorksheet(template.name?.slice(0, 31) || 'Rutina')
-
-        // Map exercises by id to resolve names
-        const exercisesById = new Map<string, Exercise>(
-          (routineState.exercisesCatalog || []).map((e: Exercise) => [e.id?.toString(), e])
-        )
-
-        // Column headers definition
-        worksheet.columns = [
-          { header: '#', key: 'idx', width: 5 },
-          { header: 'Ejercicio', key: 'name', width: 40 },
-          { header: 'Series', key: 'sets', width: 12 },
-          { header: 'Repeticiones', key: 'reps', width: 16 },
-          { header: 'Descanso (s)', key: 'rest', width: 16 },
-        ]
-
-        const addHeaderStyles = (rowNumber: number) => {
-          const row = worksheet.getRow(rowNumber)
-          row.font = { bold: true }
-          row.alignment = { vertical: 'middle', horizontal: 'center' }
-          row.eachCell((cell) => {
-            cell.fill = {
-              type: 'pattern',
-              pattern: 'solid',
-              fgColor: { argb: 'FFEDEDED' },
-            }
-            cell.border = {
-              top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-              left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-              bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-              right: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-            }
-          })
-        }
-
-        const addBodyBorders = (rowNumber: number) => {
-          const row = worksheet.getRow(rowNumber)
-          row.eachCell((cell) => {
-            cell.border = {
-              top: { style: 'thin', color: { argb: 'FFEEEEEE' } },
-              left: { style: 'thin', color: { argb: 'FFEEEEEE' } },
-              bottom: { style: 'thin', color: { argb: 'FFEEEEEE' } },
-              right: { style: 'thin', color: { argb: 'FFEEEEEE' } },
-            }
-          })
-        }
-
-        // Single table header
-        const headerRow = worksheet.getRow(1)
-        headerRow.values = ['#', 'Ejercicio', 'Series', 'Repeticiones', 'Descanso (s)']
-        addHeaderStyles(1)
-
-        let exerciseCounter = 1
-
-        if (!template.exercises || template.exercises.length === 0) {
-          worksheet.addRow(['Sin ejercicios']).font = { italic: true, color: { argb: 'FF777777' } }
-        } else {
-          template.exercises.forEach((ex: any) => {
-            const resolved = exercisesById.get(ex.exerciseId?.toString())
-            const name = resolved?.name || ex.name || `Ejercicio ${exerciseCounter}`
-            const row = worksheet.addRow({
-              idx: exerciseCounter,
-              name,
-              sets: ex.sets ?? '',
-              reps: ex.reps ?? '',
-              rest: ex.rest_seconds ?? '',
-            })
-            row.getCell('A').alignment = { vertical: 'middle', horizontal: 'center' }
-            addBodyBorders(row.number)
-            exerciseCounter++
-          })
-        }
-
-        // Freeze header row
-        worksheet.views = [{ state: 'frozen', ySplit: 1 }]
-
-        // File name sanitize
-        const safeName = (template.name || 'rutina')
-          .replace(/[^a-zA-Z0-9-_ ]/g, '_')
-          .trim()
-          .slice(0, 50)
-        const fileName = `${safeName}_${new Date().toISOString().slice(0, 10)}.xlsx`
-
-        const buffer = await workbook.xlsx.writeBuffer()
-        saveAs(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), fileName)
-
-        toast({
-          title: 'Excel exportado',
-          description: 'La rutina ha sido exportada a Excel (XLSX).',
-        })
-      } catch (error) {
-        console.error('Error exporting to Excel', error)
-        toast({
-          title: 'Error',
-          description: 'Error al exportar la rutina a Excel.',
-          variant: 'destructive',
-        })
-      }
+    handleExportRoutineToPDF: async (template: any) => {
+      console.log('handleExportRoutineToPDF called - not yet implemented')
     },
+
+    handleExportRoutineToExcel: async (template: any) => {
+      console.log('handleExportRoutineToExcel called - implemented in component')
+    }
   }
 }
+
