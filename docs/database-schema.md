@@ -81,8 +81,10 @@ CREATE INDEX idx_routine_block_routine_id ON routine_block(routine_id);
 CREATE INDEX idx_routine_block_order ON routine_block(routine_id, block_order);
 ```
 
-### 4. block_exercise
-Links exercises to routine blocks with specific parameters.
+### 4. block_exercise (DEPRECATED - V1)
+**DEPRECATED:** This table is no longer used. The application now uses `block_exercise_v2` and `block_exercise_set_v2` (see section 4b).
+
+Legacy structure that stored exercise data with flat set/reps configuration.
 
 ```sql
 CREATE TABLE block_exercise (
@@ -104,6 +106,68 @@ CREATE INDEX idx_block_exercise_block_id ON block_exercise(block_id);
 CREATE INDEX idx_block_exercise_exercise_id ON block_exercise(exercise_id);
 CREATE INDEX idx_block_exercise_order ON block_exercise(block_id, display_order);
 CREATE INDEX idx_block_exercise_superset ON block_exercise(is_superset_group);
+```
+
+### 4b. block_exercise_v2 & block_exercise_set_v2 (CURRENT IMPLEMENTATION)
+**CURRENT:** This is the active implementation. Normalized structure that separates exercise-level data from per-set data.
+
+**Status:** These tables are being prepared for future migration. Current application still uses `block_exercise` (section 4).
+
+**Key Changes:**
+- Removes per-set fields (sets, reps, load) from exercise level
+- Introduces dedicated `block_exercise_set_v2` table for per-set configuration
+- Allows different reps/load per set
+- Better support for drop sets, pyramid sets, and variable loading schemes
+- Renames `is_superset_group` to `superset_group` for clarity
+
+```sql
+-- Ensure UUID generation is available
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- ==========================================
+-- v2: Block Exercise (no per-set fields)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.block_exercise_v2 (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    block_id uuid NOT NULL
+        REFERENCES public.routine_block(id) ON DELETE CASCADE,
+    exercise_id text NOT NULL
+        REFERENCES public.exercises(id),
+    display_order integer NOT NULL,         -- position within the block
+    superset_group text NULL,               -- e.g. 'A', 'B' or '1','2' (tag/grouping)
+    notes text,
+
+    CONSTRAINT u_block_exercise_v2_order UNIQUE (block_id, display_order)
+);
+
+-- Helpful indexes
+CREATE INDEX IF NOT EXISTS idx_block_exercise_v2_block
+    ON public.block_exercise_v2(block_id);
+
+CREATE INDEX IF NOT EXISTS idx_block_exercise_v2_exercise
+    ON public.block_exercise_v2(exercise_id);
+
+-- ==========================================
+-- v2: Per-Set table
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.block_exercise_set_v2 (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    block_exercise_id uuid NOT NULL
+        REFERENCES public.block_exercise_v2(id) ON DELETE CASCADE,
+
+    set_index integer NOT NULL,             -- 1,2,3,...
+    reps text,                              -- '8', '8-10', 'AMRAP', 'to failure', etc.
+    unit text,                              -- lb, kg, etc.
+    load_kg numeric(6,2),                   -- null if BW/N/A
+    notes text,
+
+    CONSTRAINT u_block_exercise_set_v2 UNIQUE (block_exercise_id, set_index),
+    CONSTRAINT chk_set_v2_idx  CHECK (set_index >= 1),
+    CONSTRAINT chk_set_v2_load CHECK (load_kg IS NULL OR load_kg >= 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_block_exercise_set_v2_parent
+    ON public.block_exercise_set_v2(block_exercise_id);
 ```
 
 ### 5. trainee_routine
@@ -770,6 +834,90 @@ GROUP BY ws.id, ws.started_at, ws.completed_at, r.name
 ORDER BY ws.started_at DESC;
 ```
 
+### Schema Usage Examples
+
+#### Get routine structure with per-set details
+
+```sql
+SELECT 
+    r.name as routine_name,
+    rb.name as block_name,
+    rb.block_order,
+    e.name as exercise_name,
+    be.display_order,
+    be.superset_group,
+    bes.set_index,
+    bes.reps,
+    bes.load_kg,
+    bes.unit,
+    bes.notes as set_notes
+FROM routines r
+JOIN routine_block rb ON rb.routine_id = r.id
+JOIN block_exercise_v2 be ON be.block_id = rb.id
+JOIN block_exercise_set_v2 bes ON bes.block_exercise_id = be.id
+JOIN exercises e ON e.id = be.exercise_id
+WHERE r.id = $1
+ORDER BY rb.block_order, be.display_order, bes.set_index;
+```
+
+#### Create exercise with multiple sets (v2)
+
+```sql
+-- Insert the exercise
+INSERT INTO block_exercise_v2 (block_id, exercise_id, display_order, superset_group, notes)
+VALUES ($1, $2, $3, NULL, 'Focus on form')
+RETURNING id;
+
+-- Insert sets with different parameters (e.g., pyramid set)
+INSERT INTO block_exercise_set_v2 (block_exercise_id, set_index, reps, load_kg, unit)
+VALUES 
+    ($exerciseId, 1, '12', 50, 'kg'),
+    ($exerciseId, 2, '10', 60, 'kg'),
+    ($exerciseId, 3, '8', 70, 'kg'),
+    ($exerciseId, 4, '10', 60, 'kg'),
+    ($exerciseId, 5, '12', 50, 'kg');
+```
+
+#### Get superset groups with all sets (v2)
+
+```sql
+SELECT 
+    be.superset_group,
+    e.name as exercise_name,
+    be.display_order,
+    jsonb_agg(
+        jsonb_build_object(
+            'set_index', bes.set_index,
+            'reps', bes.reps,
+            'load_kg', bes.load_kg,
+            'unit', bes.unit,
+            'notes', bes.notes
+        ) ORDER BY bes.set_index
+    ) as sets
+FROM block_exercise_v2 be
+JOIN exercises e ON e.id = be.exercise_id
+JOIN block_exercise_set_v2 bes ON bes.block_exercise_id = be.id
+WHERE be.block_id = $1 
+  AND be.superset_group IS NOT NULL
+GROUP BY be.superset_group, e.name, be.display_order
+ORDER BY be.superset_group, be.display_order;
+```
+
+#### Count total sets in a routine (v2)
+
+```sql
+SELECT 
+    r.name,
+    COUNT(bes.id) as total_sets,
+    COUNT(DISTINCT be.id) as total_exercises
+FROM routines r
+JOIN routine_block rb ON rb.routine_id = r.id
+JOIN block_exercise_v2 be ON be.block_id = rb.id
+LEFT JOIN block_exercise_set_v2 bes ON bes.block_exercise_id = be.id
+WHERE r.id = $1
+GROUP BY r.id, r.name;
+```
+
 ## Migration Notes
 
 1. **Existing Data**: If you have existing data, ensure proper migration scripts are created
@@ -777,5 +925,54 @@ ORDER BY ws.started_at DESC;
 3. **RLS**: Enable and test all RLS policies before going to production
 4. **Functions**: Test all custom functions thoroughly
 5. **Triggers**: Ensure triggers work correctly with your authentication flow
+
+### Migration from V1 to V2 (COMPLETED)
+
+**Status:** ✅ Migration complete. The application now exclusively uses `block_exercise_v2` and `block_exercise_set_v2` tables.
+
+**What Changed:**
+- Removed flat set/reps structure from `block_exercise` (V1)
+- Introduced per-set customization with `block_exercise_set_v2`
+- All V1 handlers, hooks, and components have been removed
+- Export aliases created for backward compatibility
+
+**If you have legacy data in `block_exercise` table, migrate it using:**
+   ```sql
+   -- Example migration logic
+   INSERT INTO block_exercise_v2 (block_id, exercise_id, display_order, superset_group, notes)
+   SELECT block_id, exercise_id, display_order, is_superset_group, notes
+   FROM block_exercise;
+   
+   -- For each exercise, create sets based on the old 'sets' field
+   INSERT INTO block_exercise_set_v2 (block_exercise_id, set_index, reps, load_kg)
+   SELECT 
+       v2.id,
+       generate_series(1, COALESCE(v1.sets, 1)),
+       v1.reps,
+       -- Parse load_target to extract numeric value if possible
+       NULL
+   FROM block_exercise v1
+   JOIN block_exercise_v2 v2 ON v1.block_id = v2.block_id 
+       AND v1.exercise_id = v2.exercise_id 
+       AND v1.display_order = v2.display_order;
+   ```
+4. **Enable RLS policies** - Add security policies for v2 tables (see below)
+
+**RLS Policies:**
+```sql
+-- Enable RLS
+ALTER TABLE block_exercise_v2 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE block_exercise_set_v2 ENABLE ROW LEVEL SECURITY;
+
+-- Add policies as needed (follow existing patterns from other tables)
+-- SELECT, INSERT, UPDATE, DELETE policies
+```
+
+**Benefits of Current Schema:**
+- ✅ Per-set customization (different reps/weight per set)
+- ✅ Support for advanced training techniques (drop sets, pyramids, etc.)
+- ✅ More flexible data structure
+- ✅ Better normalization
+- ✅ Easier to implement progressive overload tracking
 
 This schema provides a robust foundation for a comprehensive fitness tracking application with proper security, relationships, and performance optimizations.

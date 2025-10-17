@@ -123,12 +123,21 @@ export type RoutineFolder = {
 }
 
 /**
- * Exercise inputs state for routine builder
+ * Exercise inputs state for routine builder (V1)
  */
 export type ExerciseInputsState = {
   sets: string
   reps: string
   restSec: string
+}
+
+/**
+ * Exercise inputs state for routine builder (V2)
+ * Supports per-set configuration
+ */
+export type ExerciseInputsStateV2 = {
+  numSets: number
+  sets: SetInputV2[]
 }
 
 /**
@@ -180,4 +189,150 @@ export interface DatabaseBlockExercise {
   
   is_superset_group?: string
   notes?: string
+}
+
+// ==========================================
+// V2 SCHEMA TYPES (UPCOMING IMPLEMENTATION)
+// ==========================================
+// These types support the new normalized schema with per-set customization
+// Status: Not yet implemented in the application
+
+/**
+ * Block exercise V2 - exercise level data without per-set fields
+ * Corresponds to block_exercise_v2 table
+ */
+export interface BlockExerciseV2 {
+  id: string
+  block_id: string
+  exercise_id: string
+  display_order: number
+  superset_group?: string | null // Renamed from is_superset_group for clarity
+  notes?: string | null
+}
+
+/**
+ * Individual set configuration for V2 schema
+ * Corresponds to block_exercise_set_v2 table
+ */
+export interface BlockExerciseSetV2 {
+  id: string
+  block_exercise_id: string
+  set_index: number // 1, 2, 3, ...
+  reps?: string | null // '8', '8-10', 'AMRAP', 'to failure', etc.
+  unit?: string | null // 'kg', 'lb', etc.
+  load_kg?: number | null // null if bodyweight/N/A
+  notes?: string | null
+}
+
+/**
+ * Complete exercise with all sets - for V2 operations
+ * Combines BlockExerciseV2 with its sets
+ */
+export interface BlockExerciseWithSetsV2 extends BlockExerciseV2 {
+  sets: BlockExerciseSetV2[]
+}
+
+/**
+ * Routine block with V2 exercises - for fetching complete routine structure
+ */
+export interface RoutineBlockV2 {
+  id: string
+  routine_id: string
+  name: string
+  block_order: number
+  notes?: string | null
+  exercises?: BlockExerciseWithSetsV2[]
+}
+
+/**
+ * Complete routine structure with V2 schema
+ */
+export interface RoutineWithBlocksV2 {
+  id: string
+  owner_id: string
+  name: string
+  description?: string | null
+  created_on: string
+  blocks: RoutineBlockV2[]
+}
+
+/**
+ * Set input for creating/editing exercises in V2 schema
+ * Used in UI forms
+ */
+export interface SetInputV2 {
+  set_index: number
+  reps: string
+  load_kg?: number | null
+  unit?: string
+  notes?: string
+}
+
+/**
+ * Exercise form state for V2 schema
+ * Used when adding exercises to a routine with per-set configuration
+ */
+export interface ExerciseFormStateV2 {
+  exercise_id: string
+  display_order: number
+  superset_group?: string | null
+  notes?: string
+  sets: SetInputV2[]
+}
+
+/**
+ * Payload for creating a block exercise with sets in V2 schema
+ */
+export interface CreateBlockExerciseV2Payload {
+  block_id: string
+  exercise_id: string
+  display_order: number
+  superset_group?: string | null
+  notes?: string
+  sets: Array<{
+    set_index: number
+    reps?: string
+    load_kg?: number | null
+    unit?: string
+    notes?: string
+  }>
+}
+
+/**
+ * Payload for updating a block exercise in V2 schema
+ */
+export interface UpdateBlockExerciseV2Payload {
+  display_order?: number
+  superset_group?: string | null
+  notes?: string
+  sets?: Array<{
+    id?: string // If updating existing set
+    set_index: number
+    reps?: string
+    load_kg?: number | null
+    unit?: string
+    notes?: string
+  }>
+}
+
+/**
+ * Superset group with exercises for V2 schema
+ * Useful for UI rendering of supersets
+ */
+export interface SupersetGroupV2 {
+  group_id: string
+  exercises: Array<BlockExerciseWithSetsV2 & { exercise?: Exercise }>
+}
+
+/**
+ * Exercise summary for V2 - aggregated set information
+ * Useful for displaying exercise cards
+ */
+export interface ExerciseSummaryV2 {
+  exercise_id: string
+  exercise_name?: string
+  total_sets: number
+  rep_range?: string // e.g., "8-12" if all sets are in that range
+  load_range?: string // e.g., "50-70 kg"
+  superset_group?: string | null
 }

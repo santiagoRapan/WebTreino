@@ -7,19 +7,24 @@ import { useTranslation } from "@/lib/i18n/LanguageProvider"
 import { useExerciseSearch } from "@/features/exercises"
 import { useAuth } from "@/features/auth/services/auth-context"
 import { supabase } from "@/services/database"
+import { useRoutineDatabase, createRoutine, updateRoutine, type CreateBlockExerciseV2Payload } from "@/features/routines"
 import { RoutinesHeader } from "./RoutinesHeader"
 import { RoutinesFoldersList } from "./RoutinesFoldersList"
 import { RoutinesTemplatesList } from "./RoutinesTemplatesList"
 import { ExerciseCatalog } from "./ExerciseCatalog"
 import { CreateExerciseDialog } from "./CreateExerciseDialog"
-import { ExerciseSelectorDialog } from "./ExerciseSelectorDialog"
+import { ExerciseSelectorDialogV2 } from "./ExerciseSelectorDialogV2"
 import { RoutineEditorDialog } from "./RoutineEditorDialog"
+import type { SetInputV2 } from "../types"
 
 export function RoutinesTab() {
   const { t } = useTranslation()
-  const { authUser } = useAuth()
+  const { authUser, customUser } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+  
+  // Routine Database hook
+  const routineDatabase = useRoutineDatabase()
   
   // Optimized exercise search hook for exercise selector dialog
   const exerciseSearch = useExerciseSearch({ 
@@ -90,9 +95,122 @@ export function RoutinesTab() {
   const [assignedCounts, setAssignedCounts] = useState<Record<string, number>>({})
   // Track if we've already handled the newRoutine action
   const hasHandledNewRoutine = useRef(false)
+  
+  // Exercise inputs state (per-set configuration)
+  const [perSetInputs, setPerSetInputs] = useState<{
+    numSets: number
+    sets: SetInputV2[]
+  }>({
+    numSets: 3,
+    sets: [
+      { set_index: 1, reps: '10', load_kg: null, unit: 'kg' },
+      { set_index: 2, reps: '10', load_kg: null, unit: 'kg' },
+      { set_index: 3, reps: '10', load_kg: null, unit: 'kg' }
+    ]
+  })
+  
+  // Store exercise sets data (maps exerciseId to its sets data)
+  const [exerciseSetsData, setExerciseSetsData] = useState<Record<string, SetInputV2[]>>({})
 
-  const currentFolder = routineFolders.find((f) => f.id === selectedFolderId) || routineFolders[0]
+  // Loaded routines with full data
+  const [loadedRoutinesData, setLoadedRoutinesData] = useState<typeof routineFolders>([])
+  const [loadedRoutines, setLoadedRoutines] = useState<any[]>([]) // Store raw routine data
+  const hasLoadedInitial = useRef(false)
+  
+  const currentFolder = loadedRoutinesData.find((f) => f.id === selectedFolderId) || loadedRoutinesData[0] || routineFolders[0]
 
+  // Load routine data when editing
+  useEffect(() => {
+    if (!editingRoutine?.id || typeof editingRoutine.id === 'string' && editingRoutine.id.startsWith('temp-')) {
+      // New routine, no data to load
+      return
+    }
+
+    // Find the routine in our loaded routines
+    const routine = loadedRoutines.find(r => r.id === editingRoutine.id)
+    
+    if (routine) {
+      console.log('📝 Loading data for editing routine:', editingRoutine.id)
+      
+      // Populate exerciseSetsData with the full sets information
+      const setsData: Record<string, SetInputV2[]> = {}
+      
+      routine.blocks.forEach((block: any) => {
+        block.exercises?.forEach((exercise: any) => {
+          setsData[exercise.exercise_id] = exercise.sets
+        })
+      })
+      
+      setExerciseSetsData(setsData)
+      console.log('✅ Loaded sets data for', Object.keys(setsData).length, 'exercises')
+    }
+  }, [editingRoutine?.id])
+
+  // Load routines initially
+  useEffect(() => {
+    if (!customUser?.id || hasLoadedInitial.current) return
+    
+    let cancelled = false
+    
+    const loadRoutines = async () => {
+      try {
+        console.log('📚 Loading routines for user:', customUser.id)
+        const routines = await routineDatabase.loadRoutinesV2(customUser.id)
+        
+        if (cancelled) return
+        
+        hasLoadedInitial.current = true
+        
+        // Store the full routines for later use (editing)
+        setLoadedRoutines(routines)
+        
+        // Transform routines for display
+        const transformedTemplates = routines.map(routine => {
+          const allExercises: any[] = []
+          
+          // Flatten blocks and exercises
+          routine.blocks.forEach(block => {
+            block.exercises?.forEach(exercise => {
+              // Use first set data for display (simplified)
+              const firstSet = exercise.sets[0]
+              allExercises.push({
+                exerciseId: exercise.exercise_id,
+                sets: exercise.sets.length,
+                reps: firstSet?.reps || '10',
+                rest_seconds: 90, // Default
+                load_target: firstSet?.load_kg ? `${firstSet.load_kg}${firstSet.unit || 'kg'}` : null
+              })
+            })
+          })
+          
+          return {
+            id: routine.id,
+            name: routine.name,
+            description: routine.description,
+            exercises: allExercises
+          }
+        })
+        
+        const folders = [{
+          id: '1',
+          name: 'Mis rutinas',
+          templates: transformedTemplates
+        }]
+        
+        setLoadedRoutinesData(folders)
+        console.log(`✅ Loaded ${transformedTemplates.length} routines`)
+      } catch (error) {
+        console.error('Error loading routines:', error)
+      }
+    }
+    
+    loadRoutines()
+    
+    return () => {
+      cancelled = true
+    }
+  }, [customUser?.id])
+  
   // Check for action parameter to open new routine dialog directly
   useEffect(() => {
     if (searchParams.get('action') === 'newRoutine' && !hasHandledNewRoutine.current) {
@@ -138,13 +256,210 @@ export function RoutinesTab() {
     loadAssignmentCounts()
   }, [authUser?.id, routineFolders])
 
+  // Helper function to refresh routine data
+  const refreshRoutineData = async () => {
+    if (!customUser?.id) return
+    
+    try {
+      const refreshedRoutines = await routineDatabase.refreshRoutinesV2(customUser.id)
+      
+      // Store full routine data
+      setLoadedRoutines(refreshedRoutines)
+      
+      // Transform and update display
+      const transformedTemplates = refreshedRoutines.map(routine => {
+        const allExercises: any[] = []
+        
+        routine.blocks.forEach(block => {
+          block.exercises?.forEach(exercise => {
+            const firstSet = exercise.sets[0]
+            allExercises.push({
+              exerciseId: exercise.exercise_id,
+              sets: exercise.sets.length,
+              reps: firstSet?.reps || '10',
+              rest_seconds: 90,
+              load_target: firstSet?.load_kg ? `${firstSet.load_kg}${firstSet.unit || 'kg'}` : null
+            })
+          })
+        })
+        
+        return {
+          id: routine.id,
+          name: routine.name,
+          description: routine.description,
+          exercises: allExercises
+        }
+      })
+      
+      const folders = [{
+        id: '1',
+        name: 'Mis rutinas',
+        templates: transformedTemplates
+      }]
+      
+      setLoadedRoutinesData(folders)
+      console.log('✅ Routine data refreshed')
+    } catch (error) {
+      console.error('Error refreshing routine data:', error)
+    }
+  }
+
   const saveRoutine = async () => {
+    if (!editingRoutine) return
+    if (!customUser?.id) {
+      console.error('No user ID available')
+      return
+    }
+
     setIsSaving(true)
     try {
-      await handleSaveRoutine()
+      // Validate routine name
+      if (!editingRoutine.name.trim()) {
+        throw new Error("El nombre de la rutina es obligatorio")
+      }
+
+      // Build V2 format blocks with exercises and sets
+      const exercises: CreateBlockExerciseV2Payload[] = editingRoutine.exercises.map((ex, idx) => ({
+        block_id: '', // Will be filled by createRoutineV2/updateRoutineV2
+        exercise_id: ex.exerciseId,
+        display_order: idx + 1,
+        superset_group: undefined,
+        notes: undefined,
+        sets: exerciseSetsData[ex.exerciseId] || [
+          // Fallback if no V2 data (shouldn't happen with new flow)
+          { set_index: 1, reps: ex.reps?.toString() || '10', load_kg: null, unit: 'kg' }
+        ]
+      }))
+      
+      const blocks = [{
+        name: 'Ejercicios',
+        block_order: 1,
+        notes: undefined,
+        exercises
+      }]
+
+      // Check if this is an edit (existing routine) or create (new routine)
+      const isEdit = editingRoutine.id && 
+                     typeof editingRoutine.id === 'string' && 
+                     !editingRoutine.id.startsWith('temp-')
+      
+      let success = false
+      
+      if (isEdit) {
+        // Update existing routine
+        console.log('🔄 Updating existing routine:', editingRoutine.id)
+        success = await updateRoutine(
+          editingRoutine.id as string,
+          editingRoutine.name,
+          editingRoutine.description || null,
+          customUser.id,
+          blocks
+        )
+      } else {
+        // Create new routine
+        console.log('➕ Creating new routine')
+        const routineId = await routineDatabase.saveRoutineV2(
+          editingRoutine.name,
+          editingRoutine.description || null,
+          customUser.id,
+          blocks
+        )
+        success = !!routineId
+      }
+
+      if (success) {
+        // Close editor
+        setIsRoutineEditorOpen(false)
+        setEditingRoutine(null)
+        setExerciseSetsData({})
+        
+        // Reload routines and update UI
+        await refreshRoutineData()
+      }
+    } catch (error) {
+      console.error("Error saving routine:", error)
     } finally {
       setIsSaving(false)
     }
+  }
+
+  // Wrap handleDeleteTemplate to refresh routine data after deletion
+  const handleDeleteTemplateWithRefresh = async (templateId: string | number) => {
+    // Call the original delete function
+    await handleDeleteTemplate(templateId)
+    
+    // Refresh routines to update UI
+    await refreshRoutineData()
+  }
+
+  // Delete exercise from routine
+  const deleteExerciseFromRoutine = (exerciseIndex: number) => {
+    if (!editingRoutine) return
+    
+    const exerciseToDelete = editingRoutine.exercises[exerciseIndex]
+    
+    // Remove from exercises array
+    const updatedExercises = editingRoutine.exercises.filter((_, idx) => idx !== exerciseIndex)
+    
+    // Update editing routine
+    setEditingRoutine({
+      ...editingRoutine,
+      exercises: updatedExercises
+    })
+    
+    // Remove from exerciseSetsData
+    if (exerciseToDelete) {
+      setExerciseSetsData(prev => {
+        const updated = { ...prev }
+        delete updated[exerciseToDelete.exerciseId]
+        return updated
+      })
+    }
+    
+    console.log(`🗑️ Deleted exercise at index ${exerciseIndex}`)
+  }
+
+  // Confirm add exercise with per-set data
+  const confirmAddExerciseWithSets = () => {
+    if (!pendingExercise || !editingRoutine) return
+
+    const { exercise } = pendingExercise
+    const totalSets = perSetInputs.sets.length
+    const firstSet = perSetInputs.sets[0]
+    
+    // Store sets data for this exercise
+    setExerciseSetsData(prev => ({
+      ...prev,
+      [exercise.id]: perSetInputs.sets
+    }))
+    
+    // For display purposes, add to editing routine
+    const exerciseForRoutine = {
+      exerciseId: exercise.id.toString(),
+      sets: totalSets,
+      reps: firstSet?.reps || '10',
+      rest_seconds: 90
+    }
+
+    const updatedRoutine = {
+      ...editingRoutine,
+      exercises: [...editingRoutine.exercises, exerciseForRoutine]
+    }
+
+    setEditingRoutine(updatedRoutine)
+    
+    // Reset states
+    setPerSetInputs({
+      numSets: 3,
+      sets: [
+        { set_index: 1, reps: '10', load_kg: null, unit: 'kg' },
+        { set_index: 2, reps: '10', load_kg: null, unit: 'kg' },
+        { set_index: 3, reps: '10', load_kg: null, unit: 'kg' }
+      ]
+    })
+    
+    // Close dialogs
+    setIsExerciseSelectorOpen(false)
   }
 
   return (
@@ -184,7 +499,7 @@ export function RoutinesTab() {
       {/* Folders and Templates Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <RoutinesFoldersList
-          folders={routineFolders}
+          folders={loadedRoutinesData.length > 0 ? loadedRoutinesData : routineFolders}
           selectedFolderId={selectedFolderId}
           onFolderSelect={(folderId) => setSelectedFolderId(folderId)}
           foldersTitle="Carpetas"
@@ -194,12 +509,12 @@ export function RoutinesTab() {
         <RoutinesTemplatesList
           currentFolder={currentFolder}
           templates={currentFolder?.templates || []}
-          allFolders={routineFolders}
+          allFolders={loadedRoutinesData.length > 0 ? loadedRoutinesData : routineFolders}
           searchTerm={routineSearch}
           onSearchChange={setRoutineSearch}
           onEditRoutine={handleEditRoutine}
           onMoveTemplate={handleMoveTemplate}
-          onDeleteTemplate={handleDeleteTemplate}
+          onDeleteTemplate={handleDeleteTemplateWithRefresh}
           onExportToExcel={handleExportRoutineToExcel}
           onAssignToClient={handleAssignTemplateToClient}
           onSendToClient={async (templateId: string | number, clientId: string) => {
@@ -300,16 +615,16 @@ export function RoutinesTab() {
         }}
       />
 
-      {/* Exercise Selector Dialog */}
-      <ExerciseSelectorDialog
+      {/* Exercise Selector Dialog V2 - Per-set configuration */}
+      <ExerciseSelectorDialogV2
         open={isExerciseSelectorOpen}
         onOpenChange={setIsExerciseSelectorOpen}
         exerciseSearch={exerciseSearch}
         pendingExercise={pendingExercise}
-        exerciseInputs={exerciseInputs}
-        onExerciseInputsChange={setExerciseInputs}
+        exerciseInputs={perSetInputs}
+        onExerciseInputsChange={setPerSetInputs}
         onSelectExercise={handleSelectExercise}
-        onConfirmAdd={confirmAddExercise}
+        onConfirmAdd={confirmAddExerciseWithSets}
         onCancelAdd={cancelAddExercise}
         onClearPendingExercise={clearPendingExercise}
         translations={{
@@ -321,29 +636,42 @@ export function RoutinesTab() {
           filterByEquipment: "Filtrar por equipo",
           allEquipments: "Todos los equipos",
           configureExercise: "Configurar Ejercicio",
+          numberOfSets: "Número de Series",
           sets: t("routines.forms.sets"),
           repetitions: t("routines.forms.repetitions"),
-          rest: t("routines.forms.rest"),
+          load: "Carga",
+          unit: "Unidad",
+          notes: "Notas (opcional)",
           confirmAdd: t("routines.actions.confirmAdd"),
           cancel: "Cancelar",
           close: t("routines.actions.close"),
           loadingMore: "Cargando más ejercicios...",
           noResults: "No se encontraron ejercicios",
           scrollForMore: "Haz scroll para cargar más ejercicios",
+          addSet: "Añadir Serie",
+          removeSet: "Eliminar",
+          clickToChange: "Click para cambiar ejercicio"
         }}
       />
 
-      {/* Routine Editor Dialog */}
+      {/* Routine Editor Dialog V2 - With per-set editing */}
       <RoutineEditorDialog
         open={isRoutineEditorOpen}
         onOpenChange={setIsRoutineEditorOpen}
         routine={editingRoutine}
         onRoutineChange={setEditingRoutine}
         onAddExercise={handleAddExerciseToRoutine}
-        onDeleteExercise={handleDeleteExercise}
+        onDeleteExercise={deleteExerciseFromRoutine}
         onSaveRoutine={saveRoutine}
         isSaving={isSaving}
         exercises={exerciseSearch.exercises}
+        exerciseV2Data={exerciseSetsData}
+        onUpdateExerciseSets={(exerciseId, sets) => {
+          setExerciseSetsData(prev => ({
+            ...prev,
+            [exerciseId]: sets
+          }))
+        }}
         translations={{
           title: t("routines.dialogs.editRoutine.title"),
           description: t("routines.dialogs.editRoutine.description"),
@@ -357,6 +685,11 @@ export function RoutinesTab() {
           clickToStart: t("routines.blocks.clickToStart"),
           sets: t("routines.forms.sets"),
           reps: t("routines.forms.reps"),
+          load: "Carga",
+          unit: "Unidad",
+          notes: "Notas (opcional)",
+          addSet: "Añadir Serie",
+          delete: "Eliminar",
           restShort: t("routines.forms.restShort"),
           cancel: t("routines.actions.cancel"),
           saveRoutine: t("routines.actions.saveRoutine"),
