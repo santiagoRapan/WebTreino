@@ -4,7 +4,6 @@ import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChevronDown, ChevronUp, Trash2, Plus, GripVertical, Activity } from "lucide-react"
 import type { Exercise, SetInputV2 } from "@/features/routines/types"
@@ -139,96 +138,84 @@ export function EditableExerciseCard({
 
         {/* Expanded Sets Editor */}
         {isExpanded && (
-          <div className="mt-4 space-y-3 border-t pt-4">
-            {localSets.map((set, setIdx) => (
-              <Card key={setIdx} className="bg-muted/30">
-                <CardContent className="p-3">
-                  <div className="flex items-start justify-between mb-3">
-                    <span className="font-medium text-sm">Serie {set.set_index}</span>
-                    {localSets.length > 1 && (
+          <div className="mt-4 border-t pt-4">
+            {/* Column headers */}
+            <div className="grid grid-cols-[50px_80px_100px_100px_40px] gap-2 mb-2 px-2 text-xs font-medium text-muted-foreground">
+              <div>Serie</div>
+              <div>{translations.reps}</div>
+              <div>{translations.load}</div>
+              <div>{translations.unit}</div>
+              <div></div>
+            </div>
+
+            {/* Set rows */}
+            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+              {localSets.map((set, setIdx) => (
+                <div 
+                  key={setIdx} 
+                  className="grid grid-cols-[50px_80px_100px_100px_40px] gap-2 p-2 rounded-md bg-muted/30 hover:bg-muted/40 transition-colors border border-border/40 group"
+                >
+                  <div className="flex items-center justify-center text-sm font-medium">
+                    {set.set_index}
+                  </div>
+
+                  {/* Reps */}
+                  <Input
+                    type="text"
+                    placeholder="10"
+                    value={set.reps || ''}
+                    onChange={(e) => handleSetChange(setIdx, 'reps', e.target.value)}
+                    className="h-9 bg-background/60 border-border"
+                  />
+
+                  {/* Load */}
+                  <Input
+                    type="number"
+                    step="0.5"
+                    placeholder="0"
+                    value={set.load_kg || ''}
+                    onChange={(e) => handleSetChange(setIdx, 'load_kg', e.target.value ? parseFloat(e.target.value) : null)}
+                    className="h-9 bg-background/60 border-border"
+                  />
+
+                  {/* Unit */}
+                  <Select
+                    value={set.unit || 'kg'}
+                    onValueChange={(value) => handleSetChange(setIdx, 'unit', value)}
+                  >
+                    <SelectTrigger className="h-9 bg-background/60 border-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="kg">kg</SelectItem>
+                      <SelectItem value="lb">lb</SelectItem>
+                      <SelectItem value="bw">BW</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* Delete button */}
+                  {localSets.length > 1 && (
+                    <div className="flex items-center justify-center">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveSet(setIdx)}
-                        className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    {/* Reps */}
-                    <div>
-                      <Label htmlFor={`reps-${index}-${setIdx}`} className="text-xs">
-                        {translations.reps}
-                      </Label>
-                      <Input
-                        id={`reps-${index}-${setIdx}`}
-                        type="text"
-                        placeholder="10"
-                        value={set.reps || ''}
-                        onChange={(e) => handleSetChange(setIdx, 'reps', e.target.value)}
-                        className="h-8 text-sm"
-                      />
                     </div>
-
-                    {/* Load */}
-                    <div>
-                      <Label htmlFor={`load-${index}-${setIdx}`} className="text-xs">
-                        {translations.load}
-                      </Label>
-                      <Input
-                        id={`load-${index}-${setIdx}`}
-                        type="number"
-                        step="0.5"
-                        placeholder="0"
-                        value={set.load_kg || ''}
-                        onChange={(e) => handleSetChange(setIdx, 'load_kg', e.target.value ? parseFloat(e.target.value) : null)}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-
-                    {/* Unit */}
-                    <div>
-                      <Label htmlFor={`unit-${index}-${setIdx}`} className="text-xs">
-                        {translations.unit}
-                      </Label>
-                      <Select
-                        value={set.unit || 'kg'}
-                        onValueChange={(value) => handleSetChange(setIdx, 'unit', value)}
-                      >
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="kg">kg</SelectItem>
-                          <SelectItem value="lb">lb</SelectItem>
-                          <SelectItem value="bw">BW</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Notes */}
-                  <div className="mt-2">
-                    <Input
-                      placeholder={translations.notes}
-                      value={set.notes || ''}
-                      onChange={(e) => handleSetChange(setIdx, 'notes', e.target.value)}
-                      className="h-7 text-xs"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  )}
+                </div>
+              ))}
+            </div>
 
             {/* Add Set Button */}
             <Button
               variant="outline"
               size="sm"
               onClick={handleAddSet}
-              className="w-full"
+              className="w-full mt-3"
             >
               <Plus className="h-4 w-4 mr-2" />
               {translations.addSet}

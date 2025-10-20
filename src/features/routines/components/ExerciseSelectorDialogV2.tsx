@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -21,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Activity, Trash2, Plus } from "lucide-react"
+import { Search, Activity, Trash2, Plus, X } from "lucide-react"
 import { useInfiniteScroll } from "../hooks/useInfiniteScroll"
 import type { Exercise, PendingExercise, SetInputV2 } from "@/features/routines/types"
 
@@ -96,6 +97,10 @@ export function ExerciseSelectorDialogV2({
   onClearPendingExercise,
   translations,
 }: ExerciseSelectorDialogV2Props) {
+  const [identicalSets, setIdenticalSets] = useState(true)
+  const [showRestTime, setShowRestTime] = useState(false)
+  const [showRIR, setShowRIR] = useState(false)
+
   const { containerRef, handleScroll } = useInfiniteScroll({
     hasMore: exerciseSearch.hasMore,
     loading: exerciseSearch.loading,
@@ -107,21 +112,35 @@ export function ExerciseSelectorDialogV2({
     const currentSets = exerciseInputs.sets
     let newSets: SetInputV2[]
 
-    if (num > currentSets.length) {
-      // Add new sets
-      const lastSet = currentSets[currentSets.length - 1]
-      newSets = [
-        ...currentSets,
-        ...Array.from({ length: num - currentSets.length }, (_, i) => ({
-          set_index: currentSets.length + i + 1,
-          reps: lastSet?.reps || '10',
-          load_kg: lastSet?.load_kg || null,
-          unit: lastSet?.unit || 'kg'
-        }))
-      ]
+    if (identicalSets) {
+      // For identical sets, create all sets with same values
+      const templateSet = currentSets[0] || {
+        set_index: 1,
+        reps: '10',
+        load_kg: null,
+        unit: 'kg'
+      }
+      newSets = Array.from({ length: num }, (_, i) => ({
+        ...templateSet,
+        set_index: i + 1,
+      }))
     } else {
-      // Remove sets
-      newSets = currentSets.slice(0, num)
+      if (num > currentSets.length) {
+        // Add new sets
+        const lastSet = currentSets[currentSets.length - 1]
+        newSets = [
+          ...currentSets,
+          ...Array.from({ length: num - currentSets.length }, (_, i) => ({
+            set_index: currentSets.length + i + 1,
+            reps: lastSet?.reps || '10',
+            load_kg: lastSet?.load_kg || null,
+            unit: lastSet?.unit || 'kg'
+          }))
+        ]
+      } else {
+        // Remove sets
+        newSets = currentSets.slice(0, num)
+      }
     }
 
     onExerciseInputsChange({
@@ -130,12 +149,40 @@ export function ExerciseSelectorDialogV2({
     })
   }
 
+  // Handle identical sets toggle
+  const handleIdenticalSetsToggle = (checked: boolean) => {
+    setIdenticalSets(checked)
+    
+    if (checked && exerciseInputs.sets.length > 0) {
+      // Copy first set to all sets
+      const firstSet = exerciseInputs.sets[0]
+      const newSets = exerciseInputs.sets.map((_, i) => ({
+        ...firstSet,
+        set_index: i + 1,
+      }))
+      onExerciseInputsChange({
+        ...exerciseInputs,
+        sets: newSets
+      })
+    }
+  }
+
   const handleSetChange = (index: number, field: keyof SetInputV2, value: any) => {
     const newSets = [...exerciseInputs.sets]
-    newSets[index] = {
-      ...newSets[index],
-      [field]: value
+    
+    if (identicalSets) {
+      // Update all sets with the same value
+      newSets.forEach((set) => {
+        set[field] = value as never
+      })
+    } else {
+      // Update only the specific set
+      newSets[index] = {
+        ...newSets[index],
+        [field]: value
+      }
     }
+    
     onExerciseInputsChange({
       ...exerciseInputs,
       sets: newSets
@@ -342,14 +389,16 @@ export function ExerciseSelectorDialogV2({
                 </CardContent>
               </Card>
 
-              {/* Exercise Configuration Form - V2 with per-set config */}
+              {/* Exercise Configuration Form - Compact V2 with rows */}
               <div className="border-t pt-4">
-                <h4 className="font-medium mb-3">{translations.configureExercise}</h4>
+                <h4 className="font-medium mb-4">{translations.configureExercise}</h4>
                 
-                {/* Number of sets selector */}
-                <div className="mb-4">
-                  <Label htmlFor="numSets">{translations.numberOfSets}</Label>
-                  <div className="flex items-center gap-2 mt-2">
+                {/* Number of sets selector + Identical sets switch */}
+                <div className="flex items-center justify-between gap-4 mb-4 p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Label htmlFor="numSets" className="text-sm font-medium whitespace-nowrap">
+                      {translations.numberOfSets}
+                    </Label>
                     <Input
                       id="numSets"
                       type="number"
@@ -357,110 +406,256 @@ export function ExerciseSelectorDialogV2({
                       max="20"
                       value={exerciseInputs.numSets}
                       onChange={(e) => handleNumSetsChange(parseInt(e.target.value) || 1)}
-                      className="w-24"
+                      className="w-20 h-9"
                     />
-                    <span className="text-sm text-muted-foreground">
-                      {exerciseInputs.numSets} {exerciseInputs.numSets === 1 ? 'serie' : 'series'}
-                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="identical-sets" className="text-sm cursor-pointer">
+                      Series idénticas
+                    </Label>
+                    <Switch
+                      id="identical-sets"
+                      checked={identicalSets}
+                      onCheckedChange={handleIdenticalSetsToggle}
+                    />
                   </div>
                 </div>
 
-                {/* Individual set configurations */}
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                  {exerciseInputs.sets.map((set, index) => (
-                    <Card key={index} className="bg-muted/20">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <span className="font-medium text-sm">Serie {set.set_index}</span>
-                          {exerciseInputs.sets.length > 1 && (
+                {/* Column headers */}
+                <div className={`grid gap-2 mb-2 px-2 text-xs font-medium text-muted-foreground ${
+                  showRestTime && showRIR 
+                    ? 'grid-cols-[50px_70px_90px_90px_90px_70px]'
+                    : showRestTime
+                    ? 'grid-cols-[50px_70px_90px_90px_90px]'
+                    : showRIR
+                    ? 'grid-cols-[50px_70px_90px_90px_70px]'
+                    : 'grid-cols-[50px_70px_90px_90px]'
+                }`}>
+                  <div>Serie</div>
+                  <div>{translations.repetitions}</div>
+                  <div>{translations.load}</div>
+                  <div>{translations.unit}</div>
+                  {showRestTime && <div>Descanso</div>}
+                  {showRIR && <div>RIR</div>}
+                </div>
+
+                {/* Set rows */}
+                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                  {identicalSets ? (
+                    // Single row for identical sets
+                    <div className={`grid gap-2 p-2 rounded-md bg-muted/30 hover:bg-muted/40 transition-colors border border-border/40 ${
+                      showRestTime && showRIR 
+                        ? 'grid-cols-[50px_70px_90px_90px_90px_70px]'
+                        : showRestTime
+                        ? 'grid-cols-[50px_70px_90px_90px_90px]'
+                        : showRIR
+                        ? 'grid-cols-[50px_70px_90px_90px_70px]'
+                        : 'grid-cols-[50px_70px_90px_90px]'
+                    }`}>
+                      <div className="flex items-center justify-center text-sm font-medium">
+                        1-{exerciseInputs.numSets}
+                      </div>
+                      
+                      <Input
+                        type="text"
+                        placeholder="10"
+                        value={exerciseInputs.sets[0]?.reps || ''}
+                        onChange={(e) => handleSetChange(0, 'reps', e.target.value)}
+                        className="h-9 bg-background/60 border-border"
+                      />
+                      
+                      <Input
+                        type="number"
+                        step="0.5"
+                        placeholder="0"
+                        value={exerciseInputs.sets[0]?.load_kg || ''}
+                        onChange={(e) => handleSetChange(0, 'load_kg', e.target.value ? parseFloat(e.target.value) : null)}
+                        className="h-9 bg-background/60 border-border"
+                      />
+                      
+                      <Select
+                        value={exerciseInputs.sets[0]?.unit || 'kg'}
+                        onValueChange={(value) => handleSetChange(0, 'unit', value)}
+                      >
+                        <SelectTrigger className="h-9 bg-background/60 border-border">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="kg">kg</SelectItem>
+                          <SelectItem value="lb">lb</SelectItem>
+                          <SelectItem value="bw">BW</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      {showRestTime && (
+                        <Input
+                          type="number"
+                          placeholder="60"
+                          value={exerciseInputs.sets[0]?.rest_seconds || ''}
+                          onChange={(e) => handleSetChange(0, 'rest_seconds', e.target.value ? parseInt(e.target.value) : null)}
+                          className="h-9 bg-background/60 border-border"
+                        />
+                      )}
+
+                      {showRIR && (
+                        <Input
+                          type="number"
+                          placeholder="2"
+                          min="0"
+                          max="10"
+                          value={exerciseInputs.sets[0]?.rir || ''}
+                          onChange={(e) => handleSetChange(0, 'rir', e.target.value ? parseInt(e.target.value) : null)}
+                          className="h-9 bg-background/60 border-border"
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    // Individual rows for each set
+                    exerciseInputs.sets.map((set, index) => (
+                      <div key={index} className={`grid gap-2 p-2 rounded-md bg-muted/30 hover:bg-muted/40 transition-colors border border-border/40 group ${
+                        showRestTime && showRIR 
+                          ? 'grid-cols-[50px_70px_90px_90px_90px_70px_40px]'
+                          : showRestTime
+                          ? 'grid-cols-[50px_70px_90px_90px_90px_40px]'
+                          : showRIR
+                          ? 'grid-cols-[50px_70px_90px_90px_70px_40px]'
+                          : 'grid-cols-[50px_70px_90px_90px_40px]'
+                      }`}>
+                        <div className="flex items-center justify-center text-sm font-medium">
+                          {set.set_index}
+                        </div>
+                        
+                        <Input
+                          type="text"
+                          placeholder="10"
+                          value={set.reps}
+                          onChange={(e) => handleSetChange(index, 'reps', e.target.value)}
+                          className="h-9 bg-background/60 border-border"
+                        />
+                        
+                        <Input
+                          type="number"
+                          step="0.5"
+                          placeholder="0"
+                          value={set.load_kg || ''}
+                          onChange={(e) => handleSetChange(index, 'load_kg', e.target.value ? parseFloat(e.target.value) : null)}
+                          className="h-9 bg-background/60 border-border"
+                        />
+                        
+                        <Select
+                          value={set.unit || 'kg'}
+                          onValueChange={(value) => handleSetChange(index, 'unit', value)}
+                        >
+                          <SelectTrigger className="h-9 bg-background/60 border-border">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="kg">kg</SelectItem>
+                            <SelectItem value="lb">lb</SelectItem>
+                            <SelectItem value="bw">BW</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        {showRestTime && (
+                          <Input
+                            type="number"
+                            placeholder="60"
+                            value={set.rest_seconds || ''}
+                            onChange={(e) => handleSetChange(index, 'rest_seconds', e.target.value ? parseInt(e.target.value) : null)}
+                            className="h-9 bg-background/60 border-border"
+                          />
+                        )}
+
+                        {showRIR && (
+                          <Input
+                            type="number"
+                            placeholder="2"
+                            min="0"
+                            max="10"
+                            value={set.rir || ''}
+                            onChange={(e) => handleSetChange(index, 'rir', e.target.value ? parseInt(e.target.value) : null)}
+                            className="h-9 bg-background/60 border-border"
+                          />
+                        )}
+
+                        {exerciseInputs.sets.length > 1 && (
+                          <div className="flex items-center justify-center">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => removeSet(index)}
-                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                          )}
-                        </div>
-                        
-                        <div className="grid grid-cols-3 gap-3">
-                          {/* Reps */}
-                          <div>
-                            <Label htmlFor={`reps-${index}`} className="text-xs">
-                              {translations.repetitions}
-                            </Label>
-                            <Input
-                              id={`reps-${index}`}
-                              type="text"
-                              placeholder="10"
-                              value={set.reps}
-                              onChange={(e) => handleSetChange(index, 'reps', e.target.value)}
-                              className="h-9"
-                            />
                           </div>
-
-                          {/* Load */}
-                          <div>
-                            <Label htmlFor={`load-${index}`} className="text-xs">
-                              {translations.load}
-                            </Label>
-                            <Input
-                              id={`load-${index}`}
-                              type="number"
-                              step="0.5"
-                              placeholder="0"
-                              value={set.load_kg || ''}
-                              onChange={(e) => handleSetChange(index, 'load_kg', e.target.value ? parseFloat(e.target.value) : null)}
-                              className="h-9"
-                            />
-                          </div>
-
-                          {/* Unit */}
-                          <div>
-                            <Label htmlFor={`unit-${index}`} className="text-xs">
-                              {translations.unit}
-                            </Label>
-                            <Select
-                              value={set.unit || 'kg'}
-                              onValueChange={(value) => handleSetChange(index, 'unit', value)}
-                            >
-                              <SelectTrigger className="h-9">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="kg">kg</SelectItem>
-                                <SelectItem value="lb">lb</SelectItem>
-                                <SelectItem value="bw">Peso corporal</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-
-                        {/* Notes (optional) */}
-                        <div className="mt-3">
-                          <Input
-                            placeholder={translations.notes}
-                            value={set.notes || ''}
-                            onChange={(e) => handleSetChange(index, 'notes', e.target.value)}
-                            className="h-8 text-xs"
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
 
-                {/* Add set button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={addSet}
-                  className="w-full mt-3"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {translations.addSet}
-                </Button>
+                {/* Add optional fields buttons */}
+                <div className="flex gap-2 mt-3">
+                  {!showRestTime && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowRestTime(true)}
+                      className="h-8 text-xs"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Descanso
+                    </Button>
+                  )}
+                  {!showRIR && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowRIR(true)}
+                      className="h-8 text-xs"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      RIR
+                    </Button>
+                  )}
+                  {showRestTime && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowRestTime(false)}
+                      className="h-8 text-xs text-muted-foreground"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Quitar descanso
+                    </Button>
+                  )}
+                  {showRIR && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowRIR(false)}
+                      className="h-8 text-xs text-muted-foreground"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Quitar RIR
+                    </Button>
+                  )}
+                </div>
+
+                {/* Add set button - only visible when individual sets mode */}
+                {!identicalSets && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addSet}
+                    className="w-full mt-3"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    {translations.addSet}
+                  </Button>
+                )}
 
                 {/* Action buttons */}
                 <div className="flex gap-2 mt-4">

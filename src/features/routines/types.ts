@@ -266,6 +266,8 @@ export interface SetInputV2 {
   load_kg?: number | null
   unit?: string
   notes?: string
+  rest_seconds?: number | null
+  rir?: number | null
 }
 
 /**
