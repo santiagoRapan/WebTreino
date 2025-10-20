@@ -135,7 +135,7 @@ export function ChatTab() {
   return (
     <div className="h-full flex overflow-hidden">
       {/* Conversation List Sidebar - Hidden on mobile when showing messages */}
-      <div className={`${showMobileMessages ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96`}>
+      <div className={`${showMobileMessages ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 min-h-0`}>
         <ConversationList
           conversations={filteredConversations}
           activeConversationId={chatState.activeConversationId}
@@ -153,7 +153,7 @@ export function ChatTab() {
       </div>
 
       {/* Message View - Hidden on mobile when showing conversation list */}
-      <div className={`${showMobileMessages ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-card`}>
+      <div className={`${showMobileMessages ? 'flex' : 'hidden md:flex'} flex-1 min-h-0 flex-col bg-card`}>
         {activeConversation ? (
           <>
             {/* Conversation Header */}
