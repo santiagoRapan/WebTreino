@@ -1,6 +1,6 @@
 // Trainer feature types
 import type { LucideIcon } from "lucide-react"
-import type { RequestStatus, RequestActor } from '@/features/students'
+import type { RequestActor, RequestStatus } from "@/features/students"
 
 /**
  * Client status type (for UI purposes)
@@ -8,22 +8,30 @@ import type { RequestStatus, RequestActor } from '@/features/students'
 export type ClientStatus = "active" | "pending" | "inactive"
 
 /**
- * Client data structure matching database schema
+ * Client data structure matching database + UI requirements.
+ * - `id` is a stable identifier for UI lists (trainer_student.id or request id)
+ * - `userId` refers to the Supabase auth/users id for the student
  */
 export interface Client {
   id: string
-  name: string | null
+  userId: string
+  name: string
   email?: string
-  avatar_url?: string | null
-  role: 'alumno'
-  created_on?: string
-  // Relationship data
-  trainer_id?: string
-  joined_at?: string
-  request_status?: RequestStatus
-  requested_by?: RequestActor
-  // UI-specific fields
+  phone?: string
+  avatar?: string
   status: ClientStatus
+
+  // Relationship metadata
+  relationshipId?: string | null
+  joinDate?: string
+  createdAt?: string
+
+  // Request metadata (for pending connections)
+  requestId?: string | null
+  requestedBy?: RequestActor | null
+  requestStatus?: RequestStatus | null
+
+  // UI/analytics fields
   lastSession?: string
   nextSession?: string
   progress?: number
@@ -112,5 +120,5 @@ export type RecentClient = {
   status: ClientStatus
   lastSession: string
   progress: number
-  avatar: string
+  avatar?: string
 }

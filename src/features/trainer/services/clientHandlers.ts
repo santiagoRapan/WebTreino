@@ -4,8 +4,8 @@ import type { Client } from "../types"
 
 export interface ClientHandlers {
   handleEditClient: (client: Client) => void
-  handleDeleteClient: (clientId: number) => void
-  handleMarkAsActive: (clientId: number) => void
+  handleDeleteClient: (clientId: string) => void
+  handleMarkAsActive: (clientId: string) => void
   handleNewClient: () => void
   handleViewAllClients: () => void
   acceptLinkRequest: (client: Client) => Promise<void>
@@ -24,7 +24,7 @@ export function createClientHandlers(
       uiState.setIsEditDialogOpen(true)
     },
 
-    handleDeleteClient: (clientId: number) => {
+    handleDeleteClient: (clientId: string) => {
       const updatedClients = clientState.clients.filter((c: Client) => c.id !== clientId)
       clientState.setClients(updatedClients)
       
@@ -34,9 +34,9 @@ export function createClientHandlers(
       })
     },
 
-    handleMarkAsActive: (clientId: number) => {
+    handleMarkAsActive: (clientId: string) => {
       const updatedClients = clientState.clients.map((client: Client) =>
-        client.id === clientId ? { ...client, status: "Activo" as const } : client
+        client.id === clientId ? { ...client, status: "active" as const } : client
       )
       clientState.setClients(updatedClients)
       

@@ -49,7 +49,7 @@ export function EditClientDialog({
             </Label>
             <Input
               id="edit-name"
-              value={client.name}
+              value={client.name || ""}
               onChange={(e) => onClientUpdate({ ...client, name: e.target.value })}
               className="col-span-3"
             />
@@ -60,7 +60,7 @@ export function EditClientDialog({
             </Label>
             <Input
               id="edit-email"
-              value={client.email}
+              value={client.email || ""}
               onChange={(e) => onClientUpdate({ ...client, email: e.target.value })}
               className="col-span-3"
             />
@@ -71,7 +71,7 @@ export function EditClientDialog({
             </Label>
             <Input
               id="edit-phone"
-              value={client.phone}
+              value={client.phone || ""}
               onChange={(e) => onClientUpdate({ ...client, phone: e.target.value })}
               className="col-span-3"
             />
@@ -88,9 +88,9 @@ export function EditClientDialog({
                 <SelectValue placeholder="Seleccionar estado" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Activo">Activo</SelectItem>
-                <SelectItem value="Pendiente">Pendiente</SelectItem>
-                <SelectItem value="Inactivo">Inactivo</SelectItem>
+                <SelectItem value="active">Activo</SelectItem>
+                <SelectItem value="pending">Pendiente</SelectItem>
+                <SelectItem value="inactive">Inactivo</SelectItem>
               </SelectContent>
             </Select>
           </div>

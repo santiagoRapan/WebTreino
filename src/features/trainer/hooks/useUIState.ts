@@ -31,8 +31,8 @@ export interface UseUIStateReturn {
   setIsHistoryDialogOpen: Dispatch<SetStateAction<boolean>>
   
   // UI Interaction States
-  expandedClientIds: Set<number>
-  setExpandedClientIds: Dispatch<SetStateAction<Set<number>>>
+  expandedClientIds: Set<string>
+  setExpandedClientIds: Dispatch<SetStateAction<Set<string>>>
   showArchived: boolean
   setShowArchived: Dispatch<SetStateAction<boolean>>
   // emoji picker removed (chat)
@@ -57,7 +57,7 @@ export function useUIState(): UseUIStateReturn {
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState<boolean>(false)
 
   // UI Interaction States
-  const [expandedClientIds, setExpandedClientIds] = useState<Set<number>>(new Set())
+  const [expandedClientIds, setExpandedClientIds] = useState<Set<string>>(new Set())
   const [showArchived, setShowArchived] = useState<boolean>(false)
   // emoji picker state removed
 

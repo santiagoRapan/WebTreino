@@ -9,7 +9,7 @@ import type { UseStudentsReturn } from '../types'
 import DataCacheManager from "@/lib/cache/dataCache"
 
 export function useStudents(): UseStudentsReturn {
-  const { authUser, customUser } = useAuth()
+  const { authUser } = useAuth()
   const [students, setStudents] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -58,7 +58,7 @@ export function useStudents(): UseStudentsReturn {
       // 1) Fetch roster (trainer_student)
       const { data: rosterRows, error: rosterError } = await supabase
         .from('trainer_student')
-        .select('student_id, joined_at')
+        .select('id, student_id, joined_at')
         .eq('trainer_id', trainerId)
 
       if (rosterError) {
@@ -78,23 +78,41 @@ export function useStudents(): UseStudentsReturn {
         return
       }
 
-      const rosterClients: Client[] = (rosterProfiles || []).map((profile: any, idx: number) => ({
-        id: idx + 1,
-        userId: profile.id,
-        name: profile.name || 'Alumno',
-        email: '',
-        phone: '',
-        status: "active" as const,
-        joinDate: new Date(profile.created_on || new Date()).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
-        lastSession: "N/A",
-        nextSession: "N/A",
-        progress: 0,
-        goal: "Sin definir",
-  avatar: profile.avatar_url || "/images/placeholder-user.jpg",
-        sessionsCompleted: 0,
-        totalSessions: 0,
-        plan: "Básico",
-      }))
+      const formatDate = (iso?: string | null) =>
+        iso
+          ? new Date(iso).toLocaleDateString('es-ES', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            })
+          : ''
+
+      const rosterProfileMap = new Map<string, any>(
+        (rosterProfiles || []).map((profile: any) => [profile.id, profile])
+      )
+
+      const rosterClients: Client[] = (rosterRows || []).map((row: any) => {
+        const profile = rosterProfileMap.get(row.student_id) || {}
+        return {
+          id: String(row.id || row.student_id),
+          userId: String(row.student_id),
+          relationshipId: row.id ? String(row.id) : null,
+          name: profile.name || 'Alumno',
+          email: '',
+          phone: '',
+          status: "active" as const,
+          joinDate: formatDate(row.joined_at || profile.created_on),
+          createdAt: profile.created_on || undefined,
+          lastSession: "N/A",
+          nextSession: "N/A",
+          progress: 0,
+          goal: "Sin definir",
+          avatar: profile.avatar_url || "/images/placeholder-user.jpg",
+          sessionsCompleted: 0,
+          totalSessions: 0,
+          plan: "Básico",
+        }
+      })
 
       // 2) Fetch pending requests involving this trainer
       const { data: pendingRows, error: pendingError } = await supabase
@@ -120,22 +138,25 @@ export function useStudents(): UseStudentsReturn {
         return
       }
 
-      const profileMap = new Map<string, any>(
+      const pendingProfileMap = new Map<string, any>(
         (pendingProfiles || []).map((p: any) => [p.id, p])
       )
 
-      const pendingClients: Client[] = (pendingRows || []).map((row: any, idx: number) => {
-        const profile = profileMap.get(row.student_id) || {}
+      const pendingClients: Client[] = (pendingRows || []).map((row: any) => {
+        const profile = pendingProfileMap.get(row.student_id) || {}
         return {
-          id: rosterClients.length + idx + 1,
-          userId: row.student_id,
+          id: String(row.id),
+          userId: String(row.student_id),
+          relationshipId: null,
           requestId: row.id,
-          requestedBy: row.requested_by,
+          requestedBy: row.requested_by ?? null,
+          requestStatus: row.status ?? null,
           name: profile.name || 'Solicitud pendiente',
           email: '',
           phone: '',
           status: "pending" as const,
-          joinDate: new Date(row.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
+          joinDate: formatDate(row.created_at),
+          createdAt: row.created_at || undefined,
           lastSession: "N/A",
           nextSession: "N/A",
           progress: 0,

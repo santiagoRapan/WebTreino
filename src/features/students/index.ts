@@ -8,6 +8,8 @@ export { useStudentHistory } from './hooks/useStudentHistory'
 export type { 
   WorkoutSession, 
   WorkoutSetLog, 
+  RequestStatus,
+  RequestActor,
   UseStudentsReturn, 
   UseStudentHistoryReturn 
 } from './types'

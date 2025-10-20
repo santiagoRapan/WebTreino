@@ -10,9 +10,9 @@ import { useTranslation } from "@/lib/i18n/LanguageProvider"
 
 interface ClientTableProps {
   clients: Client[]
-  onChatWithClient?: (clientName: string) => void
+  onChatWithClient?: (clientName: string, client: Client) => void
   onEditClient: (client: Client) => void
-  onDeleteClient: (clientId: number) => void
+  onDeleteClient: (clientId: string) => void
   onAcceptRequest?: (client: Client) => void
   onRejectRequest?: (client: Client) => void
   onCancelRequest?: (client: Client) => void
@@ -46,118 +46,131 @@ export function ClientTable({
           </tr>
         </thead>
         <tbody>
-          {clients.map((client) => (
-            <tr key={client.id} className="border-b border-border hover:bg-muted/30 transition-colors items-center">
-              <td className="px-3 py-2 font-medium flex items-center gap-2">
-                <Avatar className="w-14 h-14">
-                  <AvatarImage src={client.avatar || "/images/placeholder.svg"} />
-                  <AvatarFallback>
-                    {client.name.split(" ").map((n) => n[0]).join("")}
-                  </AvatarFallback>
-                </Avatar>
-                {client.name}
-              </td>
-              <td className="px-3 py-2">{client.email}</td>
-              <td className="px-3 py-2">{client.phone}</td>
-              <td className="px-3 py-2">
-                <Badge
-                  variant={
-                    client.status === "active"
-                      ? "default"
-                      : client.status === "pending"
-                      ? "secondary"
-                      : "destructive"
-                  }
-                >
-                  {t(`dashboard.status.${client.status}`)}
-                </Badge>
-              </td>
-              <td className="px-3 py-2 text-left align-middle">{client.progress}%</td>
-              <td className="px-3 py-2">{client.nextSession}</td>
-              <td className="w-48 px-1 py-2">
-                <div className="flex items-center gap-2">
-                  {/* Accept/Decline buttons for pending students */}
-                  {client.status === "pending" && client.requestedBy === 'alumno' && onAcceptRequest && onRejectRequest && (
-                    <>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700 text-white px-3"
-                        onClick={() => onAcceptRequest(client)}
-                      >
-                        <Check className="w-4 h-4 mr-1" />
-                        {t("clients.actions.accept")}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-red-600 border-red-200 hover:bg-red-50 px-3"
-                        onClick={() => onRejectRequest(client)}
-                      >
-                        <X className="w-4 h-4 mr-1" />
-                        {t("clients.actions.decline")}
-                      </Button>
-                    </>
-                  )}
-                  
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="w-5 h-5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {client.status === "pending" ? (
+          {clients.map((client) => {
+            const displayName = client.name || "Alumno"
+            const avatarFallback = displayName
+              .split(" ")
+              .filter(Boolean)
+              .map((n) => n[0])
+              .join("")
+              .toUpperCase()
+              .slice(0, 2)
+            const phone = client.phone || "—"
+            const progress = typeof client.progress === "number" ? client.progress : 0
+
+            return (
+              <tr key={client.id} className="border-b border-border hover:bg-muted/30 transition-colors items-center">
+                <td className="px-3 py-2 font-medium flex items-center gap-2">
+                  <Avatar className="w-14 h-14">
+                    <AvatarImage src={client.avatar || "/images/placeholder.svg"} />
+                    <AvatarFallback>
+                      {avatarFallback || "A"}
+                    </AvatarFallback>
+                  </Avatar>
+                  {displayName}
+                </td>
+                <td className="px-3 py-2">{client.email || "—"}</td>
+                <td className="px-3 py-2">{phone}</td>
+                <td className="px-3 py-2">
+                  <Badge
+                    variant={
+                      client.status === "active"
+                        ? "default"
+                        : client.status === "pending"
+                        ? "secondary"
+                        : "destructive"
+                    }
+                  >
+                    {t(`dashboard.status.${client.status}`)}
+                  </Badge>
+                </td>
+                <td className="px-3 py-2 text-left align-middle">{progress}%</td>
+                <td className="px-3 py-2">{client.nextSession || "—"}</td>
+                <td className="w-48 px-1 py-2">
+                  <div className="flex items-center gap-2">
+                    {/* Accept/Decline buttons for pending students */}
+                    {client.status === "pending" && client.requestedBy === 'alumno' && onAcceptRequest && onRejectRequest && (
                       <>
-                        {/* Cancel only if requested_by = entrenador (trainer initiated) */}
-                        {onCancelRequest && client.requestedBy === 'entrenador' && (
-                          <DropdownMenuItem onClick={() => onCancelRequest(client)}>
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            {t("clients.actions.cancelRequest")}
-                          </DropdownMenuItem>
-                        )}
-                        {/* Show a placeholder if no actions are available */}
-                        {(!onCancelRequest || client.requestedBy !== 'entrenador') && (
-                          <DropdownMenuItem disabled>
-                            {t("clients.actions.noActionsAvailable")}
-                          </DropdownMenuItem>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        {onChatWithClient && (
-                          <DropdownMenuItem onClick={() => onChatWithClient(client.name)}>
-                            <MessageSquare className="w-4 h-4 mr-2" />
-                            {t("clients.actions.chat")}
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onClick={() => onEditClient(client)}>
-                          <Edit className="w-4 h-4 mr-2" />
-                          {t("clients.actions.edit")}
-                        </DropdownMenuItem>
-                        {onViewHistory && (
-                          <DropdownMenuItem onClick={() => onViewHistory(client)}>
-                            <History className="w-4 h-4 mr-2" />
-                            {t("clients.actions.viewHistory")}
-                          </DropdownMenuItem>
-                        )}
-                        {/* Agenda removed */}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => onDeleteClient(client.id)}
-                          className="text-destructive focus:text-destructive"
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white px-3"
+                          onClick={() => onAcceptRequest(client)}
                         >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          {t("clients.actions.delete")}
-                        </DropdownMenuItem>
+                          <Check className="w-4 h-4 mr-1" />
+                          {t("clients.actions.accept")}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 border-red-200 hover:bg-red-50 px-3"
+                          onClick={() => onRejectRequest(client)}
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          {t("clients.actions.decline")}
+                        </Button>
                       </>
                     )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                </div>
-              </td>
-            </tr>
-          ))}
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="w-5 h-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {client.status === "pending" ? (
+                          <>
+                            {/* Cancel only if requested_by = entrenador (trainer initiated) */}
+                            {onCancelRequest && client.requestedBy === 'entrenador' && (
+                              <DropdownMenuItem onClick={() => onCancelRequest(client)}>
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                {t("clients.actions.cancelRequest")}
+                              </DropdownMenuItem>
+                            )}
+                            {/* Show a placeholder if no actions are available */}
+                            {(!onCancelRequest || client.requestedBy !== 'entrenador') && (
+                              <DropdownMenuItem disabled>
+                                {t("clients.actions.noActionsAvailable")}
+                              </DropdownMenuItem>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {onChatWithClient && (
+                              <DropdownMenuItem onClick={() => onChatWithClient(displayName, client)}>
+                                <MessageSquare className="w-4 h-4 mr-2" />
+                                {t("clients.actions.chat")}
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={() => onEditClient(client)}>
+                              <Edit className="w-4 h-4 mr-2" />
+                              {t("clients.actions.edit")}
+                            </DropdownMenuItem>
+                            {onViewHistory && (
+                              <DropdownMenuItem onClick={() => onViewHistory(client)}>
+                                <History className="w-4 h-4 mr-2" />
+                                {t("clients.actions.viewHistory")}
+                              </DropdownMenuItem>
+                            )}
+                            {/* Agenda removed */}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => onDeleteClient(client.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              {t("clients.actions.delete")}
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </td>
+              </tr>
+            )
+          })}
           {clients.length === 0 && (
             <tr>
               <td colSpan={7} className="text-center py-8 text-muted-foreground">

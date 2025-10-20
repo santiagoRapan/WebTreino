@@ -21,7 +21,7 @@ export interface TrainerDashboardState {
   clientFilter: "all" | "active" | "pending"
   isEditDialogOpen: boolean
   editingClient: Client | null
-  expandedClientIds: Set<number>
+  expandedClientIds: Set<string>
   // chat removed
   isNewClientDialogOpen: boolean
   // History dialog
@@ -76,7 +76,7 @@ export interface TrainerDashboardActions {
   setClientFilter: Dispatch<SetStateAction<"all" | "active" | "pending">>
   setIsEditDialogOpen: Dispatch<SetStateAction<boolean>>
   setEditingClient: Dispatch<SetStateAction<Client | null>>
-  setExpandedClientIds: Dispatch<SetStateAction<Set<number>>>
+  setExpandedClientIds: Dispatch<SetStateAction<Set<string>>>
   // chat setters removed
   setIsNewClientDialogOpen: Dispatch<SetStateAction<boolean>>
   // History dialog setter
@@ -111,8 +111,8 @@ export interface TrainerDashboardActions {
   setHistorySessions: Dispatch<SetStateAction<any[]>>
   setHistoryLogs: Dispatch<SetStateAction<any[]>>
   handleEditClient: (client: Client) => void
-  handleDeleteClient: (clientId: number) => void
-  handleMarkAsActive: (clientId: number) => void
+  handleDeleteClient: (clientId: string) => void
+  handleMarkAsActive: (clientId: string) => void
   handleNewClient: () => void
   handleCreateRoutine: () => void
   // schedule handlers removed

@@ -45,11 +45,16 @@ export function useClientState(): UseClientStateReturn {
   }, [students, loadingClients])
 
   const getFilteredClients = (searchTerm: string, filter: "all" | "active" | "pending"): Client[] => {
-    const normalizeText = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    const normalizeText = (text?: string) =>
+      (text ?? "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
     const normalizedSearchTerm = normalizeText(searchTerm)
     
     return clients.filter((client) => {
-      const matchesSearch = normalizeText(client.name).includes(normalizedSearchTerm) ||
+      const matchesSearch =
+        normalizeText(client.name).includes(normalizedSearchTerm) ||
         normalizeText(client.email).includes(normalizedSearchTerm) ||
         normalizeText(client.goal).includes(normalizedSearchTerm)
 
