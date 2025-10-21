@@ -50,12 +50,7 @@ Main container component that orchestrates the entire chat interface.
 - Mobile: Toggles between conversation list and message view
 - Desktop: Shows both panels simultaneously
 
-**Usage:**
-```tsx
-import { ChatTab } from '@/features/chat'
 
-<ChatTab />
-```
 
 **Responsive Behavior:**
 - On mobile screens, only one panel is visible at a time
