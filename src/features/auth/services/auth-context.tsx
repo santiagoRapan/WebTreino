@@ -51,21 +51,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const loadInitialSession = useCallback(async () => {
     console.log('[AuthContext] 🚀 Loading initial session...');
     const s = await getCurrentSession();
+    console.log('[AuthContext] 📊 Session loaded:', { hasSession: !!s, hasUser: !!s?.user, userEmail: s?.user?.email });
     setSession(s);
     setAuthUser(s?.user ?? null);
     
-    // Ensure user has entrenador role if they have a session
+    // Only ensure user if we have a session - don't block on this
     if (s?.user) {
       console.log('[AuthContext] 👤 User found in session:', s.user.email);
-      try {
-        await ensureAppUser();
-        // After ensuring user, fetch the custom user data
-        const customUserData = await fetchCustomUser(s.user.id);
+      // Run ensureAppUser in background without awaiting
+      ensureAppUser().catch(e => {
+        console.error("[AuthContext] ❌ ensureAppUser error on load:", e);
+      });
+      
+      // Fetch custom user data in background
+      fetchCustomUser(s.user.id).then(customUserData => {
         console.log('[AuthContext] 📝 Setting custom user state:', customUserData);
         setCustomUser(customUserData);
-      } catch (e) {
-        console.error("[AuthContext] ❌ ensureAppUser error on load:", e);
-      }
+      }).catch(e => {
+        console.error("[AuthContext] ❌ fetchCustomUser error on load:", e);
+      });
     } else {
       console.log('[AuthContext] ⚠️ No user in initial session');
     }
@@ -95,8 +99,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     (async () => {
       try {
         await loadInitialSession();
-      } finally {
-        // We don't set loading=false yet; wait for the first auth event or small timeout
+        // Set loading to false immediately after initial session load
+        if (mounted) {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('[AuthContext] ❌ Error loading initial session:', error);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     })();
 
@@ -107,41 +118,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setSession(newSession ?? null);
       setAuthUser(newSession?.user ?? null);
 
-      // On first session we ensure the app user row exists (role='entrenador' if first time)
-      if (newSession?.user && !ensuredRef.current) {
-        console.log('[AuthContext] 🆕 First session detected, ensuring user...');
-        ensuredRef.current = true;
-        try {
-          await ensureAppUser();
-          // After ensuring user, fetch the custom user data
-          const customUserData = await fetchCustomUser(newSession.user.id);
-          console.log('[AuthContext] 📝 Setting custom user from first session:', customUserData);
-          setCustomUser(customUserData);
-        } catch (e) {
-          // non-fatal
-          console.error("[AuthContext] ❌ ensureAppUser error:", e);
+      // Handle custom user data fetching in background (non-blocking)
+      if (newSession?.user) {
+        // On first session we ensure the app user row exists (role='entrenador' if first time)
+        if (!ensuredRef.current) {
+          console.log('[AuthContext] 🆕 First session detected, ensuring user...');
+          ensuredRef.current = true;
+          // Run ensureAppUser in background without blocking
+          ensureAppUser().catch(e => {
+            console.error("[AuthContext] ❌ ensureAppUser error:", e);
+          });
         }
-      } else if (newSession?.user) {
-        console.log('[AuthContext] 🔄 Session exists, fetching custom user data...');
-        // If already ensured, still fetch custom user data
-        const customUserData = await fetchCustomUser(newSession.user.id);
-        console.log('[AuthContext] 📝 Setting custom user from existing session:', customUserData);
-        setCustomUser(customUserData);
+        
+        // Fetch custom user data in background
+        fetchCustomUser(newSession.user.id).then(customUserData => {
+          if (mounted) {
+            console.log('[AuthContext] 📝 Setting custom user:', customUserData);
+            setCustomUser(customUserData);
+          }
+        }).catch(e => {
+          console.error("[AuthContext] ❌ fetchCustomUser error:", e);
+        });
       } else {
         console.log('[AuthContext] 🚪 No session, clearing custom user');
-        // No user, clear custom user
         setCustomUser(null);
       }
 
-      setLoading(false);
+      // Don't set loading to false here - let the initial load handle it
     });
-
-    // Fallback: if no auth event arrives (e.g., already signed in), end loading
-    const t = setTimeout(() => setLoading(false), 400);
 
     return () => {
       mounted = false;
-      clearTimeout(t);
       subscription.unsubscribe();
     };
   }, [loadInitialSession, fetchCustomUser]);
@@ -224,7 +231,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     customUser,
     session,
     loading,
-    isAuthenticated: !!session, // session is the source of truth
+    isAuthenticated: !!session && !!authUser, // More strict check
     signInWithGoogle,
     signOut,
     refreshUserData,

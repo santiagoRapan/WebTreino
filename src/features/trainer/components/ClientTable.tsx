@@ -12,7 +12,7 @@ interface ClientTableProps {
   clients: Client[]
   onChatWithClient?: (clientName: string, client: Client) => void
   onEditClient: (client: Client) => void
-  onDeleteClient: (clientId: string) => void
+  onDeleteClient: (clientId: string) => Promise<void>
   onAcceptRequest?: (client: Client) => void
   onRejectRequest?: (client: Client) => void
   onCancelRequest?: (client: Client) => void
@@ -156,7 +156,13 @@ export function ClientTable({
                             {/* Agenda removed */}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() => onDeleteClient(client.id)}
+                              onClick={async () => {
+                                try {
+                                  await onDeleteClient(client.id)
+                                } catch (error) {
+                                  console.error('Error deleting client:', error)
+                                }
+                              }}
                               className="text-destructive focus:text-destructive"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />

@@ -18,9 +18,9 @@ export function useStudentHistory(): UseStudentHistoryReturn {
   const fetchHistory = useCallback(async (studentId: string) => {
     setLoadingHistory(true)
     try {
-      // Traer sesiones del alumno (sin requerir que la rutina sea del entrenador)
+      // Traer sesiones del alumno (sin requerir que la rutina sea del entrenador) - using V2 tables
       const { data: sessionsData, error: sessErr } = await supabase
-        .from('workout_session')
+        .from('workout_session_v2')
         .select('id, performer_id, routine_id, started_at, completed_at, notes, routines(id, name, owner_id)')
         .eq('performer_id', studentId)
         .order('started_at', { ascending: false })
@@ -42,8 +42,8 @@ export function useStudentHistory(): UseStudentHistoryReturn {
       if (sessions.length) {
         const sessionIds = sessions.map((s: WorkoutSession) => s.id)
         const { data: logsData, error: logsErr } = await supabase
-          .from('workout_set_log')
-          .select('id, session_id, exercise_id, set_index, reps, weight, rpe, duration_sec, rest_seconds, notes')
+          .from('workout_set_log_v2')
+          .select('id, session_id, exercise_id, set_index, reps, weight_kg, rpe, duration_sec, rest_seconds, notes, performed_at')
           .in('session_id', sessionIds)
 
         if (logsErr) throw logsErr
@@ -67,11 +67,12 @@ export function useStudentHistory(): UseStudentHistoryReturn {
           exercise_name: nameMap.get(l.exercise_id) || 'Ejercicio',
           set_index: l.set_index,
             reps: l.reps,
-            weight: l.weight,
+            weight: l.weight_kg, // Map weight_kg to weight for compatibility
             rpe: l.rpe,
             duration_sec: l.duration_sec,
             rest_seconds: l.rest_seconds,
             notes: l.notes,
+            performed_at: l.performed_at
         }))
       }
 

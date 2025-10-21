@@ -7,7 +7,7 @@ import { useTranslation } from "@/lib/i18n/LanguageProvider"
 import { useExerciseSearch } from "@/features/exercises"
 import { useAuth } from "@/features/auth/services/auth-context"
 import { supabase } from "@/services/database"
-import { useRoutineDatabase, createRoutine, updateRoutine, type CreateBlockExerciseV2Payload } from "@/features/routines"
+import { useRoutineDatabase, createRoutine, updateRoutine, type CreateBlockExerciseV2Payload, useRoutineAssignments, type RoutineTemplate } from "@/features/routines"
 import { RoutinesHeader } from "./RoutinesHeader"
 import { RoutinesFoldersList } from "./RoutinesFoldersList"
 import { RoutinesTemplatesList } from "./RoutinesTemplatesList"
@@ -25,6 +25,9 @@ export function RoutinesTab() {
   
   // Routine Database hook
   const routineDatabase = useRoutineDatabase()
+  
+  // Routine Assignments hook
+  const { assignRoutineToStudent } = useRoutineAssignments()
   
   // Optimized exercise search hook for exercise selector dialog
   const exerciseSearch = useExerciseSearch({ 
@@ -519,12 +522,52 @@ export function RoutinesTab() {
           onAssignToClient={handleAssignTemplateToClient}
           onSendToClient={async (templateId: string | number, clientId: string) => {
             try {
-              await assignRoutineToClient(templateId, clientId)
-              // Optimistically bump assignment count for this routine
-              setAssignedCounts(prev => ({
-                ...prev,
-                [String(templateId)]: (prev[String(templateId)] || 0) + 1
-              }))
+              // Find the routine template
+              const routine = routineDatabase.routines.find(r => r.id === templateId)
+              if (!routine) {
+                throw new Error('Routine not found')
+              }
+              
+              // Find the client
+              const client = allClients.find(c => c.id === clientId)
+              if (!client) {
+                throw new Error('Client not found')
+              }
+              
+              // Convert RoutineWithBlocksV2 to RoutineTemplate format
+              const routineTemplate: RoutineTemplate = {
+                id: routine.id,
+                name: routine.name,
+                description: routine.description,
+                exercises: routine.blocks.flatMap(block => 
+                  block.exercises?.map(exercise => ({
+                    exerciseId: exercise.exercise_id,
+                    sets: exercise.sets?.length || 0,
+                    reps: exercise.sets?.[0]?.reps || '',
+                    rest_seconds: 60, // default rest
+                    load_target: exercise.sets?.[0]?.load_kg?.toString() || '',
+                    tempo: '',
+                    notes: exercise.notes
+                  })) || []
+                )
+              }
+              
+              // Assign the routine using the proper function
+              // Use client.userId (the actual user ID) instead of client.id
+              const success = await assignRoutineToStudent(
+                routineTemplate,
+                client.userId, // Use the actual user ID, not the client ID
+                authUser?.id || '',
+                undefined // notes
+              )
+              
+              if (success) {
+                // Optimistically bump assignment count for this routine
+                setAssignedCounts(prev => ({
+                  ...prev,
+                  [String(templateId)]: (prev[String(templateId)] || 0) + 1
+                }))
+              }
             } catch (error) {
               // If assignment fails, we could revert the optimistic update here
               console.error('Error assigning routine:', error)

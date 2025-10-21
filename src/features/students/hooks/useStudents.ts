@@ -58,7 +58,7 @@ export function useStudents(): UseStudentsReturn {
       // 1) Fetch roster (trainer_student)
       const { data: rosterRows, error: rosterError } = await supabase
         .from('trainer_student')
-        .select('id, student_id, joined_at')
+        .select('id, trainer_id, student_id, joined_at')
         .eq('trainer_id', trainerId)
 
       if (rosterError) {
@@ -94,9 +94,9 @@ export function useStudents(): UseStudentsReturn {
       const rosterClients: Client[] = (rosterRows || []).map((row: any) => {
         const profile = rosterProfileMap.get(row.student_id) || {}
         return {
-          id: String(row.id || row.student_id),
+          id: String(row.id), // Use trainer_student.id as the primary identifier
           userId: String(row.student_id),
-          relationshipId: row.id ? String(row.id) : null,
+          relationshipId: String(row.id), // Store the trainer_student.id for reference
           name: profile.name || 'Alumno',
           email: '',
           phone: '',
@@ -197,7 +197,7 @@ export function useStudents(): UseStudentsReturn {
       // Verificar cambios en roster
       const { data: rosterRows, error: rosterError } = await supabase
         .from('trainer_student')
-        .select('student_id')
+        .select('id, student_id')
         .eq('trainer_id', trainerId)
 
       // Verificar cambios en requests pendientes
@@ -247,9 +247,9 @@ export function useStudents(): UseStudentsReturn {
     const trainerId = authUser?.id
     if (!trainerId) return { sessions: [], logs: [] }
 
-    // Sessions for this student where routine is owned by trainer
+    // Sessions for this student where routine is owned by trainer (using V2 tables)
     const { data: sessions, error: sessErr } = await supabase
-      .from('workout_session')
+      .from('workout_session_v2')
       .select('id, performer_id, routine_id, started_at, completed_at, notes, routines!inner(id, name, owner_id)')
       .eq('performer_id', studentId)
       .order('started_at', { ascending: false })
@@ -262,8 +262,8 @@ export function useStudents(): UseStudentsReturn {
     const sessionIds = (sessions || []).map((s: any) => s.id)
     const { data: logs, error: logsErr } = sessionIds.length > 0
       ? await supabase
-          .from('workout_set_log')
-          .select('id, session_id, exercise_id, set_index, reps, weight, rpe, duration_sec, rest_seconds, notes')
+          .from('workout_set_log_v2')
+          .select('id, session_id, exercise_id, set_index, reps, weight_kg, rpe, duration_sec, rest_seconds, notes, performed_at')
           .in('session_id', sessionIds)
       : { data: [], error: null as any }
 
@@ -301,94 +301,114 @@ export function useStudents(): UseStudentsReturn {
   useEffect(() => {
     if (!authUser) return
 
-    // console.log('🔔 Setting up real-time subscriptions for trainer:', authUser.id)
+    console.log('🔔 Setting up real-time subscriptions for trainer:', authUser.id)
 
-    // Subscribe to trainer_link_request changes
-    const requestsSubscription = supabase
-      .channel('trainer-link-requests', {
-        config: {
-          broadcast: { self: true },
-        },
-      })
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to INSERT, UPDATE, DELETE
-          schema: 'public',
-          table: 'trainer_link_request',
-          filter: `trainer_id=eq.${authUser.id}`,
-        },
-        (payload) => {
-          // console.log('🔔 Trainer link request change:', payload.eventType, payload)
-          // Provide user feedback for new requests
-          if (payload.eventType === 'INSERT') {
-            // console.log('📥 Nueva solicitud de entrenador recibida!')
-            toast({
-              title: "Nueva solicitud recibida",
-              description: "Un alumno ha solicitado conectar contigo. Revisa la pestaña de alumnos.",
-            })
-          } else if (payload.eventType === 'UPDATE') {
-            // console.log('📝 Estado de solicitud actualizado')
-          } else if (payload.eventType === 'DELETE') {
-            // console.log('🗑️ Solicitud eliminada')
-          }
-          // Refetch students data when requests change (debounced)
-          debouncedRefresh()
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Subscribed to trainer link requests')
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Error subscribing to trainer link requests')
-          // Attempt to resubscribe after a delay
-          setTimeout(() => {
-            console.log('🔄 Attempting to resubscribe to trainer link requests...')
-            requestsSubscription.subscribe()
-          }, 3000)
-        }
-      })
+    let requestsSubscription: any = null
+    let relationshipSubscription: any = null
+    let reconnectTimeout: NodeJS.Timeout | null = null
 
-    // Subscribe to trainer_student changes (when requests get accepted)
-    const relationshipSubscription = supabase
-      .channel('trainer-student-relationships', {
-        config: {
-          broadcast: { self: true },
-        },
-      })
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to INSERT, UPDATE, DELETE
-          schema: 'public',
-          table: 'trainer_student',
-          filter: `trainer_id=eq.${authUser.id}`,
-        },
-        (payload) => {
-          // console.log('🔔 Trainer-student relationship change:', payload.eventType, payload)
-          if (payload.eventType === 'INSERT') {
-            // console.log('🎉 Nuevo alumno añadido a la lista!')
-            toast({
-              title: "Alumno añadido",
-              description: "Se ha establecido una nueva conexión con un alumno.",
-            })
+    const setupSubscriptions = () => {
+      // Subscribe to trainer_link_request changes
+      requestsSubscription = supabase
+        .channel('trainer-link-requests', {
+          config: {
+            broadcast: { self: true },
+            presence: { key: authUser.id },
+          },
+        })
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'trainer_link_request',
+            filter: `trainer_id=eq.${authUser.id}`,
+          },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              toast({
+                title: "Nueva solicitud recibida",
+                description: "Un alumno ha solicitado conectar contigo. Revisa la pestaña de alumnos.",
+              })
+            }
+            debouncedRefresh()
           }
-          // Refetch students data when relationships change (debounced)
-          debouncedRefresh()
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Subscribed to trainer-student relationships')
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Error subscribing to trainer-student relationships')
-          // Attempt to resubscribe after a delay
-          setTimeout(() => {
-            console.log('🔄 Attempting to resubscribe to trainer-student relationships...')
-            relationshipSubscription.subscribe()
-          }, 3000)
-        }
-      })
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Subscribed to trainer link requests')
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('❌ Error subscribing to trainer link requests:', status)
+            scheduleReconnect()
+          } else if (status === 'TIMED_OUT') {
+            console.warn('⏰ Subscription timed out, attempting reconnect...')
+            scheduleReconnect()
+          }
+        })
+
+      // Subscribe to trainer_student changes (when requests get accepted)
+      relationshipSubscription = supabase
+        .channel('trainer-student-relationships', {
+          config: {
+            broadcast: { self: true },
+            presence: { key: authUser.id },
+          },
+        })
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'trainer_student',
+            filter: `trainer_id=eq.${authUser.id}`,
+          },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              toast({
+                title: "Alumno añadido",
+                description: "Se ha establecido una nueva conexión con un alumno.",
+              })
+            }
+            debouncedRefresh()
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Subscribed to trainer-student relationships')
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('❌ Error subscribing to trainer-student relationships:', status)
+            scheduleReconnect()
+          } else if (status === 'TIMED_OUT') {
+            console.warn('⏰ Relationship subscription timed out, attempting reconnect...')
+            scheduleReconnect()
+          }
+        })
+    }
+
+    const scheduleReconnect = () => {
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout)
+      }
+      reconnectTimeout = setTimeout(() => {
+        console.log('🔄 Attempting to reconnect subscriptions...')
+        cleanupSubscriptions()
+        setupSubscriptions()
+      }, 5000) // Wait 5 seconds before reconnecting
+    }
+
+    const cleanupSubscriptions = () => {
+      if (requestsSubscription) {
+        supabase.removeChannel(requestsSubscription)
+        requestsSubscription = null
+      }
+      if (relationshipSubscription) {
+        supabase.removeChannel(relationshipSubscription)
+        relationshipSubscription = null
+      }
+    }
+
+    // Initial setup
+    setupSubscriptions()
 
     // Handle page visibility to ensure subscriptions stay active
     const handleVisibilityChange = () => {
@@ -405,13 +425,15 @@ export function useStudents(): UseStudentsReturn {
 
     // Cleanup subscriptions on unmount or auth change
     return () => {
-      // console.log('🔕 Cleaning up real-time subscriptions')
+      console.log('🔕 Cleaning up real-time subscriptions')
       if (refreshTimeout) {
         clearTimeout(refreshTimeout)
       }
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout)
+      }
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      supabase.removeChannel(requestsSubscription)
-      supabase.removeChannel(relationshipSubscription)
+      cleanupSubscriptions()
     }
   }, [authUser?.id])
 

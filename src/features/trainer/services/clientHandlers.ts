@@ -1,10 +1,11 @@
 import { toast } from "@/hooks/use-toast"
 import { supabase } from "@/services/database"
+import { getCurrentUser } from "@/features/auth/services/auth"
 import type { Client } from "../types"
 
 export interface ClientHandlers {
   handleEditClient: (client: Client) => void
-  handleDeleteClient: (clientId: string) => void
+  handleDeleteClient: (clientId: string) => Promise<void>
   handleMarkAsActive: (clientId: string) => void
   handleNewClient: () => void
   handleViewAllClients: () => void
@@ -24,14 +25,115 @@ export function createClientHandlers(
       uiState.setIsEditDialogOpen(true)
     },
 
-    handleDeleteClient: (clientId: string) => {
-      const updatedClients = clientState.clients.filter((c: Client) => c.id !== clientId)
-      clientState.setClients(updatedClients)
-      
-      toast({
-        title: "Cliente eliminado",
-        description: "El cliente ha sido eliminado exitosamente.",
-      })
+    handleDeleteClient: async (clientId: string) => {
+      try {
+        // Get the current trainer ID from auth
+        const authUser = await getCurrentUser()
+        if (!authUser?.id) {
+          toast({
+            title: "Error",
+            description: "No se encontró un usuario autenticado.",
+            variant: "destructive"
+          })
+          return
+        }
+        const trainerId = authUser.id
+
+        // Find the client to get their userId (the actual auth.users id)
+        const client = clientState.clients.find((c: Client) => c.id === clientId)
+        if (!client) {
+          toast({
+            title: "Error",
+            description: "No se encontró el cliente.",
+            variant: "destructive"
+          })
+          return
+        }
+
+        const studentId = client.userId // This is the auth.users id
+
+        // Debug: Log the values being used
+        console.log('🗑️ Deleting trainer_student relationship:', {
+          trainerId,
+          clientId,
+          studentId,
+          trainerIdType: typeof trainerId,
+          clientIdType: typeof clientId,
+          studentIdType: typeof studentId
+        })
+
+        // First, check if the relationship exists
+        const { data: existingRelationship, error: checkError } = await supabase
+          .from('trainer_student')
+          .select('id, trainer_id, student_id')
+          .eq('trainer_id', trainerId)
+          .eq('student_id', studentId)
+          .maybeSingle()
+
+        if (checkError) {
+          console.error('❌ Error checking existing relationship:', checkError)
+          toast({
+            title: "Error",
+            description: "No se pudo verificar la relación existente.",
+            variant: "destructive"
+          })
+          return
+        }
+
+        if (!existingRelationship) {
+          console.warn('⚠️ No trainer_student relationship found for:', { trainerId, studentId })
+          toast({
+            title: "Relación no encontrada",
+            description: "No se encontró una relación activa con este cliente.",
+            variant: "destructive"
+          })
+          return
+        }
+
+        console.log('✅ Found existing relationship:', existingRelationship)
+
+        // Delete the trainer_student relationship from Supabase
+        const { error, count } = await supabase
+          .from('trainer_student')
+          .delete()
+          .eq('trainer_id', trainerId)
+          .eq('student_id', studentId)
+
+        if (error) {
+          console.error('❌ Error deleting trainer_student relationship:', error)
+          console.error('Error details:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint
+          })
+          toast({
+            title: "Error",
+            description: `No se pudo eliminar la relación: ${error.message}`,
+            variant: "destructive"
+          })
+          return
+        }
+
+        console.log('✅ Successfully deleted relationship. Rows affected:', count)
+
+        // Remove from local state
+        const updatedClients = clientState.clients.filter((c: Client) => c.id !== clientId)
+        clientState.setClients(updatedClients)
+        
+        toast({
+          title: "Cliente eliminado",
+          description: "El cliente ha sido eliminado exitosamente.",
+        })
+
+      } catch (error) {
+        console.error('Unexpected error deleting client:', error)
+        toast({
+          title: "Error",
+          description: "Ocurrió un error inesperado al eliminar el cliente.",
+          variant: "destructive"
+        })
+      }
     },
 
     handleMarkAsActive: (clientId: string) => {
@@ -61,78 +163,66 @@ export function createClientHandlers(
 
     // Requests management
     acceptLinkRequest: async (client: Client) => {
-      if (client.requestedBy === 'entrenador') {
-        toast({ title: 'Acción no permitida', description: 'Solo el alumno puede aceptar una invitación enviada por el entrenador.', variant: 'destructive' })
+      if (!client.requestId) {
+        toast({ title: 'Error', description: 'No se pudo identificar la solicitud', variant: 'destructive' })
         return
       }
-      if (!client.requestId) return
+
+      const now = new Date().toISOString()
+      
       const { error } = await supabase
         .from('trainer_link_request')
-        .update({ status: 'accepted', decided_at: new Date().toISOString() })
+        .update({ status: 'accepted', decided_at: now })
         .eq('id', client.requestId)
-        .eq('status', 'pending')
 
       if (error) {
         console.error('❌ acceptLinkRequest error:', error)
-        const isUniqueConstraint = (error as any)?.code === '23505' || `${error.message}`.includes('uq_open_pair') || `${error.details}`.includes('uq_open_pair')
-        if (isUniqueConstraint) {
-          toast({ title: 'Ya aceptada', description: 'Esta relación ya existe. Actualizando la lista...', variant: 'default' })
-          await clientState.refreshClients()
-        } else {
-          toast({ title: 'Error', description: `No se pudo aceptar la solicitud: ${error.message}`, variant: 'destructive' })
-        }
+        toast({ title: 'Error', description: `No se pudo aceptar la solicitud: ${error.message}`, variant: 'destructive' })
         return
       }
 
-      // Trigger will insert into trainer_student. Refresh list.
       await clientState.refreshClients()
       toast({ title: 'Solicitud aceptada', description: `${client.name} añadido a tu roster` })
     },
 
     rejectLinkRequest: async (client: Client) => {
-      if (client.requestedBy === 'entrenador') {
-        toast({ title: 'Acción no permitida', description: 'Solo el alumno puede rechazar una invitación enviada por el entrenador.', variant: 'destructive' })
+      if (!client.requestId) {
+        toast({ title: 'Error', description: 'No se pudo identificar la solicitud', variant: 'destructive' })
         return
       }
-      if (!client.requestId) return
       
-      // Delete the request entirely when rejecting to avoid constraint violations
-      console.log(`🗑️ Deleting trainer link request ${client.requestId} for ${client.name}`)
       const { error } = await supabase
         .from('trainer_link_request')
         .delete()
         .eq('id', client.requestId)
-        .eq('status', 'pending')
 
       if (error) {
         console.error('❌ rejectLinkRequest error:', error)
         toast({ title: 'Error', description: `No se pudo rechazar la solicitud: ${error.message}`, variant: 'destructive' })
         return
       }
+      
       await clientState.refreshClients()
       toast({ title: 'Solicitud rechazada', description: `Has rechazado la solicitud de ${client.name}` })
     },
 
     cancelLinkRequest: async (client: Client) => {
-      if (client.requestedBy === 'alumno') {
-        toast({ title: 'Acción no permitida', description: 'Solo el alumno puede cancelar una solicitud que él inició.', variant: 'destructive' })
+      if (!client.requestId) {
+        toast({ title: 'Error', description: 'No se pudo identificar la solicitud', variant: 'destructive' })
         return
       }
-      if (!client.requestId) return
       
-      // Delete the request entirely when cancelling to avoid constraint violations
-      console.log(`🗑️ Deleting trainer link request ${client.requestId} for ${client.name}`)
       const { error } = await supabase
         .from('trainer_link_request')
         .delete()
         .eq('id', client.requestId)
-        .eq('status', 'pending')
 
       if (error) {
         console.error('❌ cancelLinkRequest error:', error)
         toast({ title: 'Error', description: `No se pudo cancelar la solicitud: ${error.message}`, variant: 'destructive' })
         return
       }
+      
       await clientState.refreshClients()
       toast({ title: 'Solicitud cancelada', description: `Has cancelado la solicitud a ${client.name}` })
     },

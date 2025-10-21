@@ -190,8 +190,8 @@ CREATE INDEX idx_trainee_routine_assigned_on ON trainee_routine(assigned_on);
 CREATE UNIQUE INDEX idx_trainee_routine_unique ON trainee_routine(trainee_id, routine_id);
 ```
 
-### 6. workout_session
-Records individual workout sessions performed by users.
+### 6. workout_session (DEPRECATED - Use V2)
+**DEPRECATED:** This table uses V1 schema. New code should use `workout_session_v2`.
 
 ```sql
 CREATE TABLE workout_session (
@@ -210,8 +210,30 @@ CREATE INDEX idx_workout_session_started_at ON workout_session(started_at);
 CREATE INDEX idx_workout_session_completed_at ON workout_session(completed_at);
 ```
 
-### 7. workout_set_log
-Records individual sets performed during workout sessions.
+### 6b. workout_session_v2 (CURRENT IMPLEMENTATION)
+**CURRENT:** Records individual workout sessions with support for both routine-based and ad-hoc workouts.
+
+```sql
+CREATE TABLE IF NOT EXISTS workout_session_v2 (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    performer_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    routine_id uuid NULL REFERENCES routines(id) ON DELETE SET NULL,
+    started_at timestamptz NOT NULL DEFAULT NOW(),
+    completed_at timestamptz NULL,
+    notes text NULL,
+    
+    CONSTRAINT chk_completed_after_started CHECK (completed_at IS NULL OR completed_at >= started_at)
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_workout_session_v2_performer ON workout_session_v2(performer_id);
+CREATE INDEX IF NOT EXISTS idx_workout_session_v2_routine ON workout_session_v2(routine_id);
+CREATE INDEX IF NOT EXISTS idx_workout_session_v2_started ON workout_session_v2(started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_workout_session_v2_completed ON workout_session_v2(completed_at DESC);
+```
+
+### 7. workout_set_log (DEPRECATED - Use V2)
+**DEPRECATED:** This table uses V1 schema. New code should use `workout_set_log_v2`.
 
 ```sql
 CREATE TABLE workout_set_log (
@@ -220,11 +242,11 @@ CREATE TABLE workout_set_log (
     exercise_id text NOT NULL REFERENCES public.exercises(id) ON DELETE CASCADE,
     block_id uuid REFERENCES routine_block(id) ON DELETE SET NULL,
     block_exercise_id uuid REFERENCES block_exercise(id) ON DELETE SET NULL,
-    set_index int4 NOT NULL, -- Which set number (1, 2, 3, etc.)
+    set_index int4 NOT NULL,
     reps int4,
     weight numeric,
-    rpe numeric, -- Rate of Perceived Exertion (1-10)
-    duration_sec int4, -- For time-based exercises
+    rpe numeric,
+    duration_sec int4,
     rest_seconds int4,
     notes text
 );
@@ -235,6 +257,66 @@ CREATE INDEX idx_workout_set_log_exercise_id ON workout_set_log(exercise_id);
 CREATE INDEX idx_workout_set_log_block_id ON workout_set_log(block_id);
 CREATE INDEX idx_workout_set_log_block_exercise_id ON workout_set_log(block_exercise_id);
 CREATE INDEX idx_workout_set_log_set_index ON workout_set_log(session_id, set_index);
+```
+
+### 7b. workout_set_log_v2 (CURRENT IMPLEMENTATION)
+**CURRENT:** Records individual sets with V2 schema support. Handles both routine-based (linked to planned sets) and ad-hoc workouts.
+
+**Key Features:**
+- Links to `block_exercise_set_v2` for routine-based workouts
+- Supports ad-hoc exercises without routine planning
+- Smart uniqueness constraints
+- Tracks actual performance vs planned targets
+
+```sql
+CREATE TABLE IF NOT EXISTS workout_set_log_v2 (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Link to the session (required)
+    session_id uuid NOT NULL REFERENCES workout_session_v2(id) ON DELETE CASCADE,
+    
+    -- When following a routine:
+    block_exercise_id uuid NULL REFERENCES block_exercise_v2(id) ON DELETE SET NULL,
+    block_exercise_set_id uuid NULL REFERENCES block_exercise_set_v2(id) ON DELETE SET NULL,
+    
+    -- Exercise reference (required for all logs)
+    exercise_id text NOT NULL REFERENCES exercises(id),
+    
+    -- Set ordering within the exercise for this session
+    set_index integer NOT NULL DEFAULT 1,
+    
+    -- Actual performance data
+    reps integer NULL,
+    weight_kg numeric(8,2) NULL,
+    rpe numeric(4,2) NULL,
+    duration_sec integer NULL,
+    rest_seconds integer NULL,
+    notes text NULL,
+    performed_at timestamptz NOT NULL DEFAULT NOW(),
+    
+    -- Validation constraints
+    CONSTRAINT chk_set_index_positive CHECK (set_index >= 1),
+    CONSTRAINT chk_weight_positive CHECK (weight_kg IS NULL OR weight_kg >= 0),
+    CONSTRAINT chk_duration_positive CHECK (duration_sec IS NULL OR duration_sec >= 0),
+    CONSTRAINT chk_rest_positive CHECK (rest_seconds IS NULL OR rest_seconds >= 0)
+);
+
+-- Fast lookups
+CREATE INDEX IF NOT EXISTS idx_set_log_v2_session ON workout_set_log_v2(session_id);
+CREATE INDEX IF NOT EXISTS idx_set_log_v2_block_set ON workout_set_log_v2(block_exercise_set_id);
+CREATE INDEX IF NOT EXISTS idx_set_log_v2_exercise ON workout_set_log_v2(exercise_id);
+CREATE INDEX IF NOT EXISTS idx_set_log_v2_performed ON workout_set_log_v2(performed_at DESC);
+
+-- Uniqueness rules per session:
+-- 1) If linked to a prescribed set: one log per (session, prescribed set)
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_log_v2_by_prescribed
+    ON workout_set_log_v2(session_id, block_exercise_set_id)
+    WHERE block_exercise_set_id IS NOT NULL;
+
+-- 2) If ad-hoc (no prescribed set): one log per (session, exercise, set_index)
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_log_v2_by_manual
+    ON workout_set_log_v2(session_id, exercise_id, set_index)
+    WHERE block_exercise_set_id IS NULL;
 ```
 
 ### 8. users (Extended Profile)
@@ -257,12 +339,15 @@ CREATE INDEX idx_users_created_on ON users(created_on);
 ### 9. trainer_student
 Links entrenadors (trainers) to alumnos (students) once a request/invitation is accepted.
 
+**IMPORTANT:** This table has an `id` column as the primary key to allow the `message` table to reference conversations via `conversation_id`.
+
 ```sql
 CREATE TABLE IF NOT EXISTS trainer_student (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     trainer_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     student_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     joined_at  timestamptz NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (trainer_id, student_id)
+    CONSTRAINT trainer_student_trainer_student_unique UNIQUE (trainer_id, student_id)
 );
 
 -- Indexes
@@ -270,27 +355,80 @@ CREATE INDEX IF NOT EXISTS idx_trainer_student_trainer ON trainer_student(traine
 CREATE INDEX IF NOT EXISTS idx_trainer_student_student ON trainer_student(student_id);
 ```
 
+**Note:** The unique constraint on `(trainer_id, student_id)` ensures that a trainer-student relationship can only exist once, while the `id` column serves as the primary key for foreign key references (especially from the `message` table).
+
 ### 10. trainer_link_request
 Stores vinculación requests/invitations between entrenadors and alumnos.
 
 ```sql
 CREATE TABLE IF NOT EXISTS trainer_link_request (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    trainer_id   uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    student_id   uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    requested_by request_actor NOT NULL,      -- 'alumno' o 'entrenador'
-    message      text,
-    status       request_status NOT NULL DEFAULT 'pending',
-    created_at   timestamptz NOT NULL DEFAULT NOW(),
-    decided_at   timestamptz,
-
-    -- Avoid open duplicates for the same pair
-    CONSTRAINT uq_open_pair UNIQUE (trainer_id, student_id, status)
+    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    trainer_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    student_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    message text NULL,
+    status request_status NOT NULL DEFAULT 'pending',
+    created_at timestamptz NOT NULL DEFAULT NOW(),
+    decided_at timestamptz NULL,
+    requested_by request_actor NOT NULL,
+    CONSTRAINT trainer_link_request_pkey PRIMARY KEY (id),
+    CONSTRAINT uq_open_pair UNIQUE (trainer_id, student_id, status) DEFERRABLE
 );
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_tlr_trainer ON trainer_link_request(trainer_id, status);
 CREATE INDEX IF NOT EXISTS idx_tlr_student ON trainer_link_request(student_id, status);
+
+-- Trigger for auto-creating trainer_student relationship on acceptance
+CREATE TRIGGER trg_request_accept
+AFTER UPDATE OF status ON trainer_link_request
+FOR EACH ROW WHEN (
+    NEW.status = 'accepted' 
+    AND OLD.status IS DISTINCT FROM NEW.status
+)
+EXECUTE FUNCTION handle_request_accepted();
+```
+
+### 11. message
+Stores chat messages between trainers and students.
+
+**Status:** ✅ Fully implemented with real-time support. See `/docs/chat-implementation.md` for usage guide.
+
+**Key Design:** Messages are linked to trainer_student relationships via `conversation_id`, which references the `trainer_student(id)`. This ensures that all messages for a specific trainer-student pairing are grouped together.
+
+```sql
+CREATE TABLE IF NOT EXISTS public.message (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at timestamptz NOT NULL DEFAULT NOW(),
+    content text NOT NULL,
+    sender_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    conversation_id uuid NOT NULL REFERENCES trainer_student(id) ON DELETE CASCADE,
+    
+    -- Ensure content is not empty
+    CONSTRAINT chk_content_not_empty CHECK (
+        content IS NOT NULL AND LENGTH(TRIM(content)) > 0
+    )
+);
+
+-- Indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_message_conversation ON message(conversation_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_message_sender ON message(sender_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_message_created_at ON message(created_at DESC);
+
+-- Enable Realtime for messages
+ALTER PUBLICATION supabase_realtime ADD TABLE message;
+```
+
+**Future Enhancements:**
+To add read receipts and message editing features, consider adding:
+```sql
+-- Add these columns if needed:
+ALTER TABLE message ADD COLUMN read_at timestamptz NULL;
+ALTER TABLE message ADD COLUMN edited_at timestamptz NULL;
+ALTER TABLE message ADD COLUMN is_deleted boolean NOT NULL DEFAULT false;
+
+-- Add index for unread messages:
+CREATE INDEX IF NOT EXISTS idx_message_unread ON message(conversation_id, read_at) 
+WHERE read_at IS NULL;
 ```
 
 ## Row Level Security (RLS) Policies
@@ -308,6 +446,7 @@ ALTER TABLE workout_set_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trainer_student ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trainer_link_request ENABLE ROW LEVEL SECURITY;
+ALTER TABLE message ENABLE ROW LEVEL SECURITY;
 ```
 
 ### Exercises Policies
@@ -546,7 +685,7 @@ CREATE POLICY "Entrenadors can manage routine assignments" ON trainee_routine
     );
 ```
 
-### Workout Session Policies
+### Workout Session Policies (V1 - DEPRECATED)
 
 ```sql
 -- Users can view their own workout sessions
@@ -566,7 +705,27 @@ CREATE POLICY "Users can delete own workout sessions" ON workout_session
     FOR DELETE USING (performer_id = auth.uid());
 ```
 
-### Workout Set Log Policies
+### Workout Session V2 Policies (CURRENT)
+
+```sql
+-- Users can view their own workout sessions
+CREATE POLICY "Users can view own workout sessions v2" ON workout_session_v2
+    FOR SELECT USING (performer_id = auth.uid());
+
+-- Users can create their own workout sessions
+CREATE POLICY "Users can create workout sessions v2" ON workout_session_v2
+    FOR INSERT WITH CHECK (performer_id = auth.uid());
+
+-- Users can update their own workout sessions
+CREATE POLICY "Users can update own workout sessions v2" ON workout_session_v2
+    FOR UPDATE USING (performer_id = auth.uid());
+
+-- Users can delete their own workout sessions
+CREATE POLICY "Users can delete own workout sessions v2" ON workout_session_v2
+    FOR DELETE USING (performer_id = auth.uid());
+```
+
+### Workout Set Log Policies (V1 - DEPRECATED)
 
 ```sql
 -- Users can view set logs for their own workout sessions
@@ -584,6 +743,50 @@ CREATE POLICY "Users can manage own workout set logs" ON workout_set_log
     FOR ALL USING (
         EXISTS (
             SELECT 1 FROM workout_session 
+            WHERE id = session_id 
+            AND performer_id = auth.uid()
+        )
+    );
+```
+
+### Workout Set Log V2 Policies (CURRENT)
+
+```sql
+-- Users can view set logs for their own workout sessions
+CREATE POLICY "Users can view own workout set logs v2" ON workout_set_log_v2
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM workout_session_v2 
+            WHERE id = session_id 
+            AND performer_id = auth.uid()
+        )
+    );
+
+-- Users can create set logs for their own workout sessions
+CREATE POLICY "Users can create workout set logs v2" ON workout_set_log_v2
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM workout_session_v2 
+            WHERE id = session_id 
+            AND performer_id = auth.uid()
+        )
+    );
+
+-- Users can update set logs for their own workout sessions
+CREATE POLICY "Users can update workout set logs v2" ON workout_set_log_v2
+    FOR UPDATE USING (
+        EXISTS (
+            SELECT 1 FROM workout_session_v2 
+            WHERE id = session_id 
+            AND performer_id = auth.uid()
+        )
+    );
+
+-- Users can delete set logs for their own workout sessions
+CREATE POLICY "Users can delete workout set logs v2" ON workout_set_log_v2
+    FOR DELETE USING (
+        EXISTS (
+            SELECT 1 FROM workout_session_v2 
             WHERE id = session_id 
             AND performer_id = auth.uid()
         )
@@ -616,6 +819,14 @@ CREATE POLICY "entrenador ve su roster" ON trainer_student
 -- Alumno sees their trainers
 CREATE POLICY "alumno ve sus entrenadores" ON trainer_student
     FOR SELECT USING (student_id = auth.uid());
+
+-- Trainers can delete students from their roster
+CREATE POLICY "entrenador puede eliminar de su roster" ON trainer_student
+    FOR DELETE USING (trainer_id = auth.uid());
+
+-- Students can unlink themselves from trainers
+CREATE POLICY "alumno puede desvincularse de entrenador" ON trainer_student
+    FOR DELETE USING (student_id = auth.uid());
 ```
 
 ### Trainer Link Request Policies
@@ -652,6 +863,46 @@ CREATE POLICY "contraparte acepta/rechaza" ON trainer_link_request
         )
     )
     WITH CHECK (status IN ('accepted','rejected'));
+```
+
+### Message Policies
+
+```sql
+-- Users can view messages in conversations they are part of
+CREATE POLICY "Users can view their messages" ON message
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM trainer_student ts
+            WHERE ts.id = message.conversation_id
+            AND (ts.trainer_id = auth.uid() OR ts.student_id = auth.uid())
+        )
+    );
+
+-- Users can send messages only in conversations where they are linked
+CREATE POLICY "Users can send messages to linked partners" ON message
+    FOR INSERT WITH CHECK (
+        sender_id = auth.uid()
+        AND EXISTS (
+            SELECT 1 FROM trainer_student ts
+            WHERE ts.id = conversation_id
+            AND (ts.trainer_id = auth.uid() OR ts.student_id = auth.uid())
+        )
+    );
+
+-- Users can only update their own messages
+CREATE POLICY "Users can update their own messages" ON message
+    FOR UPDATE USING (
+        sender_id = auth.uid()
+    )
+    WITH CHECK (
+        sender_id = auth.uid()
+    );
+
+-- Users can delete their own messages (hard delete)
+CREATE POLICY "Users can delete their own messages" ON message
+    FOR DELETE USING (
+        sender_id = auth.uid()
+    );
 ```
 
 ## Functions and Triggers
@@ -696,13 +947,22 @@ Creates roster entry on acceptance of a `trainer_link_request`.
 CREATE OR REPLACE FUNCTION public.handle_request_accepted()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-    IF NEW.status = 'accepted' THEN
-        INSERT INTO public.trainer_student(trainer_id, student_id, joined_at)
-        VALUES (NEW.trainer_id, NEW.student_id, COALESCE(NEW.decided_at, NOW()))
-        ON CONFLICT (trainer_id, student_id) DO NOTHING;
-        NEW.decided_at := COALESCE(NEW.decided_at, NOW());
+  IF NEW.status = 'accepted' AND (OLD.status IS DISTINCT FROM NEW.status) THEN
+    -- Check if relationship already exists before inserting
+    IF NOT EXISTS (
+      SELECT 1 FROM public.trainer_student 
+      WHERE trainer_id = NEW.trainer_id AND student_id = NEW.student_id
+    ) THEN
+      INSERT INTO public.trainer_student (trainer_id, student_id, joined_at)
+      VALUES (NEW.trainer_id, NEW.student_id, COALESCE(NEW.decided_at, NOW()));
     END IF;
-    RETURN NEW;
+
+    IF NEW.decided_at IS NULL THEN
+      NEW.decided_at := NOW();
+    END IF;
+  END IF;
+
+  RETURN NEW;
 END $$;
 
 DROP TRIGGER IF EXISTS trg_request_accept ON public.trainer_link_request;
@@ -769,6 +1029,64 @@ BEGIN
     DELETE FROM public.trainer_link_request
     WHERE trainer_id = trainer_id_to_unlink AND student_id = student_id_to_unlink;
 
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+### Chat/Message Functions
+
+**Note:** The current `message` table implementation uses a simple schema without `read_at`, `edited_at`, or `is_deleted` columns. These functions would require those columns to be added first (see Future Enhancements in the message table section).
+
+The chat functionality is currently implemented at the application level in `/services/chat.ts`. See `/docs/chat-implementation.md` for details on how to use the chat system.
+
+**Future Database Functions (requires schema enhancements):**
+
+Once you add `read_at` column to the `message` table, you can create these functions:
+
+```sql
+-- Function to mark messages as read (requires read_at column)
+CREATE OR REPLACE FUNCTION public.mark_conversation_as_read(
+    conv_id uuid
+)
+RETURNS integer AS $$
+DECLARE
+    current_user_id uuid := auth.uid();
+    updated_count integer;
+BEGIN
+    IF current_user_id IS NULL THEN
+        RAISE EXCEPTION 'User not authenticated';
+    END IF;
+
+    UPDATE public.message
+    SET read_at = NOW()
+    WHERE conversation_id = conv_id
+        AND sender_id != current_user_id
+        AND read_at IS NULL;
+
+    GET DIAGNOSTICS updated_count = ROW_COUNT;
+    RETURN updated_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get unread message count (requires read_at column)
+CREATE OR REPLACE FUNCTION public.get_unread_message_count()
+RETURNS integer AS $$
+DECLARE
+    current_user_id uuid := auth.uid();
+    unread_count integer;
+BEGIN
+    IF current_user_id IS NULL THEN
+        RAISE EXCEPTION 'User not authenticated';
+    END IF;
+
+    SELECT COUNT(*)::integer INTO unread_count
+    FROM public.message m
+    JOIN public.trainer_student ts ON ts.id = m.conversation_id
+    WHERE (ts.trainer_id = current_user_id OR ts.student_id = current_user_id)
+        AND m.sender_id != current_user_id
+        AND m.read_at IS NULL;
+
+    RETURN COALESCE(unread_count, 0);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
@@ -917,6 +1235,217 @@ LEFT JOIN block_exercise_set_v2 bes ON bes.block_exercise_id = be.id
 WHERE r.id = $1
 GROUP BY r.id, r.name;
 ```
+
+### Get messages for a conversation
+
+```sql
+-- Get messages between current user and another user using conversation_id
+-- First, get the conversation_id
+WITH conv AS (
+    SELECT id as conversation_id
+    FROM trainer_student
+    WHERE (trainer_id = auth.uid() AND student_id = $1)
+       OR (student_id = auth.uid() AND trainer_id = $1)
+    LIMIT 1
+)
+SELECT 
+    m.id,
+    m.content,
+    m.sender_id,
+    m.created_at,
+    m.conversation_id,
+    u.name as sender_name,
+    u.avatar_url as sender_avatar
+FROM message m
+JOIN users u ON u.id = m.sender_id
+JOIN conv ON conv.conversation_id = m.conversation_id
+ORDER BY m.created_at ASC;
+```
+
+### Send a message
+
+```sql
+-- Get the conversation_id and insert message
+WITH conv AS (
+    SELECT id as conversation_id
+    FROM trainer_student
+    WHERE (trainer_id = auth.uid() AND student_id = $1)
+       OR (student_id = auth.uid() AND trainer_id = $1)
+    LIMIT 1
+)
+INSERT INTO message (conversation_id, sender_id, content)
+SELECT 
+    conv.conversation_id,
+    auth.uid(),
+    $2  -- message content
+FROM conv
+RETURNING *;
+```
+
+### Get conversations with latest message
+
+```sql
+-- Get all trainer_student relationships for current user with latest message
+SELECT 
+    ts.id as conversation_id,
+    ts.trainer_id,
+    ts.student_id,
+    CASE 
+        WHEN ts.trainer_id = auth.uid() THEN s.name
+        ELSE t.name
+    END as other_user_name,
+    CASE 
+        WHEN ts.trainer_id = auth.uid() THEN s.avatar_url
+        ELSE t.avatar_url
+    END as other_user_avatar,
+    (
+        SELECT content 
+        FROM message 
+        WHERE conversation_id = ts.id 
+        ORDER BY created_at DESC 
+        LIMIT 1
+    ) as latest_message,
+    (
+        SELECT created_at 
+        FROM message 
+        WHERE conversation_id = ts.id 
+        ORDER BY created_at DESC 
+        LIMIT 1
+    ) as latest_message_time
+FROM trainer_student ts
+LEFT JOIN users t ON t.id = ts.trainer_id
+LEFT JOIN users s ON s.id = ts.student_id
+WHERE ts.trainer_id = auth.uid() OR ts.student_id = auth.uid()
+ORDER BY latest_message_time DESC NULLS LAST;
+```
+
+### Chat API Usage
+
+For chat functionality, use the TypeScript service layer in `/services/chat.ts`:
+
+```typescript
+import { getConversationMessages, sendMessage, getChatConversations } from '@/services/chat';
+
+// Load messages
+const messages = await getConversationMessages(otherUserId);
+
+// Send a message
+await sendMessage(otherUserId, 'Hello!');
+
+// Get conversations list
+const conversations = await getChatConversations();
+```
+
+See `/docs/chat-implementation.md` for complete API documentation.
+
+## Real-Time Setup
+
+### Enable Real-Time on Required Tables
+
+**IMPORTANT:** For real-time subscriptions to work, tables must be added to the `supabase_realtime` publication.
+
+**Required tables for real-time:**
+- `message` - Chat messages
+- `trainer_link_request` - Trainer connection requests
+- `trainer_student` - Trainer-student relationships
+
+#### Method 1: Enable Real-Time in Supabase Dashboard
+
+Navigate to Database → Replication and enable replication for each table:
+- `message`
+- `trainer_link_request`
+- `trainer_student`
+
+#### Method 2: Use SQL Migration
+
+Run the migration script in `/database/migrations/enable_realtime_subscriptions.sql`:
+
+```sql
+-- Enable realtime for all required tables
+ALTER PUBLICATION supabase_realtime ADD TABLE message;
+ALTER PUBLICATION supabase_realtime ADD TABLE trainer_link_request;
+ALTER PUBLICATION supabase_realtime ADD TABLE trainer_student;
+
+-- Set REPLICA IDENTITY to FULL (required for realtime)
+ALTER TABLE message REPLICA IDENTITY FULL;
+ALTER TABLE trainer_link_request REPLICA IDENTITY FULL;
+ALTER TABLE trainer_student REPLICA IDENTITY FULL;
+```
+
+#### Verify Tables are Added
+
+```sql
+-- Check which tables are in the realtime publication
+SELECT * FROM pg_publication_tables WHERE pubname = 'supabase_realtime';
+```
+
+### Enable Real-Time on message table (DEPRECATED - Use Method 2 above)
+
+To enable real-time updates for messages, follow these steps:
+
+1. **Enable Real-Time in Supabase Dashboard:**
+   - Navigate to Database → Replication
+   - Find the `message` table
+   - Enable replication for the table
+
+2. **Or use SQL to enable it:**
+   ```sql
+   ALTER PUBLICATION supabase_realtime ADD TABLE message;
+   ```
+
+3. **Client-side subscription (use the service functions):**
+   ```typescript
+   import { subscribeToConversation, unsubscribeFromConversation } from '@/services/chat';
+   
+   // Subscribe to messages in a conversation
+   const channel = subscribeToConversation(conversationId, (payload) => {
+     console.log('Message update:', payload);
+     if (payload.eventType === 'INSERT') {
+       // Add new message to UI
+     } else if (payload.eventType === 'UPDATE') {
+       // Update existing message
+     } else if (payload.eventType === 'DELETE') {
+       // Remove message from UI
+     }
+   });
+   
+   // Cleanup when done
+   await unsubscribeFromConversation(channel);
+   ```
+
+4. **Direct Supabase subscription (advanced):**
+   ```typescript
+   import { supabase } from './lib/supabase';
+   
+   // Subscribe to messages in a specific conversation
+   const subscribeToMessages = (conversationId: string) => {
+     const channel = supabase
+       .channel(`conversation:${conversationId}`)
+       .on(
+         'postgres_changes',
+         {
+           event: '*',  // Listen to INSERT, UPDATE, DELETE
+           schema: 'public',
+           table: 'message',
+           filter: `conversation_id=eq.${conversationId}`
+         },
+         (payload) => {
+           console.log('Message update:', payload);
+           // Handle the message change
+         }
+       )
+       .subscribe();
+     
+     return channel;
+   };
+   
+   // Cleanup
+   const unsubscribe = (channel) => {
+     supabase.removeChannel(channel);
+   };
+   ```
+
+For complete implementation examples, see `/docs/chat-implementation.md` and `/services/chat.ts`.
 
 ## Migration Notes
 

@@ -111,7 +111,7 @@ export interface TrainerDashboardActions {
   setHistorySessions: Dispatch<SetStateAction<any[]>>
   setHistoryLogs: Dispatch<SetStateAction<any[]>>
   handleEditClient: (client: Client) => void
-  handleDeleteClient: (clientId: string) => void
+  handleDeleteClient: (clientId: string) => Promise<void>
   handleMarkAsActive: (clientId: string) => void
   handleNewClient: () => void
   handleCreateRoutine: () => void

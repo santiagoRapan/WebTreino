@@ -171,16 +171,33 @@ export class ChatDatabase {
       }
     }
 
-    const messages: Message[] = (rows || []).map((m) => ({
-      id: m.id ?? `${m.sender_id}-${Math.random().toString(36).slice(2)}`,
-      conversationId: m.conversation_id,
-      senderId: m.sender_id,
-      senderName: m.sender_id === userId ? 'Tú' : 'Contacto',
-      content: m.content,
-      timestamp: m.created_at ? new Date(m.created_at) : new Date(),
-      status: 'read',
-      isOwnMessage: m.sender_id === userId,
-    }))
+    // Get unique sender IDs to fetch their names
+    const senderIds = Array.from(new Set(rows.map(m => m.sender_id)))
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id, name, avatar_url')
+      .in('id', senderIds)
+
+    if (usersError) {
+      console.error('Error fetching user names for messages:', usersError)
+    }
+
+    const userMap = new Map((users || []).map(u => [u.id, u]))
+
+    const messages: Message[] = (rows || []).map((m) => {
+      const sender = userMap.get(m.sender_id)
+      return {
+        id: m.id ?? `${m.sender_id}-${Math.random().toString(36).slice(2)}`,
+        conversationId: m.conversation_id,
+        senderId: m.sender_id,
+        senderName: m.sender_id === userId ? 'Tú' : (sender?.name || 'Usuario'),
+        senderAvatar: sender?.avatar_url,
+        content: m.content,
+        timestamp: m.created_at ? new Date(m.created_at) : new Date(),
+        status: 'read',
+        isOwnMessage: m.sender_id === userId,
+      }
+    })
 
     return messages
   }

@@ -27,6 +27,7 @@ import { useChatState } from '../hooks/useChatState'
 import { createChatHandlers } from '../services/chatHandlers'
 import { chatDatabase } from '../services/chatDatabase'
 import { useAuth } from '@/features/auth/services/auth-context'
+import { supabase } from '@/services/database'
 
 export function ChatTab() {
   const { authUser } = useAuth()
@@ -72,15 +73,37 @@ export function ChatTab() {
 
     unsubscribeRef.current = chatDatabase.subscribeToConversation(
       idsToListen,
-      (dbMessage) => {
+      async (dbMessage) => {
         // Debug: confirma que llegó un evento
         // console.log('[Realtime] new message payload:', dbMessage)
+
+        // Fetch sender information for real-time messages
+        let senderName = 'Usuario'
+        let senderAvatar: string | undefined = undefined
+        
+        if (dbMessage.sender_id !== authUser.id) {
+          try {
+            const { data: sender, error } = await supabase
+              .from('users')
+              .select('name, avatar_url')
+              .eq('id', dbMessage.sender_id)
+              .single()
+            
+            if (!error && sender) {
+              senderName = sender.name || 'Usuario'
+              senderAvatar = sender.avatar_url
+            }
+          } catch (error) {
+            console.error('Error fetching sender info for realtime message:', error)
+          }
+        }
 
         const m = {
           id: dbMessage.id ?? `${dbMessage.sender_id}-${Date.now()}`,
           conversationId: dbMessage.conversation_id,
           senderId: dbMessage.sender_id,
-          senderName: dbMessage.sender_id === authUser.id ? 'Tú' : 'Contacto',
+          senderName: dbMessage.sender_id === authUser.id ? 'Tú' : senderName,
+          senderAvatar: dbMessage.sender_id === authUser.id ? undefined : senderAvatar,
           content: dbMessage.content,
           timestamp: dbMessage.created_at ? new Date(dbMessage.created_at) : new Date(),
           status: 'delivered' as const,

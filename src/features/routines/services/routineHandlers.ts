@@ -5,6 +5,16 @@
  * Most actual routine operations are now handled directly in components using V2 hooks.
  */
 
+import { toast } from "@/hooks/use-toast"
+import { supabase } from "@/services/database"
+import {
+  createCustomExercise,
+  musclesArrayToDb,
+  secondaryMusclesArrayToDb,
+  bodyPartsArrayToDb,
+  equipmentsArrayToDb,
+} from "@/features/exercises"
+
 export interface RoutineHandlers {
   handleCreateRoutine: () => void
   handleCreateExercise: () => Promise<void>
@@ -53,7 +63,99 @@ export function createRoutineHandlers(
     },
 
     handleCreateExercise: async () => {
-      console.log('handleCreateExercise called - implemented in component')
+      // Get the current user ID (owner_id for the exercise)
+      const ownerId = routineState.customUser?.id
+      
+      if (!ownerId) {
+        toast({
+          title: "Error de autenticación",
+          description: "No se pudo identificar el usuario. Por favor, inicia sesión nuevamente.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Validate required fields
+      const form = routineState.newExerciseForm
+      if (!form.name.trim()) {
+        toast({
+          title: "Nombre requerido",
+          description: "Por favor, ingresa un nombre para el ejercicio.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (form.target_muscles.length === 0) {
+        toast({
+          title: "Músculos objetivo requeridos",
+          description: "Por favor, selecciona al menos un músculo objetivo.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      try {
+        // Convert Spanish UI labels to actual database values
+        const targetMusclesDb = musclesArrayToDb(form.target_muscles)
+        const secondaryMusclesDb = secondaryMusclesArrayToDb(form.secondary_muscles)
+        const bodyPartsDb = bodyPartsArrayToDb(form.body_parts)
+        const equipmentsDb = equipmentsArrayToDb(form.equipments)
+
+        // Create the exercise in the database
+        const createdExercise = await createCustomExercise(
+          {
+            name: form.name.trim(),
+            gif_URL: form.gif_URL?.trim() || undefined,
+            target_muscles: targetMusclesDb,
+            body_parts: bodyPartsDb,
+            equipments: equipmentsDb,
+            secondary_muscles: secondaryMusclesDb,
+            instructions: form.instructions?.trim() || undefined,
+          },
+          ownerId
+        )
+
+        if (!createdExercise) {
+          throw new Error("Failed to create exercise")
+        }
+
+        // Success! Show toast and close dialog
+        toast({
+          title: "¡Ejercicio creado!",
+          description: `El ejercicio "${createdExercise.name}" ha sido creado exitosamente.`,
+        })
+
+        // Reset form
+        routineState.setNewExerciseForm({
+          name: "",
+          gif_URL: "",
+          target_muscles: [],
+          body_parts: [],
+          equipments: [],
+          secondary_muscles: [],
+          instructions: "",
+          description: "",
+          category: "",
+        })
+
+        // Close dialog
+        uiState.setIsCreateExerciseDialogOpen(false)
+
+        // Optionally: Add the new exercise to the exercises catalog in state
+        // so it appears immediately without needing to refresh
+        if (routineState.exercisesCatalog) {
+          routineState.setExercisesCatalog([createdExercise, ...routineState.exercisesCatalog])
+        }
+
+      } catch (error) {
+        console.error("Error creating custom exercise:", error)
+        toast({
+          title: "Error al crear ejercicio",
+          description: "No se pudo crear el ejercicio. Por favor, intenta nuevamente.",
+          variant: "destructive",
+        })
+      }
     },
 
     handleCreateFolder: () => {
