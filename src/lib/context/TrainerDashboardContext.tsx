@@ -143,7 +143,7 @@ export interface TrainerDashboardActions {
   rejectLinkRequest: (client: Client) => Promise<void>
   cancelLinkRequest: (client: Client) => Promise<void>
   openStudentHistory: (client: Client) => Promise<void>
-
+  refreshClients: () => Promise<void>
 }
 
 export interface TrainerDashboardContextValue {

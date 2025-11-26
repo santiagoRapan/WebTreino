@@ -20,6 +20,7 @@ export interface Client {
   phone?: string
   avatar?: string
   status: ClientStatus
+  isGuest?: boolean
 
   // Relationship metadata
   relationshipId?: string | null

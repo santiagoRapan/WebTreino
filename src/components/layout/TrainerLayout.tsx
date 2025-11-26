@@ -128,9 +128,10 @@ export function TrainerLayout({ children }: TrainerLayoutProps) {
       handleDeleteExercise: trainerData.handleDeleteExercise,
       handleExportRoutineToPDF: trainerData.handleExportRoutineToPDF,
       handleExportRoutineToExcel: trainerData.handleExportRoutineToExcel,
-      
+
       // Additional context handlers
       handleRegisterPayment: trainerData.handleRegisterPayment,
+      refreshClients: trainerData.refreshClients,
     },
     data: {
       stats: trainerData.stats,

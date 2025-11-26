@@ -33,7 +33,7 @@ export function ClientsTab() {
     <>
       <main className="p-6 space-y-6">
         <ClientsHeader onNewClient={actions.handleNewClient} />
-        
+
         <Card className="bg-card border-border">
           <CardContent className="p-4">
             <ClientFilters
@@ -43,7 +43,7 @@ export function ClientsTab() {
               setClientFilter={actions.setClientFilter}
               allClients={data.allClients}
             />
-            
+
             <ClientTable
               clients={data.filteredClients}
               //onChatWithClient={actions.handleChatFromClient}
@@ -68,6 +68,7 @@ export function ClientsTab() {
       <NewClientDialog
         isOpen={state.isNewClientDialogOpen}
         onClose={() => actions.setIsNewClientDialogOpen(false)}
+        onSuccess={actions.refreshClients}
       />
 
       <ClientHistoryDialog

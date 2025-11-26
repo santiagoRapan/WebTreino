@@ -11,17 +11,65 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useState } from "react"
+import { guestService } from "@/features/students/services/guest-service"
+import { toast } from "@/hooks/use-toast"
 
 interface NewClientDialogProps {
   isOpen: boolean
   onClose: () => void
+  onSuccess?: () => void
 }
 
-export function NewClientDialog({ isOpen, onClose }: NewClientDialogProps) {
-  const handleSave = () => {
-    alert("Alumno agregado correctamente (funcionalidad completa disponible con base de datos)")
-    onClose()
+export function NewClientDialog({ isOpen, onClose, onSuccess }: NewClientDialogProps) {
+  // Dialog for creating new guests
+  const [loading, setLoading] = useState(false)
+
+  // Guest form state
+  const [guestName, setGuestName] = useState("")
+  const [guestEmail, setGuestEmail] = useState("")
+  const [guestPhone, setGuestPhone] = useState("")
+
+  const handleCreateGuest = async () => {
+    if (!guestName) {
+      toast({
+        title: "Error",
+        description: "El nombre es obligatorio",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setLoading(true)
+    try {
+      await guestService.createGuest({
+        name: guestName,
+        email: guestEmail || undefined,
+        phone: guestPhone || undefined
+      })
+
+      toast({
+        title: "Alumno invitado creado",
+        description: "El alumno ha sido registrado correctamente."
+      })
+
+      // Reset form
+      setGuestName("")
+      setGuestEmail("")
+      setGuestPhone("")
+
+      onSuccess?.()
+      onClose()
+    } catch (error) {
+      console.error("Error creating guest:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo crear el alumno invitado",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -30,75 +78,57 @@ export function NewClientDialog({ isOpen, onClose }: NewClientDialogProps) {
         <DialogHeader>
           <DialogTitle>Agregar Nuevo Alumno</DialogTitle>
           <DialogDescription>
-            Completa la información del nuevo alumno. Los campos marcados con * son obligatorios.
+            Crea un perfil para un alumno invitado.
           </DialogDescription>
         </DialogHeader>
+
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
+            <Label htmlFor="guest-name" className="text-right">
               Nombre *
             </Label>
-            <Input id="name" placeholder="Nombre completo" className="col-span-3" />
+            <Input
+              id="guest-name"
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              placeholder="Nombre del alumno"
+              className="col-span-3"
+            />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="email" className="text-right">
-              Email *
+            <Label htmlFor="guest-email" className="text-right">
+              Email
             </Label>
-            <Input id="email" type="email" placeholder="email@ejemplo.com" className="col-span-3" />
+            <Input
+              id="guest-email"
+              type="email"
+              value={guestEmail}
+              onChange={(e) => setGuestEmail(e.target.value)}
+              placeholder="Opcional"
+              className="col-span-3"
+            />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="phone" className="text-right">
+            <Label htmlFor="guest-phone" className="text-right">
               Teléfono
             </Label>
-            <Input id="phone" placeholder="+54 9 11 1234-5678" className="col-span-3" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="goal" className="text-right">
-              Objetivo
-            </Label>
-            <Select>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Seleccionar objetivo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="weight-loss">Pérdida de peso</SelectItem>
-                <SelectItem value="muscle-gain">Ganancia muscular</SelectItem>
-                <SelectItem value="endurance">Resistencia</SelectItem>
-                <SelectItem value="strength">Fuerza</SelectItem>
-                <SelectItem value="general">Fitness general</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="plan" className="text-right">
-              Plan
-            </Label>
-            <Select>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Seleccionar plan" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="basic">Básico - 2 sesiones/semana</SelectItem>
-                <SelectItem value="standard">Estándar - 3 sesiones/semana</SelectItem>
-                <SelectItem value="premium">Premium - 4 sesiones/semana</SelectItem>
-                <SelectItem value="unlimited">Ilimitado</SelectItem>
-              </SelectContent>
-            </Select>
+            <Input
+              id="guest-phone"
+              value={guestPhone}
+              onChange={(e) => setGuestPhone(e.target.value)}
+              placeholder="Opcional"
+              className="col-span-3"
+            />
           </div>
         </div>
         <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button
-            variant="outline"
-            onClick={onClose}
-            className="hover:bg-accent hover:text-accent-foreground transition-colors"
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSave}
+            onClick={handleCreateGuest}
+            disabled={loading}
             className="hover:bg-orange-500 transition-colors"
           >
-            Agregar Alumno
+            {loading ? "Creando..." : "Crear Invitado"}
           </Button>
         </DialogFooter>
       </DialogContent>

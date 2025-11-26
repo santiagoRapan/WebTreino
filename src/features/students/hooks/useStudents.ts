@@ -7,6 +7,7 @@ import { useAuth } from "@/features/auth/services/auth-context"
 import type { Client } from "@/features/trainer/types"
 import type { UseStudentsReturn } from '../types'
 import DataCacheManager from "@/lib/cache/dataCache"
+import { guestService } from "../services/guest-service"
 
 export function useStudents(): UseStudentsReturn {
   const { authUser } = useAuth()
@@ -40,12 +41,12 @@ export function useStudents(): UseStudentsReturn {
           // console.log('💾 Loading students from persistent cache')
           setStudents(cachedStudents)
           setLastUpdateEvent(new Date())
-          
+
           // Verificar actualizaciones en background (sin loading visible)
           setTimeout(() => {
             checkForStudentUpdatesInBackground(trainerId, cachedStudents)
           }, 0)
-          
+
           return
         }
       }
@@ -58,7 +59,7 @@ export function useStudents(): UseStudentsReturn {
       // 1) Fetch roster (trainer_student)
       const { data: rosterRows, error: rosterError } = await supabase
         .from('trainer_student')
-        .select('id, trainer_id, student_id, joined_at')
+        .select('id, trainer_id, student_id, joined_at, status')
         .eq('trainer_id', trainerId)
 
       if (rosterError) {
@@ -81,10 +82,10 @@ export function useStudents(): UseStudentsReturn {
       const formatDate = (iso?: string | null) =>
         iso
           ? new Date(iso).toLocaleDateString('es-ES', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric',
-            })
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          })
           : ''
 
       const rosterProfileMap = new Map<string, any>(
@@ -100,7 +101,7 @@ export function useStudents(): UseStudentsReturn {
           name: profile.name || 'Alumno',
           email: '',
           phone: '',
-          status: "active" as const,
+          status: (row.status as any) || "active",
           joinDate: formatDate(row.joined_at || profile.created_on),
           createdAt: profile.created_on || undefined,
           lastSession: "N/A",
@@ -168,9 +169,31 @@ export function useStudents(): UseStudentsReturn {
         }
       })
 
-      const combined = [...rosterClients, ...pendingClients]
+      // 3) Fetch guest students
+      const guests = await guestService.getGuests()
+      const guestClients: Client[] = guests.map(guest => ({
+        id: guest.id,
+        userId: `guest_${guest.id}`, // Virtual user ID for guests
+        name: guest.name,
+        email: guest.email || '',
+        phone: guest.phone || '',
+        status: (guest.status as any) || "active",
+        joinDate: formatDate(guest.created_at),
+        createdAt: guest.created_at,
+        lastSession: "N/A",
+        nextSession: "N/A",
+        progress: 0,
+        goal: "Sin definir",
+        avatar: "/images/placeholder-user.jpg", // Default avatar for guests
+        sessionsCompleted: 0,
+        totalSessions: 0,
+        plan: "Invitado",
+        isGuest: true
+      }))
+
+      const combined = [...rosterClients, ...pendingClients, ...guestClients]
       // console.log(`✅ Loaded ${rosterClients.length} in roster, ${pendingClients.length} pending`)
-      
+
       // ✅ Actualizar both cache en memoria y persistente
       setStudents(combined)
       setLastUpdateEvent(new Date())
@@ -193,7 +216,7 @@ export function useStudents(): UseStudentsReturn {
   const checkForStudentUpdatesInBackground = useCallback(async (trainerId: string, cachedStudents: Client[]) => {
     try {
       // console.log('🔍 Checking for student updates in background...')
-      
+
       // Verificar cambios en roster
       const { data: rosterRows, error: rosterError } = await supabase
         .from('trainer_student')
@@ -213,7 +236,7 @@ export function useStudents(): UseStudentsReturn {
       }
 
       const currentStudentCount = (rosterRows?.length || 0) + (pendingRows?.length || 0)
-      
+
       // Simple check: si el número de estudiantes cambió, actualizar
       if (currentStudentCount !== cachedStudents.length) {
         // console.log('🔄 Student changes detected, refreshing data...')
@@ -262,9 +285,9 @@ export function useStudents(): UseStudentsReturn {
     const sessionIds = (sessions || []).map((s: any) => s.id)
     const { data: logs, error: logsErr } = sessionIds.length > 0
       ? await supabase
-          .from('workout_set_log_v2')
-          .select('id, session_id, exercise_id, set_index, reps, weight_kg, rpe, duration_sec, rest_seconds, notes, performed_at')
-          .in('session_id', sessionIds)
+        .from('workout_set_log_v2')
+        .select('id, session_id, exercise_id, set_index, reps, weight_kg, rpe, duration_sec, rest_seconds, notes, performed_at')
+        .in('session_id', sessionIds)
       : { data: [], error: null as any }
 
     if (logsErr) {
@@ -275,13 +298,13 @@ export function useStudents(): UseStudentsReturn {
     // NEW: Fetch exercise names
     const exerciseIds = [...new Set((logs || []).map((l: any) => l.exercise_id))]
     const { data: exercises, error: exErr } = exerciseIds.length > 0
-        ? await supabase.from('exercises').select('id, name').in('id', exerciseIds)
-        : { data: [], error: null as any }
+      ? await supabase.from('exercises').select('id, name').in('id', exerciseIds)
+      : { data: [], error: null as any }
 
     if (exErr) {
-        console.error('❌ Error loading exercises:', exErr)
-        // Non-fatal, just won't have names, but return original logs
-        return { sessions: sessions || [], logs: logs || [] }
+      console.error('❌ Error loading exercises:', exErr)
+      // Non-fatal, just won't have names, but return original logs
+      return { sessions: sessions || [], logs: logs || [] }
     }
 
     const exerciseMap = new Map((exercises || []).map((e: any) => [e.id, e.name]))
