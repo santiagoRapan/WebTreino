@@ -54,7 +54,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     console.log('[AuthContext] 📊 Session loaded:', { hasSession: !!s, hasUser: !!s?.user, userEmail: s?.user?.email });
     setSession(s);
     setAuthUser(s?.user ?? null);
-    
+
     // Only ensure user if we have a session - don't block on this
     if (s?.user) {
       console.log('[AuthContext] 👤 User found in session:', s.user.email);
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       ensureAppUser().catch(e => {
         console.error("[AuthContext] ❌ ensureAppUser error on load:", e);
       });
-      
+
       // Fetch custom user data in background
       fetchCustomUser(s.user.id).then(customUserData => {
         console.log('[AuthContext] 📝 Setting custom user state:', customUserData);
@@ -80,7 +80,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const { data: { session } } = await supabase.auth.getSession();
     setSession(session ?? null);
     setAuthUser(session?.user ?? null);
-    
+
     // Fetch custom user data if we have a session
     if (session?.user) {
       console.log('[AuthContext] 👤 User found, fetching custom data...');
@@ -129,7 +129,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             console.error("[AuthContext] ❌ ensureAppUser error:", e);
           });
         }
-        
+
         // Fetch custom user data in background
         fetchCustomUser(newSession.user.id).then(customUserData => {
           if (mounted) {
@@ -219,6 +219,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const updateUserProfile = async (data: { name?: string | null; avatar_url?: string | null }): Promise<{ ok: true; data: void } | { ok: false; error: string }> => {
+    if (!authUser) {
+      return { ok: false, error: "No authenticated user" };
+    }
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update(data)
+        .eq('id', authUser.id);
+
+      if (error) {
+        console.error("Error updating user profile:", error);
+        return { ok: false, error: error.message };
+      }
+
+      // Update local state
+      setCustomUser(prev => prev ? { ...prev, ...data } : null);
+
+      return { ok: true, data: undefined };
+    } catch (error: any) {
+      console.error("Unexpected error updating profile:", error);
+      return { ok: false, error: error.message || "Unknown error" };
+    }
+  };
+
   const fullUserData: FullUserData | null = session ? {
     authUser,
     customUser,
@@ -235,6 +261,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signInWithGoogle,
     signOut,
     refreshUserData,
+    updateUserProfile,
     fullUserData,
   };
 

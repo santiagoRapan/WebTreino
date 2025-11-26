@@ -73,6 +73,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   fullUserData: FullUserData | null;
   refreshUserData: () => Promise<void>;
+  updateUserProfile: (data: UpdateUserData) => Promise<Result<void, string>>;
 }
 
 /**
