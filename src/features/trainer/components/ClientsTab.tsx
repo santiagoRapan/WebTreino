@@ -53,6 +53,7 @@ export function ClientsTab() {
               onRejectRequest={actions.rejectLinkRequest}
               onCancelRequest={actions.cancelLinkRequest}
               onViewHistory={actions.openStudentHistory}
+              onUpdateStatus={actions.handleUpdateStatus}
             />
           </CardContent>
         </Card>
@@ -63,6 +64,7 @@ export function ClientsTab() {
         onClose={() => actions.setIsEditDialogOpen(false)}
         client={state.editingClient}
         onClientUpdate={actions.setEditingClient}
+        onUpdateStatus={actions.handleUpdateStatus}
       />
 
       <NewClientDialog

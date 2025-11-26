@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/hooks/use-toast"
+import { useState } from "react"
+import { guestService } from "@/features/students/services/guest-service"
 import type { Client } from "../types"
 
 interface EditClientDialogProps {
@@ -20,6 +22,7 @@ interface EditClientDialogProps {
   onClose: () => void
   client: Client | null
   onClientUpdate: (client: Client) => void
+  onUpdateStatus: (client: Client, newStatus: "active" | "inactive" | "pending") => Promise<void>
 }
 
 export function EditClientDialog({
@@ -27,10 +30,47 @@ export function EditClientDialog({
   onClose,
   client,
   onClientUpdate,
+  onUpdateStatus,
 }: EditClientDialogProps) {
-  const handleSave = () => {
-    toast({ title: "Datos guardados (temporal, sin base de datos)" })
-    onClose()
+  const [loading, setLoading] = useState(false)
+
+  const handleSave = async () => {
+    if (!client) return
+    setLoading(true)
+    try {
+      // 1. Update status if changed
+      // Note: We don't track "original" status here easily without more state, 
+      // but calling update is safe even if same.
+      await onUpdateStatus(client, client.status)
+
+      // 2. Update other fields (Guest only for now as per previous implementation patterns)
+      if (client.isGuest) {
+        await guestService.updateGuest(client.id, {
+          name: client.name,
+          email: client.email,
+          phone: client.phone,
+        })
+      } else {
+        // For registered users, we might need a different service call if we want to edit their profile
+        // But usually profile data comes from auth/users table which might be read-only for trainer
+        // For now, we assume only status is editable for registered users via this dialog, 
+        // or we implement a specific endpoint.
+        // Given the current scope, we'll focus on status and guest updates.
+        console.log("Updating registered user data is not fully implemented yet, only status.")
+      }
+
+      toast({ title: "Datos actualizados correctamente" })
+      onClose()
+    } catch (error) {
+      console.error("Error updating client:", error)
+      toast({
+        title: "Error",
+        description: "No se pudieron guardar los cambios.",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (!client) return null
@@ -103,8 +143,8 @@ export function EditClientDialog({
           >
             Cancelar
           </Button>
-          <Button onClick={handleSave}>
-            Guardar
+          <Button onClick={handleSave} disabled={loading}>
+            {loading ? "Guardando..." : "Guardar"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -6,7 +6,7 @@ import type { Client } from "../types"
 export interface ClientHandlers {
   handleEditClient: (client: Client) => void
   handleDeleteClient: (clientId: string) => Promise<void>
-  handleMarkAsActive: (clientId: string) => void
+  handleUpdateStatus: (client: Client, newStatus: "active" | "inactive" | "pending") => Promise<void>
   handleNewClient: () => void
   handleViewAllClients: () => void
   acceptLinkRequest: (client: Client) => Promise<void>
@@ -120,7 +120,7 @@ export function createClientHandlers(
         // Remove from local state
         const updatedClients = clientState.clients.filter((c: Client) => c.id !== clientId)
         clientState.setClients(updatedClients)
-        
+
         toast({
           title: "Cliente eliminado",
           description: "El cliente ha sido eliminado exitosamente.",
@@ -136,16 +136,61 @@ export function createClientHandlers(
       }
     },
 
-    handleMarkAsActive: (clientId: string) => {
-      const updatedClients = clientState.clients.map((client: Client) =>
-        client.id === clientId ? { ...client, status: "active" as const } : client
-      )
-      clientState.setClients(updatedClients)
-      
-      toast({
-        title: "Estado actualizado",
-        description: "El cliente ha sido marcado como activo.",
-      })
+    handleUpdateStatus: async (client: Client, newStatus: "active" | "inactive" | "pending") => {
+      try {
+        const authUser = await getCurrentUser()
+        if (!authUser?.id) return
+
+        if (client.isGuest) {
+          // Update guest status
+          const { error } = await supabase
+            .from('guests')
+            .update({ status: newStatus })
+            .eq('id', client.id)
+            .eq('trainer_id', authUser.id)
+
+          if (error) throw error
+        } else {
+          // Update registered student status (trainer_student)
+          // Use relationshipId if available, otherwise try to find it
+          let relationshipId = client.relationshipId
+
+          if (!relationshipId) {
+            const { data } = await supabase
+              .from('trainer_student')
+              .select('id')
+              .eq('trainer_id', authUser.id)
+              .eq('student_id', client.userId)
+              .single()
+            relationshipId = data?.id
+          }
+
+          if (!relationshipId) throw new Error("No relationship found")
+
+          const { error } = await supabase
+            .from('trainer_student')
+            .update({ status: newStatus })
+            .eq('id', relationshipId)
+        }
+
+        // Optimistic update
+        const updatedClients = clientState.clients.map((c: Client) =>
+          c.id === client.id ? { ...c, status: newStatus } : c
+        )
+        clientState.setClients(updatedClients)
+
+        toast({
+          title: "Estado actualizado",
+          description: `El estado del alumno se ha cambiado a ${newStatus}.`,
+        })
+      } catch (error) {
+        console.error('Error updating status:', error)
+        toast({
+          title: "Error",
+          description: "No se pudo actualizar el estado.",
+          variant: "destructive"
+        })
+      }
     },
 
     handleNewClient: () => {
@@ -169,7 +214,7 @@ export function createClientHandlers(
       }
 
       const now = new Date().toISOString()
-      
+
       const { error } = await supabase
         .from('trainer_link_request')
         .update({ status: 'accepted', decided_at: now })
@@ -190,7 +235,7 @@ export function createClientHandlers(
         toast({ title: 'Error', description: 'No se pudo identificar la solicitud', variant: 'destructive' })
         return
       }
-      
+
       const { error } = await supabase
         .from('trainer_link_request')
         .delete()
@@ -201,7 +246,7 @@ export function createClientHandlers(
         toast({ title: 'Error', description: `No se pudo rechazar la solicitud: ${error.message}`, variant: 'destructive' })
         return
       }
-      
+
       await clientState.refreshClients()
       toast({ title: 'Solicitud rechazada', description: `Has rechazado la solicitud de ${client.name}` })
     },
@@ -211,7 +256,7 @@ export function createClientHandlers(
         toast({ title: 'Error', description: 'No se pudo identificar la solicitud', variant: 'destructive' })
         return
       }
-      
+
       const { error } = await supabase
         .from('trainer_link_request')
         .delete()
@@ -222,7 +267,7 @@ export function createClientHandlers(
         toast({ title: 'Error', description: `No se pudo cancelar la solicitud: ${error.message}`, variant: 'destructive' })
         return
       }
-      
+
       await clientState.refreshClients()
       toast({ title: 'Solicitud cancelada', description: `Has cancelado la solicitud a ${client.name}` })
     },
@@ -240,7 +285,7 @@ export function createClientHandlers(
       clientState.setHistoryLogs([])
 
       const { sessions, logs } = await clientState.fetchStudentSessions(client.userId)
-      
+
       console.log("Fetched Sessions:", sessions);
       console.log("Fetched Logs:", logs);
 

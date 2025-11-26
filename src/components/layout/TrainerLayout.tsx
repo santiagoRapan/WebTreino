@@ -105,7 +105,7 @@ export function TrainerLayout({ children }: TrainerLayoutProps) {
       // All Handler Functions
       handleEditClient: trainerData.handleEditClient,
       handleDeleteClient: trainerData.handleDeleteClient,
-      handleMarkAsActive: trainerData.handleMarkAsActive,
+      handleUpdateStatus: trainerData.handleUpdateStatus,
       handleNewClient: trainerData.handleNewClient,
       handleViewAllClients: trainerData.handleViewAllClients,
       openStudentHistory: trainerData.openStudentHistory,

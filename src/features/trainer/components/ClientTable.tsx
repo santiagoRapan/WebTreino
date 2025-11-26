@@ -17,6 +17,7 @@ interface ClientTableProps {
   onRejectRequest?: (client: Client) => void
   onCancelRequest?: (client: Client) => void
   onViewHistory?: (client: Client) => void
+  onUpdateStatus?: (client: Client, newStatus: "active" | "inactive" | "pending") => void
 }
 
 export function ClientTable({
@@ -28,6 +29,7 @@ export function ClientTable({
   onRejectRequest,
   onCancelRequest,
   onViewHistory,
+  onUpdateStatus,
 }: ClientTableProps) {
   const { t } = useTranslation()
 
@@ -72,17 +74,35 @@ export function ClientTable({
                 <td className="px-3 py-2">{client.email || "—"}</td>
                 <td className="px-3 py-2">{phone}</td>
                 <td className="px-3 py-2">
-                  <Badge
-                    variant={
-                      client.status === "active"
-                        ? "default"
-                        : client.status === "pending"
-                        ? "secondary"
-                        : "destructive"
-                    }
-                  >
-                    {t(`dashboard.status.${client.status}`)}
-                  </Badge>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="p-0 h-auto hover:bg-transparent">
+                        <Badge
+                          variant={
+                            client.status === "active"
+                              ? "default"
+                              : client.status === "pending"
+                                ? "secondary"
+                                : "destructive"
+                          }
+                          className="cursor-pointer hover:opacity-80"
+                        >
+                          {t(`dashboard.status.${client.status}`)}
+                        </Badge>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem onClick={() => onUpdateStatus?.(client, "active")}>
+                        {t("dashboard.status.active")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onUpdateStatus?.(client, "pending")}>
+                        {t("dashboard.status.pending")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onUpdateStatus?.(client, "inactive")}>
+                        {t("dashboard.status.inactive")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </td>
                 <td className="px-3 py-2 text-left align-middle">{progress}%</td>
                 <td className="px-3 py-2">{client.nextSession || "—"}</td>
@@ -111,7 +131,7 @@ export function ClientTable({
                         </Button>
                       </>
                     )}
-                    
+
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
