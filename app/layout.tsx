@@ -6,6 +6,7 @@ import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from "@/features/auth"
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider"
+import { TrainerAssistant } from "@/features/trainer/components"
 
 export const metadata: Metadata = {
   title: "Treino",
@@ -27,6 +28,7 @@ export default function RootLayout({
         <LanguageProvider>
           <AuthProvider>
             {children}
+            <TrainerAssistant />
           </AuthProvider>
         </LanguageProvider>
         <Toaster />
