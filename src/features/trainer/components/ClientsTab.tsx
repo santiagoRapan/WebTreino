@@ -31,11 +31,11 @@ export function ClientsTab() {
 
   return (
     <>
-      <main className="p-6 space-y-6">
+      <main className="p-4 md:p-6 space-y-4 md:space-y-6">
         <ClientsHeader onNewClient={actions.handleNewClient} />
 
         <Card className="bg-card border-border">
-          <CardContent className="p-4">
+          <CardContent className="p-3 md:p-4">
             <ClientFilters
               searchTerm={state.searchTerm}
               setSearchTerm={actions.setSearchTerm}

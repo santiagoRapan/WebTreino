@@ -4,6 +4,7 @@ import { useTrainerDashboard } from "@/features/trainer"
 import { TrainerDashboardProvider } from "@/lib/context/TrainerDashboardContext"
 import { Sidebar } from "./Sidebar"
 import { TrainerHeader } from "./TrainerHeader"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 interface TrainerLayoutProps {
   children: React.ReactNode
@@ -12,6 +13,7 @@ interface TrainerLayoutProps {
 export function TrainerLayout({ children }: TrainerLayoutProps) {
   // Use the master hook that provides all state and handlers
   const trainerData = useTrainerDashboard()
+  const isMobile = useIsMobile()
 
   // Create the context value that matches the existing interface
   const contextValue = {
@@ -19,6 +21,7 @@ export function TrainerLayout({ children }: TrainerLayoutProps) {
       // UI State
       activeTab: trainerData.activeTab,
       sidebarCollapsed: trainerData.sidebarCollapsed,
+      sidebarMobileOpen: trainerData.sidebarMobileOpen,
       theme: trainerData.theme,
       searchTerm: trainerData.searchTerm,
       clientFilter: trainerData.clientFilter,
@@ -61,6 +64,7 @@ export function TrainerLayout({ children }: TrainerLayoutProps) {
       // UI Actions
       setActiveTab: trainerData.setActiveTab,
       setSidebarCollapsed: trainerData.setSidebarCollapsed,
+      setSidebarMobileOpen: trainerData.setSidebarMobileOpen,
       setTheme: trainerData.setTheme,
       setSearchTerm: trainerData.setSearchTerm,
       setClientFilter: trainerData.setClientFilter,
@@ -150,7 +154,7 @@ export function TrainerLayout({ children }: TrainerLayoutProps) {
         <Sidebar />
 
         {/* Main Content Area - Positioned to account for fixed sidebar */}
-        <main className={`${trainerData.sidebarCollapsed ? "ml-20" : "ml-64"} transition-all duration-300 h-full flex flex-col`}>
+        <main className={`${!isMobile ? (trainerData.sidebarCollapsed ? "ml-20" : "ml-64") : ""} transition-all duration-300 h-full flex flex-col`}>
           {/* Header - Full Width of main area */}
           <TrainerHeader />
 

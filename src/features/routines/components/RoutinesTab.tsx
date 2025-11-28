@@ -466,7 +466,7 @@ export function RoutinesTab() {
   }
 
   return (
-    <main className="p-4 space-y-4">
+    <main className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Header Section */}
       <RoutinesHeader
         title={t("routines.title")}
@@ -500,7 +500,7 @@ export function RoutinesTab() {
       />
 
       {/* Folders and Templates Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <RoutinesFoldersList
           folders={loadedRoutinesData.length > 0 ? loadedRoutinesData : routineFolders}
           selectedFolderId={selectedFolderId}

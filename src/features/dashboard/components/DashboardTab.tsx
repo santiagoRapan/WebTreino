@@ -21,41 +21,41 @@ export function DashboardTab() {
   const { t } = useTranslation()
 
   return (
-    <main className="p-6 space-y-6">
-      <div className="flex items-center justify-between mb-8">
+    <main className="p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="flex items-center justify-between mb-4 md:mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">{t('dashboard.title')}</h1>
-          <p className="text-muted-foreground">{t('dashboard.welcome')}</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">{t('dashboard.title')}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">{t('dashboard.welcome')}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
         {stats.map((stat, index) => (
           <Card key={index} className="bg-card border-border">
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{stat.titleKey}</p>
-                  <p className="text-2xl font-bold text-card-foreground">{stat.value}</p>
-                  <p className="text-sm text-primary">{stat.change}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">{stat.titleKey}</p>
+                  <p className="text-xl md:text-2xl font-bold text-card-foreground">{stat.value}</p>
+                  <p className="text-xs md:text-sm text-primary">{stat.change}</p>
                 </div>
-                <stat.icon className={`w-8 h-8 ${stat.color}`} />
+                <stat.icon className="w-6 h-6 md:w-8 md:h-8 ${stat.color}" />
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 gap-4 md:gap-6">
         <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle className="text-card-foreground">{t('dashboard.recentClients.title')}</CardTitle>
-            <CardDescription>{t('dashboard.recentClients.description')}</CardDescription>
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="text-base md:text-lg text-card-foreground">{t('dashboard.recentClients.title')}</CardTitle>
+            <CardDescription className="text-sm">{t('dashboard.recentClients.description')}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 md:space-y-4 p-4 md:p-6 pt-0">
             {recentClients.map((client) => (
-              <div key={client.id} className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
-                <Avatar>
+              <div key={client.id} className="flex items-center gap-3 md:gap-4 p-3 rounded-lg bg-muted/50">
+                <Avatar className="h-10 w-10 md:h-12 md:w-12">
                   <AvatarImage src={client.avatar || "/images/placeholder.svg"} />
                   <AvatarFallback>
                     {client.name
@@ -64,13 +64,13 @@ export function DashboardTab() {
                       .join("")}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
-                  <p className="font-medium text-card-foreground">{client.name}</p>
-                  <p className="text-sm text-muted-foreground">Última sesión: {client.lastSession}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm md:text-base text-card-foreground truncate">{client.name}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Última sesión: {client.lastSession}</p>
                 </div>
-                <div className="text-right">
-                  <Badge variant={client.status === "active" ? "default" : "secondary"}>{client.status}</Badge>
-                  <p className="text-sm text-primary mt-1">{client.progress}% de progreso</p>
+                <div className="text-right flex-shrink-0">
+                  <Badge variant={client.status === "active" ? "default" : "secondary"} className="text-xs">{client.status}</Badge>
+                  <p className="text-xs md:text-sm text-primary mt-1">{client.progress}%</p>
                 </div>
               </div>
             ))}
@@ -87,27 +87,27 @@ export function DashboardTab() {
       </div>
 
       <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="text-card-foreground">{t('dashboard.quickActions.title')}</CardTitle>
-          <CardDescription>{t('dashboard.quickActions.description')}</CardDescription>
+        <CardHeader className="p-4 md:p-6">
+          <CardTitle className="text-base md:text-lg text-card-foreground">{t('dashboard.quickActions.title')}</CardTitle>
+          <CardDescription className="text-sm">{t('dashboard.quickActions.description')}</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex justify-around gap-4 flex-wrap">
+        <CardContent className="p-4 md:p-6 pt-0">
+          <div className="grid grid-cols-2 gap-3 md:gap-4">
             <Button
-              className="h-20 flex-col gap-2 bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors"
+              className="h-20 md:h-24 flex-col gap-2 bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors"
               variant="outline"
               onClick={handleNewClient}
             >
-              <Users className="w-6 h-6" />
-              <span className="text-sm">{t('dashboard.quickActions.newClient')}</span>
+              <Users className="w-5 h-5 md:w-6 md:h-6" />
+              <span className="text-xs md:text-sm">{t('dashboard.quickActions.newClient')}</span>
             </Button>
             <Button
-              className="h-20 flex-col gap-2 bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors"
+              className="h-20 md:h-24 flex-col gap-2 bg-transparent hover:bg-accent hover:text-accent-foreground transition-colors"
               variant="outline"
               onClick={handleCreateRoutine}
             >
-              <Activity className="w-6 h-6" />
-              <span className="text-sm">{t('dashboard.quickActions.createRoutine')}</span>
+              <Activity className="w-5 h-5 md:w-6 md:h-6" />
+              <span className="text-xs md:text-sm">{t('dashboard.quickActions.createRoutine')}</span>
             </Button>
           </div>
         </CardContent>

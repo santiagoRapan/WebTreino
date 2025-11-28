@@ -43,7 +43,7 @@ export function TrainerAssistant() {
     }
 
     return (
-        <Card className="fixed bottom-4 right-4 w-[400px] h-[600px] shadow-2xl flex flex-col z-50 animate-in slide-in-from-bottom-5 fade-in duration-300 border-primary/20">
+        <Card className="fixed bottom-4 right-4 w-[calc(100vw-2rem)] md:w-[400px] h-[calc(100vh-2rem)] md:h-[600px] max-w-[400px] shadow-2xl flex flex-col z-50 animate-in slide-in-from-bottom-5 fade-in duration-300 border-primary/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b bg-muted/30">
                 <div className="flex items-center gap-2">
                     <div className="bg-primary/10 p-2 rounded-full">

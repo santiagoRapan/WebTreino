@@ -8,6 +8,8 @@ export interface UseUIStateReturn {
   setActiveTab: Dispatch<SetStateAction<string>>
   sidebarCollapsed: boolean
   setSidebarCollapsed: Dispatch<SetStateAction<boolean>>
+  sidebarMobileOpen: boolean
+  setSidebarMobileOpen: Dispatch<SetStateAction<boolean>>
   theme: "dark" | "light"
   setTheme: Dispatch<SetStateAction<"dark" | "light">>
   
@@ -42,6 +44,7 @@ export function useUIState(): UseUIStateReturn {
   // Main UI State
   const [activeTab, setActiveTab] = useState<string>("dashboard")
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false)
+  const [sidebarMobileOpen, setSidebarMobileOpen] = useState<boolean>(false)
   const [theme, setTheme] = useState<"dark" | "light">("dark")
 
   // Search and Filter States
@@ -77,6 +80,8 @@ export function useUIState(): UseUIStateReturn {
     setActiveTab,
     sidebarCollapsed,
     setSidebarCollapsed,
+    sidebarMobileOpen,
+    setSidebarMobileOpen,
     theme,
     setTheme,
     searchTerm,
