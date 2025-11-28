@@ -75,6 +75,19 @@ export function useUIState(): UseUIStateReturn {
     }
   }, [theme])
 
+  useEffect(() => {
+    const storedCollapsed = localStorage.getItem("sidebarCollapsed")
+    if (storedCollapsed !== null) {
+      const collapsedValue = storedCollapsed === "true"
+      setSidebarCollapsed(prev => (prev === collapsedValue ? prev : collapsedValue))
+    }
+  }, [])
+
+  useEffect(() => {
+    // Persist collapsed state so it survives navigation between sections.
+    localStorage.setItem("sidebarCollapsed", sidebarCollapsed.toString())
+  }, [sidebarCollapsed])
+
   return {
     activeTab,
     setActiveTab,

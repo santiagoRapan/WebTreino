@@ -200,7 +200,7 @@ export function ClientTable({
   // Desktop table view
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full text-sm">"
+      <table className="min-w-full text-sm">
         <thead>
           <tr className="bg-muted/40 text-muted-foreground">
             <th className="px-3 py-2 text-left">{t("clients.table.name")}</th>
