@@ -1,18 +1,50 @@
 "use client"
 
 import { useChat } from '@ai-sdk/react'
-import { useState, useRef, useEffect } from 'react'
+import { DefaultChatTransport } from 'ai'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Bot, Send, User, X, Sparkles, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/features/auth/services/auth-context'
+import ReactMarkdown from 'react-markdown'
 
 export function TrainerAssistant() {
     const [isOpen, setIsOpen] = useState(false)
     const [inputValue, setInputValue] = useState('')
-    const { messages, sendMessage, status } = useChat()
+    const { authUser, session } = useAuth()
+    
+    // Use ref to always get latest authUser and session in the transport body function
+    const authUserRef = useRef(authUser)
+    const sessionRef = useRef(session)
+    useEffect(() => {
+        authUserRef.current = authUser
+        sessionRef.current = session
+        console.log('[TrainerAssistant] authUser updated:', authUser?.id)
+    }, [authUser, session])
+    
+    // Create transport with ownerId and accessToken in body - use function with ref to get latest value on each request
+    const transport = useMemo(() => {
+        return new DefaultChatTransport({
+            api: '/api/chat',
+            body: () => {
+                const ownerId = authUserRef.current?.id
+                const accessToken = sessionRef.current?.access_token
+                console.log('[TrainerAssistant] Sending request with ownerId:', ownerId, 'hasToken:', !!accessToken)
+                return {
+                    ownerId,
+                    accessToken,
+                }
+            },
+        })
+    }, []) // Empty deps - transport is stable, body function uses ref
+    
+    const { messages, sendMessage, status } = useChat({
+        transport,
+    })
     const isLoading = status === 'streaming' || status === 'submitted'
     const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -83,28 +115,52 @@ export function TrainerAssistant() {
                         </div>
                     )}
 
-                    {messages.map((m: any) => (
-                        <div
-                            key={m.id}
-                            className={cn(
-                                "flex w-full",
-                                m.role === 'user' ? "justify-end" : "justify-start"
-                            )}
-                        >
+                    {messages.map((m: any) => {
+                        // Extract text content - handle both 'content' and 'parts' formats
+                        let textContent = m.content;
+                        if (!textContent && m.parts) {
+                            const textPart = m.parts.find((p: any) => p.type === 'text');
+                            textContent = textPart?.text || '';
+                        }
+                        
+                        // Skip assistant messages with no meaningful text content
+                        // This filters out tool-only messages and partial messages
+                        if (m.role === 'assistant') {
+                            const trimmedContent = (textContent || '').trim();
+                            if (!trimmedContent || trimmedContent.length < 5) {
+                                return null;
+                            }
+                        }
+                        
+                        return (
                             <div
+                                key={m.id}
                                 className={cn(
-                                    "flex gap-2 max-w-[85%] rounded-lg px-4 py-3 text-sm",
-                                    m.role === 'user'
-                                        ? "bg-primary text-primary-foreground"
-                                        : "bg-muted"
+                                    "flex w-full",
+                                    m.role === 'user' ? "justify-end" : "justify-start"
                                 )}
                             >
-                                {m.role !== 'user' && <Bot className="h-4 w-4 mt-0.5 shrink-0 opacity-70" />}
-                                <div className="whitespace-pre-wrap">{m.content}</div>
-                                {m.role === 'user' && <User className="h-4 w-4 mt-0.5 shrink-0 opacity-70" />}
+                                <div
+                                    className={cn(
+                                        "flex gap-2 max-w-[85%] rounded-lg px-4 py-3 text-sm",
+                                        m.role === 'user'
+                                            ? "bg-primary text-primary-foreground"
+                                            : "bg-muted"
+                                    )}
+                                >
+                                    {m.role !== 'user' && <Bot className="h-4 w-4 mt-0.5 shrink-0 opacity-70" />}
+                                    {m.role === 'user' ? (
+                                        <div className="whitespace-pre-wrap">{textContent}</div>
+                                    ) : (
+                                        <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_p]:my-1 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-medium [&_code]:bg-background/50 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs">
+                                            <ReactMarkdown>{textContent}</ReactMarkdown>
+                                        </div>
+                                    )}
+                                    {m.role === 'user' && <User className="h-4 w-4 mt-0.5 shrink-0 opacity-70" />}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
 
                     {isLoading && (
                         <div className="flex justify-start w-full">

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
 import { useTranslation } from "@/lib/i18n/LanguageProvider"
@@ -260,10 +260,11 @@ export function RoutinesTab() {
   }, [authUser?.id, routineFolders])
 
   // Helper function to refresh routine data
-  const refreshRoutineData = async () => {
+  const refreshRoutineData = useCallback(async () => {
     if (!customUser?.id) return
     
     try {
+      console.log('🔄 Refreshing routine data...')
       const refreshedRoutines = await routineDatabase.refreshRoutinesV2(customUser.id)
       
       // Store full routine data
@@ -301,11 +302,59 @@ export function RoutinesTab() {
       }]
       
       setLoadedRoutinesData(folders)
-      console.log('✅ Routine data refreshed')
+      console.log('✅ Routine data refreshed, found', refreshedRoutines.length, 'routines')
     } catch (error) {
       console.error('Error refreshing routine data:', error)
     }
-  }
+  }, [customUser?.id, routineDatabase])
+
+  // Real-time subscription + polling for routines (handles AI-created routines)
+  useEffect(() => {
+    if (!customUser?.id) return
+
+    console.log('📡 Setting up real-time subscription for routines...')
+    
+    // Set up real-time subscription
+    const channel = supabase
+      .channel(`routines_changes_${customUser.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'routines',
+          filter: `owner_id=eq.${customUser.id}`
+        },
+        (payload) => {
+          console.log('📡 Routine change detected:', payload.eventType)
+          refreshRoutineData()
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Routines subscription status:', status)
+      })
+
+    // Also poll every 5 seconds as backup (in case realtime is not enabled)
+    const pollInterval = setInterval(() => {
+      refreshRoutineData()
+    }, 5000)
+
+    // Refresh when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('👁️ Tab visible, refreshing routines...')
+        refreshRoutineData()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      console.log('📡 Cleaning up routines subscription')
+      supabase.removeChannel(channel)
+      clearInterval(pollInterval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [customUser?.id, refreshRoutineData])
 
   const saveRoutine = async () => {
     if (!editingRoutine) return
