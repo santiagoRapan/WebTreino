@@ -308,6 +308,17 @@ export function RoutinesTab() {
     }
   }, [customUser?.id, routineDatabase])
 
+  // Listen for chat assistant "routine created" events to refresh immediately
+  useEffect(() => {
+    const handleRoutineCreated = (event: Event) => {
+      console.log('⚡ Routine created event received from chat', event)
+      refreshRoutineData()
+    }
+
+    window.addEventListener('treino:routine-created', handleRoutineCreated)
+    return () => window.removeEventListener('treino:routine-created', handleRoutineCreated)
+  }, [refreshRoutineData])
+
   // Real-time subscription + polling for routines (handles AI-created routines)
   useEffect(() => {
     if (!customUser?.id) return

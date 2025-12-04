@@ -98,6 +98,12 @@ REGLA CRÍTICA - RESPUESTA OBLIGATORIA:
 - NUNCA termines sin dar una respuesta de texto al usuario
 - Formato del resumen: "✅ **Rutina creada:** [nombre] con [X] ejercicios. Ya está disponible en tu sección de Rutinas."
 
+FORMATO DE RESPUESTA:
+- Responde siempre en ESPAÑOL.
+- Usa Markdown minimalista: viñetas cortas (•), negritas solo para nombres de ejercicios/pasos clave. Evita subtítulos y párrafos largos.
+- Sé breve: máximo 3-4 viñetas o 60-80 palabras. Sin texto redundante.
+- Si das listas de ejercicios, limita a 4 ítems como máximo.
+
 Responde en español. Sé muy conciso.`,
         messages: modelMessages,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

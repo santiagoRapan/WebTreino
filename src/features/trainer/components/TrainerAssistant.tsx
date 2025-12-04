@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Bot, Send, User, X, Sparkles, Loader2 } from 'lucide-react'
+import { Bot, Send, User, X, Sparkles, Loader2, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/features/auth/services/auth-context'
 import ReactMarkdown from 'react-markdown'
@@ -42,24 +42,66 @@ export function TrainerAssistant() {
         })
     }, []) // Empty deps - transport is stable, body function uses ref
     
-    const { messages, sendMessage, status } = useChat({
+    const { messages, sendMessage, status, setMessages, stop } = useChat({
         transport,
     })
     const isLoading = status === 'streaming' || status === 'submitted'
     const scrollRef = useRef<HTMLDivElement>(null)
+    const handledRoutineMessageIds = useRef<Set<string>>(new Set())
+    const resetChat = () => {
+        stop?.()
+        setMessages([])
+        handledRoutineMessageIds.current.clear()
+        setInputValue('')
+    }
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!inputValue.trim()) return
 
-        await sendMessage({ role: 'user', content: inputValue } as any)
+        const toSend = inputValue
+        // Clear input immediately for snappy UX
         setInputValue('')
+        await sendMessage({ role: 'user', content: toSend } as any)
     }
 
     // Auto-scroll to bottom
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+        }
+    }, [messages])
+    
+    // Detect assistant confirmation of routine creation and trigger routines refresh
+    useEffect(() => {
+        for (const m of messages) {
+            const msg: any = m
+            if (msg.role !== 'assistant') continue
+            if (!msg.id || handledRoutineMessageIds.current.has(msg.id)) continue
+
+            // Extract text content (content or parts)
+            let textContent: string = msg.content || ''
+            if (!textContent && msg.parts) {
+                const textPart = msg.parts.find((p: any) => p.type === 'text')
+                textContent = textPart?.text || ''
+            }
+
+            const normalized = (textContent || '').toLowerCase()
+            const mentionsRoutineCreation = normalized.includes('rutina creada') || normalized.includes('rutina \"') || normalized.includes('rutina “')
+            const mentionsSuccessEmoji = textContent?.includes('✅')
+
+            if (mentionsRoutineCreation || mentionsSuccessEmoji) {
+                handledRoutineMessageIds.current.add(msg.id)
+
+                // Dispatch a custom event so RoutinesTab can refresh immediately
+                window.dispatchEvent(new CustomEvent('treino:routine-created', {
+                    detail: {
+                        source: 'trainer-assistant',
+                        messageId: msg.id
+                    }
+                }))
+
+            }
         }
     }, [messages])
 
@@ -82,13 +124,24 @@ export function TrainerAssistant() {
                         <Bot className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                        <CardTitle className="text-base">Trainer Assistant</CardTitle>
+                        <CardTitle className="text-base">Treinus</CardTitle>
                         <p className="text-xs text-muted-foreground">Powered by AI</p>
                     </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="h-8 w-8">
-                    <X className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Reiniciar conversación"
+                        onClick={resetChat}
+                        className="h-8 w-8"
+                    >
+                        <RotateCcw className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="h-8 w-8">
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
             </CardHeader>
 
             <CardContent className="flex-1 p-0 overflow-hidden relative">
@@ -99,17 +152,17 @@ export function TrainerAssistant() {
                     {messages.length === 0 && (
                         <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4 space-y-4 opacity-60">
                             <Bot className="h-12 w-12 mb-2" />
-                            <p>Hello! I can help you design workouts or find exercise alternatives.</p>
+                            <p>Hola! Puedo ayudarte a crear rutinas o buscar alternatives.</p>
                             <div className="grid grid-cols-1 gap-2 w-full max-w-xs text-sm">
                                 <Button variant="outline" size="sm" className="justify-start h-auto py-2 px-3" onClick={() => {
-                                    setInputValue("Create a chest workout for a beginner");
+                                    setInputValue("Hace una rutina de pecho para un principiante");
                                 }}>
-                                    "Create a chest workout..."
+                                    "Hace una rutina de pecho..."
                                 </Button>
                                 <Button variant="outline" size="sm" className="justify-start h-auto py-2 px-3" onClick={() => {
-                                    setInputValue("Suggest alternatives for Bench Press");
+                                    setInputValue("Sugiere alternativas para Press de Banca");
                                 }}>
-                                    "Alternatives for Bench Press..."
+                                    "Alternativas para Press de Banca..."
                                 </Button>
                             </div>
                         </div>
