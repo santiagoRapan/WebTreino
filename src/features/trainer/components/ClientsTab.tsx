@@ -52,7 +52,7 @@ export function ClientsTab() {
               onAcceptRequest={actions.acceptLinkRequest}
               onRejectRequest={actions.rejectLinkRequest}
               onCancelRequest={actions.cancelLinkRequest}
-              onViewHistory={actions.openStudentHistory}
+              onViewHistory={(client) => router.push(`/alumnos/${encodeURIComponent(client.userId)}/historial`)}
               onUpdateStatus={actions.handleUpdateStatus}
             />
           </CardContent>

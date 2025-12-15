@@ -31,6 +31,7 @@ export interface SessionExerciseDetail {
   exerciseId: string
   name: string
   gifUrl: string | null
+  note: string | null
   sets: {
     id: string
     setIndex: number
@@ -49,6 +50,7 @@ export async function getSessionDetails(sessionId: string): Promise<SessionExerc
       reps,
       weight_kg,
       rpe,
+      notes,
       performed_at,
       exercise:exercises (
         id,
@@ -71,16 +73,23 @@ export async function getSessionDetails(sessionId: string): Promise<SessionExerc
         exerciseId,
         name: log.exercise.name,
         gifUrl: log.exercise.gif_URL, // Supabase returns it as gif_URL usually, or we might need to check casing
+        note: null,
         sets: []
       })
     }
+
+    const existing = grouped.get(exerciseId)!
+    const candidateNote = typeof log.notes === 'string' ? log.notes.trim() : ''
+    if (!existing.note && candidateNote) {
+      existing.note = candidateNote
+    }
     
-    grouped.get(exerciseId)!.sets.push({
+    existing.sets.push({
       id: log.id,
       setIndex: log.set_index,
       weight: log.weight_kg,
       reps: log.reps,
-      rpe: log.rpe
+      rpe: log.rpe,
     })
   })
 
@@ -214,6 +223,127 @@ export async function getStudentWorkouts(trainerId: string): Promise<FeedWorkout
       stats: {
         exerciseCount: uniqueExercises,
         setCount: setCount,
+        duration: formattedDuration
+      }
+    }
+  }))
+
+  return transformedSessions
+}
+
+export async function getWorkoutsForStudent(trainerId: string, studentId: string): Promise<FeedWorkoutSession[]> {
+  // Ensure this student belongs to the trainer (avoid leaking data if RLS is permissive)
+  const { data: rel, error: relErr } = await supabase
+    .from('trainer_student')
+    .select('id')
+    .eq('trainer_id', trainerId)
+    .eq('student_id', studentId)
+    .maybeSingle()
+
+  if (relErr) throw relErr
+  if (!rel) return []
+
+  const { data: sessions, error: sessionsError } = await supabase
+    .from('workout_session_v2')
+    .select(`
+      id,
+      performer_id,
+      started_at,
+      completed_at,
+      duration_seconds,
+      title,
+      description,
+      notes,
+      routine:routines (
+        name,
+        description
+      ),
+      media:workout_session_media (
+        storage_path,
+        media_type,
+        mime_type
+      ),
+      logs:workout_set_log_v2 (
+        exercise_id
+      )
+    `)
+    .eq('performer_id', studentId)
+    .order('completed_at', { ascending: false })
+
+  if (sessionsError) {
+    console.error("Error fetching sessions:", JSON.stringify(sessionsError, null, 2))
+    throw sessionsError
+  }
+
+  if (!sessions || sessions.length === 0) return []
+
+  const { data: performer, error: performerError } = await supabase
+    .from('users')
+    .select('id, name, avatar_url')
+    .eq('id', studentId)
+    .maybeSingle()
+
+  if (performerError) {
+    console.error("Error fetching performer:", JSON.stringify(performerError, null, 2))
+  }
+
+  const transformedSessions = await Promise.all(sessions.map(async (session: any) => {
+    let durationSeconds = 0
+    if (session.duration_seconds) {
+      durationSeconds = session.duration_seconds
+    } else {
+      const durationMs = session.completed_at
+        ? new Date(session.completed_at).getTime() - new Date(session.started_at).getTime()
+        : 0
+      durationSeconds = Math.floor(durationMs / 1000)
+    }
+
+    const minutes = Math.floor(durationSeconds / 60)
+    const seconds = durationSeconds % 60
+    const formattedDuration = `${minutes}:${seconds.toString().padStart(2, '0')}`
+
+    const uniqueExercises = new Set((session.logs || []).map((l: any) => l.exercise_id)).size
+    const setCount = (session.logs || []).length
+
+    const mediaWithUrls = await Promise.all((session.media || []).map(async (item: any) => {
+      try {
+        const { data, error } = await supabase.storage
+          .from('workout-images')
+          .createSignedUrl(item.storage_path, 3600)
+
+        if (error) {
+          console.error("Error creating signed URL:", error)
+          return { ...item, public_url: null }
+        }
+
+        const isVideo = item.mime_type?.startsWith('video/') || item.media_type === 'video'
+        return {
+          ...item,
+          media_type: isVideo ? 'video' : 'image',
+          public_url: data.signedUrl
+        }
+      } catch (err) {
+        console.error("Exception creating signed URL:", err)
+        return { ...item, public_url: null }
+      }
+    }))
+
+    return {
+      id: session.id,
+      started_at: session.started_at,
+      completed_at: session.completed_at,
+      title: session.title,
+      description: session.description,
+      notes: session.notes,
+      routine: session.routine,
+      performer: {
+        name: performer?.name || 'Usuario desconocido',
+        avatar_url: performer?.avatar_url || null
+      },
+      media: mediaWithUrls.filter((m: any) => m.public_url !== null),
+      stats: {
+        exerciseCount: uniqueExercises,
+        setCount,
         duration: formattedDuration
       }
     }

@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 import { FeedWorkoutSession } from "../services/feedService"
-import { Play, Clock, Dumbbell, Layers, Maximize2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Clock, Dumbbell, Layers, Maximize2, Play } from "lucide-react"
 import Image from "next/image"
 import { WorkoutDetailModal } from "./WorkoutDetailModal"
 
@@ -16,6 +17,49 @@ interface WorkoutCardProps {
 export function WorkoutCard({ session }: WorkoutCardProps) {
   const [selectedMedia, setSelectedMedia] = useState<{ url: string, type: 'image' | 'video' } | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+
+  const mediaStripRef = useRef<HTMLDivElement | null>(null)
+  const [mediaScroll, setMediaScroll] = useState({
+    hasOverflow: false,
+    canScrollLeft: false,
+    canScrollRight: false,
+  })
+
+  const updateMediaScrollState = useCallback(() => {
+    const el = mediaStripRef.current
+    if (!el) return
+
+    const hasOverflow = el.scrollWidth > el.clientWidth + 1
+    const canScrollLeft = hasOverflow && el.scrollLeft > 1
+    const canScrollRight =
+      hasOverflow && el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+
+    setMediaScroll({ hasOverflow, canScrollLeft, canScrollRight })
+  }, [])
+
+  useEffect(() => {
+    const el = mediaStripRef.current
+    if (!el) return
+
+    updateMediaScrollState()
+
+    const onScroll = () => updateMediaScrollState()
+    el.addEventListener("scroll", onScroll, { passive: true })
+
+    const ro = new ResizeObserver(() => updateMediaScrollState())
+    ro.observe(el)
+
+    return () => {
+      el.removeEventListener("scroll", onScroll)
+      ro.disconnect()
+    }
+  }, [updateMediaScrollState])
+
+  const scrollMediaBy = useCallback((direction: -1 | 1) => {
+    const el = mediaStripRef.current
+    if (!el) return
+    el.scrollBy({ left: direction * Math.max(120, el.clientWidth * 0.8), behavior: "smooth" })
+  }, [])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -95,26 +139,62 @@ export function WorkoutCard({ session }: WorkoutCardProps) {
 
         {/* Media Preview */}
         {session.media.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 mt-2 h-32">
-            {session.media.slice(0, 2).map((item, index) => (
-              <div 
-                key={index} 
-                className="relative rounded-md overflow-hidden bg-muted h-full cursor-pointer group"
+          <div className="relative mt-2 h-32">
+            {mediaScroll.hasOverflow && mediaScroll.canScrollLeft && (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="absolute left-1 top-1/2 z-30 h-7 w-7 -translate-y-1/2 rounded-full bg-background"
                 onClick={(e) => {
                   e.stopPropagation()
-                  item.public_url && setSelectedMedia({ url: item.public_url, type: item.media_type })
+                  scrollMediaBy(-1)
                 }}
+                aria-label="Ver multimedia anterior"
               >
-                <div className="absolute inset-0 z-20 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                  <Maximize2 className="w-6 h-6 text-white drop-shadow-md" />
-                </div>
-                
-                <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground text-xs relative">
-                   {item.public_url ? (
-                      item.media_type === 'video' ? (
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            )}
+
+            {mediaScroll.hasOverflow && mediaScroll.canScrollRight && (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="absolute right-1 top-1/2 z-30 h-7 w-7 -translate-y-1/2 rounded-full bg-background"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  scrollMediaBy(1)
+                }}
+                aria-label="Ver más multimedia"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            )}
+
+            <div
+              ref={mediaStripRef}
+              className="flex h-32 gap-2 overflow-x-auto scroll-smooth"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {session.media.map((item, index) => (
+                <div
+                  key={index}
+                  className="relative h-full w-44 shrink-0 rounded-md overflow-hidden bg-muted cursor-pointer group"
+                  onClick={() => {
+                    item.public_url && setSelectedMedia({ url: item.public_url, type: item.media_type })
+                  }}
+                >
+                  <div className="absolute inset-0 z-20 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <Maximize2 className="w-6 h-6 text-white drop-shadow-md" />
+                  </div>
+
+                  <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground text-xs relative">
+                    {item.public_url ? (
+                      item.media_type === "video" ? (
                         <div className="relative w-full h-full">
-                          <video 
-                            src={item.public_url} 
+                          <video
+                            src={item.public_url}
                             className="w-full h-full object-cover pointer-events-none"
                             muted
                             playsInline
@@ -126,21 +206,22 @@ export function WorkoutCard({ session }: WorkoutCardProps) {
                           </div>
                         </div>
                       ) : (
-                        <Image 
-                          src={item.public_url} 
-                          alt="Workout media" 
-                          fill 
+                        <Image
+                          src={item.public_url}
+                          alt="Workout media"
+                          fill
                           className="object-cover"
                         />
                       )
-                   ) : (
+                    ) : (
                       <div className="flex flex-col items-center gap-1">
-                        {item.media_type === 'video' ? 'Video' : 'Imagen'}
+                        {item.media_type === "video" ? "Video" : "Imagen"}
                       </div>
-                   )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 

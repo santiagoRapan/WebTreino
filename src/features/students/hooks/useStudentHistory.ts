@@ -24,7 +24,7 @@ export function useStudentHistory(): UseStudentHistoryReturn {
         .select('id, performer_id, routine_id, started_at, completed_at, notes, routines(id, name, owner_id)')
         .eq('performer_id', studentId)
         .order('started_at', { ascending: false })
-        .limit(50)
+        
 
       if (sessErr) throw sessErr
 
