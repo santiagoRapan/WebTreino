@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "@/services/database"
 import { toast } from "@/hooks/use-toast"
 import { useAuth } from "@/features/auth/services/auth-context"
@@ -12,6 +12,7 @@ import { guestService } from "../services/guest-service"
 export function useStudents(): UseStudentsReturn {
   const { authUser } = useAuth()
   const [students, setStudents] = useState<Client[]>([])
+  const studentsRef = useRef<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshTimeout, setRefreshTimeout] = useState<NodeJS.Timeout | null>(null)
@@ -30,7 +31,7 @@ export function useStudents(): UseStudentsReturn {
       // 🚀 CACHE-FIRST: Intentar cargar desde cache primero si no estamos forzando refresh
       if (!forceRefresh) {
         // 1. Verificar cache en memoria
-        if (students.length > 0) {
+        if (studentsRef.current.length > 0) {
           // console.log('🚀 Using in-memory cached students')
           return
         }
@@ -195,6 +196,7 @@ export function useStudents(): UseStudentsReturn {
       // console.log(`✅ Loaded ${rosterClients.length} in roster, ${pendingClients.length} pending`)
 
       // ✅ Actualizar both cache en memoria y persistente
+      studentsRef.current = combined
       setStudents(combined)
       setLastUpdateEvent(new Date())
       DataCacheManager.setCachedStudents(trainerId, combined)
@@ -210,7 +212,7 @@ export function useStudents(): UseStudentsReturn {
     } finally {
       setLoading(false)
     }
-  }, [authUser, students])
+  }, [authUser])
 
   // 🔍 Verificar actualizaciones en background sin mostrar loading al usuario
   const checkForStudentUpdatesInBackground = useCallback(async (trainerId: string, cachedStudents: Client[]) => {
@@ -237,8 +239,11 @@ export function useStudents(): UseStudentsReturn {
 
       const currentStudentCount = (rosterRows?.length || 0) + (pendingRows?.length || 0)
 
+      // cachedStudents may include guest entries that are not reflected in DB counts.
+      const cachedDbBackedCount = (cachedStudents || []).filter((s: any) => !s?.isGuest).length
+
       // Simple check: si el número de estudiantes cambió, actualizar
-      if (currentStudentCount !== cachedStudents.length) {
+      if (currentStudentCount !== cachedDbBackedCount) {
         // console.log('🔄 Student changes detected, refreshing data...')
         await fetchStudents(true)
       } else {
@@ -319,6 +324,11 @@ export function useStudents(): UseStudentsReturn {
       fetchStudents(false) // Initial load with cache-first
     }
   }, [authUser, fetchStudents])
+
+  // Keep ref in sync for cache-first short-circuit.
+  useEffect(() => {
+    studentsRef.current = students
+  }, [students])
 
   // Real-time subscriptions for automatic updates
   useEffect(() => {
