@@ -1,0 +1,249 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Plus, Activity } from "lucide-react"
+import { supabase } from "@/services/database"
+import type { RoutineTemplate, Exercise, SetInputV2 } from "@/features/routines/types"
+import { EditableExerciseCard } from "./EditableExerciseCard"
+
+interface RoutineEditorDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  routine: RoutineTemplate | null
+  onRoutineChange: (routine: RoutineTemplate) => void
+  onAddExercise: () => void
+  onDeleteExercise: (exerciseIndex: number) => void
+  onSaveRoutine: () => Promise<void>
+  isSaving?: boolean
+  exercises: Exercise[]
+  exerciseV2Data?: Record<string, SetInputV2[]>
+  onUpdateExerciseSets?: (exerciseId: string, sets: SetInputV2[]) => void
+  translations: {
+    title: string
+    description: string
+    routineName: string
+    routineNamePlaceholder: string
+    routineDescription: string
+    routineDescriptionPlaceholder: string
+    exercisesTitle: string
+    addExercise: string
+    noExercises: string
+    clickToStart: string
+    sets: string
+    reps: string
+    load: string
+    unit: string
+    notes: string
+    addSet: string
+    delete: string
+    restShort: string
+    cancel: string
+    saveRoutine: string
+    saving: string
+    noGifAvailable: string
+  }
+}
+
+export function RoutineEditorDialog({
+  open,
+  onOpenChange,
+  routine,
+  onRoutineChange,
+  onAddExercise,
+  onDeleteExercise,
+  onSaveRoutine,
+  isSaving = false,
+  exercises,
+  exerciseV2Data = {},
+  onUpdateExerciseSets,
+  translations,
+}: RoutineEditorDialogProps) {
+  // State to store fetched exercise data
+  const [fetchedExercises, setFetchedExercises] = useState<Record<string, Exercise>>({})
+  
+  // Reset fetched exercises when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setFetchedExercises({})
+    }
+  }, [open])
+  
+  // Fetch missing exercise data when routine changes
+  useEffect(() => {
+    if (!routine || !open) return
+    
+    const fetchMissingExercises = async () => {
+      const missingIds: string[] = []
+      
+      // Find exercise IDs that aren't in the exercises array or fetchedExercises
+      routine.exercises.forEach((ex) => {
+        const found = exercises.find((e) => e.id.toString() === ex.exerciseId.toString())
+        if (!found && !fetchedExercises[ex.exerciseId]) {
+          missingIds.push(ex.exerciseId)
+        }
+      })
+      
+      if (missingIds.length === 0) return
+      
+      // Fetch missing exercises from database
+      const { data, error } = await supabase
+        .from('exercises')
+        .select('*')
+        .in('id', missingIds)
+      
+      if (!error && data) {
+        setFetchedExercises((prev) => {
+          const updated = { ...prev }
+          data.forEach((ex) => {
+            updated[ex.id] = ex as Exercise
+          })
+          return updated
+        })
+      }
+    }
+    
+    fetchMissingExercises()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routine, exercises, open])
+  
+  if (!routine) return null
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {translations.title}: {routine.name}
+          </DialogTitle>
+          <DialogDescription>{translations.description}</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Routine Name */}
+          <div className="space-y-2">
+            <Label htmlFor="routine-name">{translations.routineName}</Label>
+            <Input
+              id="routine-name"
+              value={routine.name}
+              onChange={(e) => onRoutineChange({ ...routine, name: e.target.value })}
+              placeholder={translations.routineNamePlaceholder}
+            />
+          </div>
+
+          {/* Routine Description */}
+          <div className="space-y-2">
+            <Label htmlFor="routine-description">{translations.routineDescription}</Label>
+            <Textarea
+              id="routine-description"
+              value={routine.description || ""}
+              onChange={(e) => onRoutineChange({ ...routine, description: e.target.value })}
+              placeholder={translations.routineDescriptionPlaceholder}
+              className="min-h-20"
+            />
+          </div>
+
+          {/* Exercises Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">{translations.exercisesTitle}</h3>
+              <Button
+                onClick={onAddExercise}
+                size="sm"
+                className="bg-primary hover:bg-primary/90"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                {translations.addExercise}
+              </Button>
+            </div>
+
+            {routine.exercises.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>{translations.noExercises}</p>
+                <p className="text-sm">{translations.clickToStart}</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {routine.exercises.map((exercise, idx) => {
+                  // Try to find exercise in loaded exercises first, then in fetched exercises
+                  const exerciseData = exercises.find(
+                    (e) => e.id.toString() === exercise.exerciseId.toString()
+                  ) || fetchedExercises[exercise.exerciseId]
+
+                  // Get V2 sets data or create default sets
+                  const setsData = exerciseV2Data[exercise.exerciseId] || [
+                    {
+                      set_index: 1,
+                      reps: exercise.reps?.toString() || '10',
+                      load_kg: null,
+                      unit: 'kg',
+                      notes: undefined
+                    }
+                  ]
+
+                  return (
+                    <EditableExerciseCard
+                      key={idx}
+                      exercise={exercise}
+                      exerciseData={exerciseData}
+                      index={idx}
+                      setsData={setsData}
+                      onDelete={onDeleteExercise}
+                      onUpdateSets={(index, sets) => {
+                        if (onUpdateExerciseSets) {
+                          onUpdateExerciseSets(exercise.exerciseId, sets)
+                        }
+                      }}
+                      translations={{
+                        sets: translations.sets,
+                        reps: translations.reps,
+                        load: translations.load,
+                        unit: translations.unit,
+                        notes: translations.notes,
+                        addSet: translations.addSet,
+                        delete: translations.delete,
+                        noGifAvailable: translations.noGifAvailable,
+                      }}
+                    />
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            {translations.cancel}
+          </Button>
+          <Button
+            type="button"
+            onClick={onSaveRoutine}
+            className="bg-primary hover:bg-primary/90"
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <>
+                <span className="loader mr-2"></span> {translations.saving}
+              </>
+            ) : (
+              translations.saveRoutine
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

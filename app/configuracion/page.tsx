@@ -2,9 +2,9 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/services/auth"
+import { useAuth } from "@/features/auth/services/auth-context"
 import { TrainerLayout } from "@/components/layout/TrainerLayout"
-import { SettingsTab } from "@/components/features/dashboard/SettingsTab"
+import { SettingsTab } from "@/features/dashboard"
 import { Loader2 } from "lucide-react"
 
 export default function ConfiguracionPage() {
@@ -34,7 +34,10 @@ export default function ConfiguracionPage() {
 
   return (
     <TrainerLayout>
-      <SettingsTab />
+      <div className="space-y-4">
+        
+        <SettingsTab />
+      </div>
     </TrainerLayout>
   )
 }

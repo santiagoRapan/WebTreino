@@ -4,9 +4,13 @@ import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
-import { AuthProvider } from "@/services/auth"
+import { AuthProvider } from "@/features/auth"
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider"
+<<<<<<< HEAD
 import { ThemeProvider } from "@/components/common/theme-provider"
+=======
+import { TrainerAssistant } from "@/features/trainer/components"
+>>>>>>> agent2.0
 
 export const metadata: Metadata = {
   title: "Treino",
@@ -25,6 +29,7 @@ export default function RootLayout({
         <link rel="icon" href="/images/treinologo.png" type="image/png" />
       </head>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}>
+<<<<<<< HEAD
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -38,6 +43,15 @@ export default function RootLayout({
           </LanguageProvider>
           <Toaster />
         </ThemeProvider>
+=======
+        <LanguageProvider>
+          <AuthProvider>
+            {children}
+            <TrainerAssistant />
+          </AuthProvider>
+        </LanguageProvider>
+        <Toaster />
+>>>>>>> agent2.0
       </body>
     </html>
   )

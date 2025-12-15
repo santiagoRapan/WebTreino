@@ -3,8 +3,7 @@
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { NavigationBar } from "@/components/features/landing/NavigationBar"
-import { Footer } from "@/components/features/landing/Footer"
+import { NavigationBar, Footer } from "@/features/landing"
 import { Users, Code, Heart, Target } from "lucide-react"
 
 interface TeamMember {
@@ -71,6 +70,7 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      
       <NavigationBar />
       
       <main className="py-20">

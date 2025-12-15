@@ -1,28 +1,31 @@
 "use client"
 
 import { createContext, useContext, Dispatch, SetStateAction } from "react"
+import type { Client, DashboardStat, RecentClient } from "@/features/trainer/types"
 import type {
-  Client,
-  DashboardStat,
   Exercise,
   ExerciseFilterState,
   ExerciseFormState,
   ExerciseInputsState,
   RoutineFolder,
   RoutineTemplate,
-  RecentClient,
-} from "@/lib/types/trainer"
+} from "@/features/routines/types"
 
-export type PendingExerciseState = { exercise: Exercise; blockId: number } | null
+export type PendingExerciseState = { exercise: Exercise; blockId: string } | null
 
 export interface TrainerDashboardState {
   activeTab: string
   sidebarCollapsed: boolean
+<<<<<<< HEAD
+=======
+  sidebarMobileOpen: boolean
+  theme: "dark" | "light"
+>>>>>>> agent2.0
   searchTerm: string
   clientFilter: "all" | "active" | "pending"
   isEditDialogOpen: boolean
   editingClient: Client | null
-  expandedClientIds: Set<number>
+  expandedClientIds: Set<string>
   // chat removed
   isNewClientDialogOpen: boolean
   // History dialog
@@ -36,27 +39,22 @@ export interface TrainerDashboardState {
   exercisesCatalog: Exercise[]
   loadingExercises: boolean
   routineFolders: RoutineFolder[]
-  selectedFolderId: number | null
+  selectedFolderId: string | null
   routineSearch: string
   exerciseFilter: ExerciseFilterState
   editingRoutine: RoutineTemplate | null
   isRoutineEditorOpen: boolean
   isExerciseSelectorOpen: boolean
-  selectedBlockId: number | null
   exerciseSearchTerm: string
-  expandedBlocks: Set<number>
   viewingRoutine: RoutineTemplate | null
   isRoutineViewerOpen: boolean
   showNewFolderInput: boolean
   newFolderName: string
   showExerciseCatalog: boolean
   catalogSearch: string
-  restInput: string
-  restBlockId: number | null
   exerciseInputs: ExerciseInputsState
   pendingExercise: PendingExerciseState
   newRoutineName: string
-  newBlockName: string
   // chatConversations removed
   // history state
   historySessions: any[]
@@ -76,11 +74,16 @@ export interface TrainerDashboardData {
 export interface TrainerDashboardActions {
   setActiveTab: Dispatch<SetStateAction<string>>
   setSidebarCollapsed: Dispatch<SetStateAction<boolean>>
+<<<<<<< HEAD
+=======
+  setSidebarMobileOpen: Dispatch<SetStateAction<boolean>>
+  setTheme: Dispatch<SetStateAction<"dark" | "light">>
+>>>>>>> agent2.0
   setSearchTerm: Dispatch<SetStateAction<string>>
   setClientFilter: Dispatch<SetStateAction<"all" | "active" | "pending">>
   setIsEditDialogOpen: Dispatch<SetStateAction<boolean>>
   setEditingClient: Dispatch<SetStateAction<Client | null>>
-  setExpandedClientIds: Dispatch<SetStateAction<Set<number>>>
+  setExpandedClientIds: Dispatch<SetStateAction<Set<string>>>
   // chat setters removed
   setIsNewClientDialogOpen: Dispatch<SetStateAction<boolean>>
   // History dialog setter
@@ -93,59 +96,51 @@ export interface TrainerDashboardActions {
   setNewExerciseForm: Dispatch<SetStateAction<ExerciseFormState>>
   setExercisesCatalog: Dispatch<SetStateAction<Exercise[]>>
   setRoutineFolders: Dispatch<SetStateAction<RoutineFolder[]>>
-  setSelectedFolderId: Dispatch<SetStateAction<number | null>>
+  setSelectedFolderId: Dispatch<SetStateAction<string | null>>
   setRoutineSearch: Dispatch<SetStateAction<string>>
   setExerciseFilter: Dispatch<SetStateAction<ExerciseFilterState>>
   setEditingRoutine: Dispatch<SetStateAction<RoutineTemplate | null>>
   setIsRoutineEditorOpen: Dispatch<SetStateAction<boolean>>
   setIsExerciseSelectorOpen: Dispatch<SetStateAction<boolean>>
-  setSelectedBlockId: Dispatch<SetStateAction<number | null>>
   setExerciseSearchTerm: Dispatch<SetStateAction<string>>
-  setExpandedBlocks: Dispatch<SetStateAction<Set<number>>>
   setViewingRoutine: Dispatch<SetStateAction<RoutineTemplate | null>>
   setIsRoutineViewerOpen: Dispatch<SetStateAction<boolean>>
   setShowNewFolderInput: Dispatch<SetStateAction<boolean>>
   setNewFolderName: Dispatch<SetStateAction<string>>
   setShowExerciseCatalog: Dispatch<SetStateAction<boolean>>
   setCatalogSearch: Dispatch<SetStateAction<string>>
-  setRestInput: Dispatch<SetStateAction<string>>
-  setRestBlockId: Dispatch<SetStateAction<number | null>>
   setExerciseInputs: Dispatch<SetStateAction<ExerciseInputsState>>
   setPendingExercise: Dispatch<SetStateAction<PendingExerciseState>>
   setNewRoutineName: Dispatch<SetStateAction<string>>
-  setNewBlockName: Dispatch<SetStateAction<string>>
   // setChatConversations removed
   // history setters
   setHistorySessions: Dispatch<SetStateAction<any[]>>
   setHistoryLogs: Dispatch<SetStateAction<any[]>>
   handleEditClient: (client: Client) => void
-  handleDeleteClient: (clientId: number) => void
-  handleMarkAsActive: (clientId: number) => void
+  handleDeleteClient: (clientId: string) => Promise<void>
+  handleUpdateStatus: (client: Client, newStatus: "active" | "inactive" | "pending") => Promise<void>
   handleNewClient: () => void
   handleCreateRoutine: () => void
   // schedule handlers removed
   handleRegisterPayment: () => void
   // calendar handlers removed
-  handleCreateExercise: () => void
+  handleCreateExercise: () => Promise<void>
   handleExportRoutineToPDF: (template: RoutineTemplate) => Promise<void>
   handleExportRoutineToExcel: (template: RoutineTemplate) => Promise<void>
   handleCreateFolder: () => void
   handleDeleteTemplate: (templateId: number | string) => Promise<void>
-  handleMoveTemplate: (templateId: number | string, targetFolderId: number) => void
+  handleMoveTemplate: (templateId: number | string, targetFolderId: string | number) => void
   handleCreateTemplate: () => void
   handleAssignTemplateToClient: (template: RoutineTemplate, client: Client) => void
   assignRoutineToClient: (routineId: number | string, traineeId: number | string) => Promise<void>
   handleEditRoutine: (template: RoutineTemplate) => void
-  handleAddBlock: () => void
-  handleAddExerciseToBlock: (blockId: number) => void
-  handleAddRest: (blockId: number) => void
+  handleAddExerciseToRoutine: () => void
   handleSelectExercise: (exercise: Exercise) => void
   confirmAddExercise: () => void
   cancelAddExercise: () => void
+  clearPendingExercise: () => void
   handleSaveRoutine: () => Promise<void>
-  handleDeleteExercise: (blockId: number, exerciseIndex: number) => void
-  handleDeleteBlock: (blockId: number) => void
-  toggleBlockExpansion: (blockId: number) => void
+  handleDeleteExercise: (exerciseIndex: number) => void
   handleViewAllClients: () => void
   // calendar handlers removed
   handleGoToRoutines: (clientName: string) => void
@@ -154,7 +149,7 @@ export interface TrainerDashboardActions {
   rejectLinkRequest: (client: Client) => Promise<void>
   cancelLinkRequest: (client: Client) => Promise<void>
   openStudentHistory: (client: Client) => Promise<void>
-
+  refreshClients: () => Promise<void>
 }
 
 export interface TrainerDashboardContextValue {

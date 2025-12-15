@@ -1,9 +1,10 @@
 "use client"
 
-import { useTrainerDashboard } from "@/hooks/trainer/useTrainerDashboard"
+import { useTrainerDashboard } from "@/features/trainer"
 import { TrainerDashboardProvider } from "@/lib/context/TrainerDashboardContext"
 import { Sidebar } from "./Sidebar"
 import { TrainerHeader } from "./TrainerHeader"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 interface TrainerLayoutProps {
   children: React.ReactNode
@@ -12,6 +13,7 @@ interface TrainerLayoutProps {
 export function TrainerLayout({ children }: TrainerLayoutProps) {
   // Use the master hook that provides all state and handlers
   const trainerData = useTrainerDashboard()
+  const isMobile = useIsMobile()
 
   // Create the context value that matches the existing interface
   const contextValue = {
@@ -19,6 +21,11 @@ export function TrainerLayout({ children }: TrainerLayoutProps) {
       // UI State
       activeTab: trainerData.activeTab,
       sidebarCollapsed: trainerData.sidebarCollapsed,
+<<<<<<< HEAD
+=======
+      sidebarMobileOpen: trainerData.sidebarMobileOpen,
+      theme: trainerData.theme,
+>>>>>>> agent2.0
       searchTerm: trainerData.searchTerm,
       clientFilter: trainerData.clientFilter,
       isEditDialogOpen: trainerData.isEditDialogOpen,
@@ -42,21 +49,16 @@ export function TrainerLayout({ children }: TrainerLayoutProps) {
       editingRoutine: trainerData.editingRoutine,
       isRoutineEditorOpen: trainerData.isRoutineEditorOpen,
       isExerciseSelectorOpen: trainerData.isExerciseSelectorOpen,
-      selectedBlockId: trainerData.selectedBlockId,
       exerciseSearchTerm: trainerData.exerciseSearchTerm,
-      expandedBlocks: trainerData.expandedBlocks,
       viewingRoutine: trainerData.viewingRoutine,
       isRoutineViewerOpen: trainerData.isRoutineViewerOpen,
       showNewFolderInput: trainerData.showNewFolderInput,
       newFolderName: trainerData.newFolderName,
       showExerciseCatalog: trainerData.showExerciseCatalog,
       catalogSearch: trainerData.catalogSearch,
-      restInput: trainerData.restInput,
-      restBlockId: trainerData.restBlockId,
       exerciseInputs: trainerData.exerciseInputs,
       pendingExercise: trainerData.pendingExercise,
       newRoutineName: trainerData.newRoutineName,
-      newBlockName: trainerData.newBlockName,
       historySessions: trainerData.historySessions,
       historyLogs: trainerData.historyLogs,
     },
@@ -64,6 +66,11 @@ export function TrainerLayout({ children }: TrainerLayoutProps) {
       // UI Actions
       setActiveTab: trainerData.setActiveTab,
       setSidebarCollapsed: trainerData.setSidebarCollapsed,
+<<<<<<< HEAD
+=======
+      setSidebarMobileOpen: trainerData.setSidebarMobileOpen,
+      setTheme: trainerData.setTheme,
+>>>>>>> agent2.0
       setSearchTerm: trainerData.setSearchTerm,
       setClientFilter: trainerData.setClientFilter,
       setIsEditDialogOpen: trainerData.setIsEditDialogOpen,
@@ -90,28 +97,23 @@ export function TrainerLayout({ children }: TrainerLayoutProps) {
       setEditingRoutine: trainerData.setEditingRoutine,
       setIsRoutineEditorOpen: trainerData.setIsRoutineEditorOpen,
       setIsExerciseSelectorOpen: trainerData.setIsExerciseSelectorOpen,
-      setSelectedBlockId: trainerData.setSelectedBlockId,
       setExerciseSearchTerm: trainerData.setExerciseSearchTerm,
-      setExpandedBlocks: trainerData.setExpandedBlocks,
       setViewingRoutine: trainerData.setViewingRoutine,
       setIsRoutineViewerOpen: trainerData.setIsRoutineViewerOpen,
       setShowNewFolderInput: trainerData.setShowNewFolderInput,
       setNewFolderName: trainerData.setNewFolderName,
       setShowExerciseCatalog: trainerData.setShowExerciseCatalog,
       setCatalogSearch: trainerData.setCatalogSearch,
-      setRestInput: trainerData.setRestInput,
-      setRestBlockId: trainerData.setRestBlockId,
       setExerciseInputs: trainerData.setExerciseInputs,
       setPendingExercise: trainerData.setPendingExercise,
       setNewRoutineName: trainerData.setNewRoutineName,
-      setNewBlockName: trainerData.setNewBlockName,
       setHistorySessions: trainerData.setHistorySessions,
       setHistoryLogs: trainerData.setHistoryLogs,
 
       // All Handler Functions
       handleEditClient: trainerData.handleEditClient,
       handleDeleteClient: trainerData.handleDeleteClient,
-      handleMarkAsActive: trainerData.handleMarkAsActive,
+      handleUpdateStatus: trainerData.handleUpdateStatus,
       handleNewClient: trainerData.handleNewClient,
       handleViewAllClients: trainerData.handleViewAllClients,
       openStudentHistory: trainerData.openStudentHistory,
@@ -125,21 +127,24 @@ export function TrainerLayout({ children }: TrainerLayoutProps) {
       handleAssignTemplateToClient: trainerData.handleAssignTemplateToClient,
       assignRoutineToClient: trainerData.assignRoutineToClient,
       handleEditRoutine: trainerData.handleEditRoutine,
-      handleAddBlock: trainerData.handleAddBlock,
-      handleAddExerciseToBlock: trainerData.handleAddExerciseToBlock,
-      handleAddRest: trainerData.handleAddRest,
+      handleAddExerciseToRoutine: trainerData.handleAddExerciseToRoutine,
       handleSelectExercise: trainerData.handleSelectExercise,
       confirmAddExercise: trainerData.confirmAddExercise,
       cancelAddExercise: trainerData.cancelAddExercise,
+      clearPendingExercise: trainerData.clearPendingExercise,
       handleSaveRoutine: trainerData.handleSaveRoutine,
       handleDeleteExercise: trainerData.handleDeleteExercise,
+<<<<<<< HEAD
       handleDeleteBlock: trainerData.handleDeleteBlock,
       toggleBlockExpansion: trainerData.toggleBlockExpansion,
+=======
+>>>>>>> agent2.0
       handleExportRoutineToPDF: trainerData.handleExportRoutineToPDF,
       handleExportRoutineToExcel: trainerData.handleExportRoutineToExcel,
-      
+
       // Additional context handlers
       handleRegisterPayment: trainerData.handleRegisterPayment,
+      refreshClients: trainerData.refreshClients,
     },
     data: {
       stats: trainerData.stats,
@@ -158,7 +163,7 @@ export function TrainerLayout({ children }: TrainerLayoutProps) {
         <Sidebar />
 
         {/* Main Content Area - Positioned to account for fixed sidebar */}
-        <main className={`${trainerData.sidebarCollapsed ? "ml-20" : "ml-64"} transition-all duration-300 h-full flex flex-col`}>
+        <main className={`${!isMobile ? (trainerData.sidebarCollapsed ? "ml-20" : "ml-64") : ""} transition-all duration-300 h-full flex flex-col`}>
           {/* Header - Full Width of main area */}
           <TrainerHeader />
 

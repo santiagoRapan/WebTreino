@@ -10,19 +10,19 @@ export const dictionaries: Record<Locale, Messages> = {
   es: {
     // Common
     "common.brand": "Treino",
-    
+
     // Navigation
     "nav.features": "Características",
     "nav.contact": "Contacto",
     "nav.login": "Iniciar Sesión",
     "nav.signup": "Registrarse",
-    
+
     // Landing Hero
     "landing.hero.title.part1": "Transforma tu",
     "landing.hero.title.highlight": "Negocio Fitness",
     "landing.hero.subtitle": "La plataforma todo-en-uno que necesitas para gestionar clientes, crear rutinas personalizadas y hacer crecer tu negocio como entrenador personal.",
     "landing.hero.cta": "Comenzar prueba",
-    
+
     // Dashboard
     "dashboard.title": "Dashboard",
     "dashboard.welcome": "Bienvenido de vuelta, entrenador",
@@ -40,19 +40,20 @@ export const dictionaries: Record<Locale, Messages> = {
     "dashboard.quickActions.newClient": "Nuevo Alumno",
     "dashboard.quickActions.createRoutine": "Crear Rutina",
     "dashboard.status.active": "Activo",
-    "dashboard.status.pending": "Pendiente", 
+    "dashboard.status.pending": "Pendiente",
     "dashboard.status.inactive": "Inactivo",
     "dashboard.userProfile.defaultName": "Usuario",
     "dashboard.userProfile.role": "entrenador",
-    
+
     // Navigation labels
     "navigation.dashboard": "Dashboard",
-    "navigation.clients": "Gestión de Alumnos", 
+    "navigation.clients": "Gestión de Alumnos",
     "navigation.routines": "Rutinas",
+    "navigation.chat": "Mensajes",
     "navigation.settings": "Configuración",
     
     "navigation.defaultUser": "Usuario",
-    
+
     // Settings
     "settings.title": "Configuración",
     "settings.subtitle": "Gestiona tu cuenta y preferencias",
@@ -62,7 +63,20 @@ export const dictionaries: Record<Locale, Messages> = {
     "settings.profile.name": "Nombre",
     "settings.profile.role": "Rol",
     "settings.profile.notAvailable": "No disponible",
+<<<<<<< HEAD
     
+=======
+    "settings.profile.refresh": "Actualizar",
+    "settings.profile.refreshing": "Actualizando...",
+    "settings.profile.loading": "Cargando...",
+    "settings.profile.save": "Guardar cambios",
+    "settings.profile.namePlaceholder": "Tu nombre",
+    "settings.profile.editPicture": "Editar foto de perfil",
+    "settings.profile.avatarUrl": "URL de la imagen",
+    "settings.profile.cancel": "Cancelar",
+    "settings.profile.editAvatarTitle": "Editar Foto de Perfil",
+    "settings.profile.editAvatarDescription": "Ingresa la URL de tu nueva foto de perfil.",
+>>>>>>> agent2.0
     "settings.preferences.title": "Preferencias",
     "settings.preferences.description": "Personaliza tu experiencia",
     "settings.preferences.theme.title": "Tema de la aplicación",
@@ -87,13 +101,24 @@ export const dictionaries: Record<Locale, Messages> = {
     "settings.toasts.logout.description": "Has cerrado sesión exitosamente.",
     "settings.toasts.error.title": "Error",
     "settings.toasts.logoutError": "Hubo un problema al cerrar sesión. Inténtalo de nuevo.",
+<<<<<<< HEAD
     
     
+=======
+    "settings.toasts.refreshSuccess.title": "Datos actualizados",
+    "settings.toasts.refreshSuccess.description": "Tu información se ha actualizado correctamente.",
+    "settings.toasts.refreshError": "No se pudieron actualizar los datos. Inténtalo de nuevo.",
+    "settings.toasts.avatarSuccess.title": "Avatar actualizado",
+    "settings.toasts.avatarSuccess.description": "Tu foto de perfil se ha actualizado correctamente.",
+    "settings.toasts.profileSuccess.title": "Perfil actualizado",
+    "settings.toasts.profileSuccess.description": "Tu información de perfil se ha actualizado correctamente.",
+
+>>>>>>> agent2.0
     // Language names
     "language.es": "Español",
-    "language.en": "English", 
+    "language.en": "English",
     "language.pt": "Português",
-    
+
     // Clients Tab
     "clients.title": "Listado de Alumnos",
     "clients.subtitle": "Visualiza y gestiona todos tus alumnos en una sola vista",
@@ -104,7 +129,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "clients.filters.pending": "Pendientes",
     "clients.table.name": "Nombre",
     "clients.table.email": "Email",
-    "clients.table.phone": "Teléfono", 
+    "clients.table.phone": "Teléfono",
     "clients.table.status": "Estado",
     "clients.table.progress": "Progreso",
     "clients.table.nextSession": "Próxima sesión",
@@ -120,7 +145,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "clients.actions.viewHistory": "Ver historial",
     "clients.actions.delete": "Eliminar",
     "clients.noResults": "No se encontraron alumnos con los filtros aplicados.",
-    
+
     // Routines Tab
     "routines.title": "Rutinas",
     "routines.subtitle": "Carpetas y plantillas para asignar a alumnos",
@@ -141,7 +166,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "routines.saveBeforeAssign": "Guarda la rutina antes de enviarla",
     "routines.unsavedTitle": "Rutina no guardada",
     "routines.unsavedDescription": "Guarda la rutina antes de enviarla a un alumno.",
-    
+
     // Missing routines keys
     "routines.actions.newFolder": "Nueva carpeta",
     "routines.actions.newRoutine": "Nueva rutina",
@@ -156,19 +181,19 @@ export const dictionaries: Record<Locale, Messages> = {
     "routines.actions.createExercise": "Crear Ejercicio",
     "routines.actions.saving": "Guardando...",
     "routines.actions.saveRoutine": "Guardar Rutina",
-    
+
     "routines.placeholders.folderName": "Nombre de la carpeta",
     "routines.placeholders.routineName": "Nombre de la rutina",
     "routines.placeholders.searchTemplates": "Buscar plantillas...",
     "routines.placeholders.newBlockName": "Nombre del nuevo bloque",
     "routines.placeholders.routineDescription": "Descripción de la rutina",
-    
+
     "routines.folders.description": "Organiza tus plantillas",
-    
+
     "routines.templates.defaultDescription": "Plantilla predeterminada sin descripción.",
     "routines.templates.totalExercises": "Ejercicios totales",
     "routines.templates.noTemplatesInFolder": "No hay plantillas en esta carpeta.",
-    
+
     "routines.assignments.loadingStudents": "Cargando alumnos...",
     "routines.assignments.errorLoadingStudents": "Error al cargar alumnos",
     "routines.assignments.noStudentsRegistered": "Sin alumnos registrados",
@@ -176,28 +201,32 @@ export const dictionaries: Record<Locale, Messages> = {
     "routines.assignments.saveBeforeSending": "Guarda la rutina antes de enviarla a un alumno.",
     "routines.assignments.sendTo": "Enviar a",
     "routines.assignments.selectStudent": "Selecciona un alumno",
-    
+
     "routines.exercises.catalogTitle": "Catálogo de ejercicios",
     "routines.exercises.catalogDescription": "Gestiona tu biblioteca de ejercicios",
     "routines.exercises.newExercise": "Nuevo ejercicio",
     "routines.exercises.searchPlaceholder": "Buscar ejercicios...",
     "routines.exercises.editFeatureSoon": "Funcionalidad de editar ejercicio estará disponible próximamente",
-    
+
     "routines.dialogs.createExercise.title": "Crear Nuevo Ejercicio",
     "routines.dialogs.createExercise.description": "Agrega un nuevo ejercicio a tu catálogo. Completa todos los campos requeridos.",
     "routines.dialogs.selectExercise.title": "Seleccionar Ejercicio",
     "routines.dialogs.selectExercise.description": "Elige un ejercicio para añadir al bloque",
     "routines.dialogs.editRoutine.title": "Editar Rutina",
     "routines.dialogs.editRoutine.description": "Modifica los bloques y ejercicios de la rutina",
-    
+
     "routines.forms.exerciseName": "Nombre del ejercicio*",
     "routines.forms.exerciseNamePlaceholder": "Ej: Press de banca con barra",
     "routines.forms.targetMuscles": "Músculos objetivo*",
+    "routines.forms.secondaryMuscles": "Músculos secundarios",
+    "routines.forms.bodyParts": "Partes del cuerpo*",
     "routines.forms.equipment": "Equipamiento*",
     "routines.forms.category": "Categoría",
     "routines.forms.selectCategory": "Selecciona una categoría",
     "routines.forms.description": "Descripción",
     "routines.forms.descriptionPlaceholder": "Describe cómo realizar el ejercicio, la técnica correcta, consejos importantes...",
+    "routines.forms.instructions": "Instrucciones",
+    "routines.forms.instructionsPlaceholder": "Describe cómo realizar el ejercicio paso a paso...",
     "routines.forms.sets": "Series",
     "routines.forms.repetitions": "Repeticiones",
     "routines.forms.rest": "Peso (seg)",
@@ -205,7 +234,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "routines.forms.restShort": "Peso",
     "routines.forms.routineName": "Nombre de la Rutina",
     "routines.forms.routineDescription": "Descripción (opcional)",
-    
+
     "routines.blocks.title": "Bloques de Ejercicios",
     "routines.blocks.clickToStart": "Haz clic en \"Añadir Bloque\" para empezar",
     "routines.blocks.noExercises": "No hay ejercicios en este bloque",
@@ -214,19 +243,19 @@ export const dictionaries: Record<Locale, Messages> = {
   en: {
     // Common
     "common.brand": "Treino",
-    
+
     // Navigation
     "nav.features": "Features",
     "nav.contact": "Contact",
     "nav.login": "Log In",
     "nav.signup": "Sign Up",
-    
+
     // Landing Hero
     "landing.hero.title.part1": "Transform your",
     "landing.hero.title.highlight": "Fitness Business",
     "landing.hero.subtitle": "The all-in-one platform you need to manage clients, create personalized routines and grow your personal training business.",
     "landing.hero.cta": "Start trial",
-    
+
     // Dashboard
     "dashboard.title": "Dashboard",
     "dashboard.welcome": "Welcome back, trainer",
@@ -248,7 +277,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "dashboard.status.inactive": "Inactive",
     "dashboard.userProfile.defaultName": "User",
     "dashboard.userProfile.role": "trainer",
-    
+
     // Navigation labels
     "navigation.dashboard": "Dashboard",
     "navigation.clients": "Client Management",
@@ -256,7 +285,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "navigation.settings": "Settings",
     
     "navigation.defaultUser": "User",
-    
+
     // Settings
     "settings.title": "Settings",
     "settings.subtitle": "Manage your account and preferences",
@@ -266,7 +295,20 @@ export const dictionaries: Record<Locale, Messages> = {
     "settings.profile.name": "Name",
     "settings.profile.role": "Role",
     "settings.profile.notAvailable": "Not available",
+<<<<<<< HEAD
     
+=======
+    "settings.profile.refresh": "Refresh",
+    "settings.profile.refreshing": "Refreshing...",
+    "settings.profile.loading": "Loading...",
+    "settings.profile.save": "Save changes",
+    "settings.profile.namePlaceholder": "Your Name",
+    "settings.profile.editPicture": "Edit Profile Picture",
+    "settings.profile.avatarUrl": "Image URL",
+    "settings.profile.cancel": "Cancel",
+    "settings.profile.editAvatarTitle": "Edit Profile Picture",
+    "settings.profile.editAvatarDescription": "Enter the URL of your new profile picture.",
+>>>>>>> agent2.0
     "settings.preferences.title": "Preferences",
     "settings.preferences.description": "Customize your experience",
     "settings.preferences.theme.title": "Application theme",
@@ -291,13 +333,24 @@ export const dictionaries: Record<Locale, Messages> = {
     "settings.toasts.logout.description": "You have successfully signed out.",
     "settings.toasts.error.title": "Error",
     "settings.toasts.logoutError": "There was a problem signing out. Please try again.",
+<<<<<<< HEAD
     
     
+=======
+    "settings.toasts.refreshSuccess.title": "Data updated",
+    "settings.toasts.refreshSuccess.description": "Your information has been updated successfully.",
+    "settings.toasts.refreshError": "Could not update data. Please try again.",
+    "settings.toasts.avatarSuccess.title": "Avatar updated",
+    "settings.toasts.avatarSuccess.description": "Your profile picture has been updated successfully.",
+    "settings.toasts.profileSuccess.title": "Profile updated",
+    "settings.toasts.profileSuccess.description": "Your profile information has been updated successfully.",
+
+>>>>>>> agent2.0
     // Language names
     "language.es": "Español",
     "language.en": "English",
     "language.pt": "Português",
-    
+
     // Clients Tab
     "clients.title": "Client Directory",
     "clients.subtitle": "View and manage all your clients in one place",
@@ -308,7 +361,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "clients.filters.pending": "Pending",
     "clients.table.name": "Name",
     "clients.table.email": "Email",
-    "clients.table.phone": "Phone", 
+    "clients.table.phone": "Phone",
     "clients.table.status": "Status",
     "clients.table.progress": "Progress",
     "clients.table.nextSession": "Next session",
@@ -324,7 +377,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "clients.actions.viewHistory": "View history",
     "clients.actions.delete": "Delete",
     "clients.noResults": "No clients found with the applied filters.",
-    
+
     // Routines Tab
     "routines.title": "Routines",
     "routines.subtitle": "Folders and templates to assign to students",
@@ -345,10 +398,10 @@ export const dictionaries: Record<Locale, Messages> = {
     "routines.saveBeforeAssign": "Save the routine before sending it",
     "routines.unsavedTitle": "Unsaved routine",
     "routines.unsavedDescription": "Save the routine before sending it to a student.",
-    
+
     // Missing routines keys
     "routines.actions.newFolder": "New folder",
-    "routines.actions.newRoutine": "New routine", 
+    "routines.actions.newRoutine": "New routine",
     "routines.actions.create": "Create",
     "routines.actions.cancel": "Cancel",
     "routines.actions.hide": "Hide",
@@ -360,19 +413,19 @@ export const dictionaries: Record<Locale, Messages> = {
     "routines.actions.createExercise": "Create Exercise",
     "routines.actions.saving": "Saving...",
     "routines.actions.saveRoutine": "Save Routine",
-    
+
     "routines.placeholders.folderName": "Folder name",
     "routines.placeholders.routineName": "Routine name",
     "routines.placeholders.searchTemplates": "Search templates...",
     "routines.placeholders.newBlockName": "New block name",
     "routines.placeholders.routineDescription": "Routine description",
-    
+
     "routines.folders.description": "Organize your templates",
-    
+
     "routines.templates.defaultDescription": "Default template without description.",
     "routines.templates.totalExercises": "Total exercises",
     "routines.templates.noTemplatesInFolder": "No templates in this folder.",
-    
+
     "routines.assignments.loadingStudents": "Loading students...",
     "routines.assignments.errorLoadingStudents": "Error loading students",
     "routines.assignments.noStudentsRegistered": "No students registered",
@@ -380,28 +433,32 @@ export const dictionaries: Record<Locale, Messages> = {
     "routines.assignments.saveBeforeSending": "Save the routine before sending it to a student.",
     "routines.assignments.sendTo": "Send to",
     "routines.assignments.selectStudent": "Select a student",
-    
+
     "routines.exercises.catalogTitle": "Exercise Catalog",
     "routines.exercises.catalogDescription": "Manage your exercise library",
     "routines.exercises.newExercise": "New exercise",
     "routines.exercises.searchPlaceholder": "Search exercises...",
     "routines.exercises.editFeatureSoon": "Edit exercise functionality will be available soon",
-    
+
     "routines.dialogs.createExercise.title": "Create New Exercise",
     "routines.dialogs.createExercise.description": "Add a new exercise to your catalog. Fill in all required fields.",
     "routines.dialogs.selectExercise.title": "Select Exercise",
     "routines.dialogs.selectExercise.description": "Choose an exercise to add to the block",
     "routines.dialogs.editRoutine.title": "Edit Routine",
     "routines.dialogs.editRoutine.description": "Modify the blocks and exercises of the routine",
-    
+
     "routines.forms.exerciseName": "Exercise name*",
     "routines.forms.exerciseNamePlaceholder": "Ex: Bench press with barbell",
     "routines.forms.targetMuscles": "Target muscles*",
+    "routines.forms.secondaryMuscles": "Secondary muscles",
+    "routines.forms.bodyParts": "Body parts*",
     "routines.forms.equipment": "Equipment*",
-    "routines.forms.category": "Category", 
+    "routines.forms.category": "Category",
     "routines.forms.selectCategory": "Select a category",
     "routines.forms.description": "Description",
     "routines.forms.descriptionPlaceholder": "Describe how to perform the exercise, correct technique, important tips...",
+    "routines.forms.instructions": "Instructions",
+    "routines.forms.instructionsPlaceholder": "Describe how to perform the exercise step by step...",
     "routines.forms.sets": "Sets",
     "routines.forms.repetitions": "Repetitions",
     "routines.forms.rest": "Rest (sec)",
@@ -409,7 +466,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "routines.forms.restShort": "rest",
     "routines.forms.routineName": "Routine Name",
     "routines.forms.routineDescription": "Description (optional)",
-    
+
     "routines.blocks.title": "Exercise Blocks",
     "routines.blocks.clickToStart": "Click \"Add Block\" to start",
     "routines.blocks.noExercises": "No exercises in this block",
@@ -418,19 +475,19 @@ export const dictionaries: Record<Locale, Messages> = {
   pt: {
     // Common
     "common.brand": "Treino",
-    
+
     // Navigation
     "nav.features": "Funcionalidades",
     "nav.contact": "Contato",
     "nav.login": "Entrar",
     "nav.signup": "Registrar",
-    
+
     // Landing Hero
     "landing.hero.title.part1": "Transforme seu",
     "landing.hero.title.highlight": "Negócio Fitness",
     "landing.hero.subtitle": "A plataforma tudo-em-um que você precisa para gerenciar clientes, criar rotinas personalizadas e fazer crescer seu negócio de personal trainer.",
     "landing.hero.cta": "Iniciar teste",
-    
+
     // Dashboard
     "dashboard.title": "Dashboard",
     "dashboard.welcome": "Bem-vindo de volta, treinador",
@@ -452,7 +509,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "dashboard.status.inactive": "Inativo",
     "dashboard.userProfile.defaultName": "Usuário",
     "dashboard.userProfile.role": "treinador",
-    
+
     // Navigation labels
     "navigation.dashboard": "Dashboard",
     "navigation.clients": "Gestão de Clientes",
@@ -460,7 +517,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "navigation.settings": "Configurações",
     
     "navigation.defaultUser": "Usuário",
-    
+
     // Settings
     "settings.title": "Configurações",
     "settings.subtitle": "Gerencie sua conta e preferências",
@@ -470,7 +527,20 @@ export const dictionaries: Record<Locale, Messages> = {
     "settings.profile.name": "Nome",
     "settings.profile.role": "Função",
     "settings.profile.notAvailable": "Não disponível",
+<<<<<<< HEAD
     
+=======
+    "settings.profile.refresh": "Atualizar",
+    "settings.profile.refreshing": "Atualizando...",
+    "settings.profile.loading": "Carregando...",
+    "settings.profile.save": "Salvar alterações",
+    "settings.profile.namePlaceholder": "Seu nome",
+    "settings.profile.editPicture": "Editar foto de perfil",
+    "settings.profile.avatarUrl": "URL da imagem",
+    "settings.profile.cancel": "Cancelar",
+    "settings.profile.editAvatarTitle": "Editar Foto de Perfil",
+    "settings.profile.editAvatarDescription": "Insira a URL da sua nova foto de perfil.",
+>>>>>>> agent2.0
     "settings.preferences.title": "Preferências",
     "settings.preferences.description": "Personalize sua experiência",
     "settings.preferences.theme.title": "Tema da aplicação",
@@ -495,13 +565,24 @@ export const dictionaries: Record<Locale, Messages> = {
     "settings.toasts.logout.description": "Você saiu com sucesso.",
     "settings.toasts.error.title": "Erro",
     "settings.toasts.logoutError": "Houve um problema ao sair. Tente novamente.",
+<<<<<<< HEAD
     
     
+=======
+    "settings.toasts.refreshSuccess.title": "Dados atualizados",
+    "settings.toasts.refreshSuccess.description": "Suas informações foram atualizadas com sucesso.",
+    "settings.toasts.refreshError": "Não foi possível atualizar os dados. Tente novamente.",
+    "settings.toasts.avatarSuccess.title": "Avatar atualizado",
+    "settings.toasts.avatarSuccess.description": "Sua foto de perfil foi atualizada com sucesso.",
+    "settings.toasts.profileSuccess.title": "Perfil atualizado",
+    "settings.toasts.profileSuccess.description": "Suas informações de perfil foram atualizadas com sucesso.",
+
+>>>>>>> agent2.0
     // Language names
     "language.es": "Español",
     "language.en": "English",
     "language.pt": "Português",
-    
+
     // Clients Tab
     "clients.title": "Lista de Alunos",
     "clients.subtitle": "Visualize e gerencie todos os seus alunos em um só lugar",
@@ -512,7 +593,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "clients.filters.pending": "Pendentes",
     "clients.table.name": "Nome",
     "clients.table.email": "Email",
-    "clients.table.phone": "Telefone", 
+    "clients.table.phone": "Telefone",
     "clients.table.status": "Status",
     "clients.table.progress": "Progresso",
     "clients.table.nextSession": "Próxima sessão",
@@ -528,7 +609,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "clients.actions.viewHistory": "Ver histórico",
     "clients.actions.delete": "Excluir",
     "clients.noResults": "Nenhum aluno encontrado com os filtros aplicados.",
-    
+
     // Routines Tab
     "routines.title": "Rotinas",
     "routines.subtitle": "Pastas e modelos para atribuir aos alunos",
@@ -549,7 +630,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "routines.saveBeforeAssign": "Salve a rotina antes de enviá-la",
     "routines.unsavedTitle": "Rotina não salva",
     "routines.unsavedDescription": "Salve a rotina antes de enviá-la a um aluno.",
-    
+
     // Missing routines keys  
     "routines.actions.newFolder": "Nova pasta",
     "routines.actions.newRoutine": "Nova rotina",
@@ -564,19 +645,19 @@ export const dictionaries: Record<Locale, Messages> = {
     "routines.actions.createExercise": "Criar Exercício",
     "routines.actions.saving": "Salvando...",
     "routines.actions.saveRoutine": "Salvar Rotina",
-    
+
     "routines.placeholders.folderName": "Nome da pasta",
     "routines.placeholders.routineName": "Nome da rotina",
     "routines.placeholders.searchTemplates": "Buscar modelos...",
     "routines.placeholders.newBlockName": "Nome do novo bloco",
     "routines.placeholders.routineDescription": "Descrição da rotina",
-    
+
     "routines.folders.description": "Organize seus modelos",
-    
+
     "routines.templates.defaultDescription": "Modelo padrão sem descrição.",
     "routines.templates.totalExercises": "Total de exercícios",
     "routines.templates.noTemplatesInFolder": "Nenhum modelo nesta pasta.",
-    
+
     "routines.assignments.loadingStudents": "Carregando alunos...",
     "routines.assignments.errorLoadingStudents": "Erro ao carregar alunos",
     "routines.assignments.noStudentsRegistered": "Nenhum aluno registrado",
@@ -584,28 +665,32 @@ export const dictionaries: Record<Locale, Messages> = {
     "routines.assignments.saveBeforeSending": "Salve a rotina antes de enviá-la a um aluno.",
     "routines.assignments.sendTo": "Enviar para",
     "routines.assignments.selectStudent": "Selecionar um aluno",
-    
+
     "routines.exercises.catalogTitle": "Catálogo de Exercícios",
     "routines.exercises.catalogDescription": "Gerencie sua biblioteca de exercícios",
     "routines.exercises.newExercise": "Novo exercício",
     "routines.exercises.searchPlaceholder": "Buscar exercícios...",
     "routines.exercises.editFeatureSoon": "Funcionalidade de editar exercício estará disponível em breve",
-    
+
     "routines.dialogs.createExercise.title": "Criar Novo Exercício",
     "routines.dialogs.createExercise.description": "Adicione um novo exercício ao seu catálogo. Preencha todos os campos obrigatórios.",
     "routines.dialogs.selectExercise.title": "Selecionar Exercício",
     "routines.dialogs.selectExercise.description": "Escolha um exercício para adicionar ao bloco",
     "routines.dialogs.editRoutine.title": "Editar Rotina",
     "routines.dialogs.editRoutine.description": "Modifique os blocos e exercícios da rotina",
-    
+
     "routines.forms.exerciseName": "Nome do exercício*",
     "routines.forms.exerciseNamePlaceholder": "Ex: Supino com barra",
     "routines.forms.targetMuscles": "Músculos alvo*",
+    "routines.forms.secondaryMuscles": "Músculos secundários",
+    "routines.forms.bodyParts": "Partes do corpo*",
     "routines.forms.equipment": "Equipamento*",
     "routines.forms.category": "Categoria",
     "routines.forms.selectCategory": "Selecione uma categoria",
     "routines.forms.description": "Descrição",
     "routines.forms.descriptionPlaceholder": "Descreva como realizar o exercício, técnica correta, dicas importantes...",
+    "routines.forms.instructions": "Instruções",
+    "routines.forms.instructionsPlaceholder": "Descreva como realizar o exercício passo a passo...",
     "routines.forms.sets": "Séries",
     "routines.forms.repetitions": "Repetições",
     "routines.forms.rest": "Peso (seg)",
@@ -613,7 +698,7 @@ export const dictionaries: Record<Locale, Messages> = {
     "routines.forms.restShort": "Peso",
     "routines.forms.routineName": "Nome da Rotina",
     "routines.forms.routineDescription": "Descrição (opcional)",
-    
+
     "routines.blocks.title": "Blocos de Exercícios",
     "routines.blocks.clickToStart": "Clique em \"Adicionar Bloco\" para começar",
     "routines.blocks.noExercises": "Nenhum exercício neste bloco",

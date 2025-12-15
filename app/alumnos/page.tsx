@@ -1,10 +1,15 @@
 "use client"
 
 import { useEffect } from "react"
+<<<<<<< HEAD
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/services/auth"
+=======
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/features/auth/services/auth-context"
+>>>>>>> agent2.0
 import { TrainerLayout } from "@/components/layout/TrainerLayout"
-import { ClientsTab } from "@/components/features/trainer/ClientsTab"
+import { ClientsTab } from "@/features/trainer"
 import { Loader2 } from "lucide-react"
 
 export default function AlumnosPage() {
@@ -35,7 +40,14 @@ export default function AlumnosPage() {
 
   return (
     <TrainerLayout>
+<<<<<<< HEAD
       <ClientsTab action={searchParams.get('action')} />
+=======
+      <div className="space-y-4">
+       
+        <ClientsTab />
+      </div>
+>>>>>>> agent2.0
     </TrainerLayout>
   )
 }
