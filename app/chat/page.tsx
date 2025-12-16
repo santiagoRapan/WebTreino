@@ -29,7 +29,7 @@ export default function ChatPage() {
   }
 
   if (!isAuthenticated) {
-    return null // Will redirect in useEffect
+    return null 
   }
 
   return (
