@@ -316,8 +316,49 @@ export function createRoutineHandlers(
     },
 
     handleExportRoutineToExcel: async (template: any) => {
-      console.log('handleExportRoutineToExcel called - implemented in component')
+      try {
+        // Define headers
+        const headers = ['Ejercicio', 'Series', 'Repeticiones', 'Carga', 'Descanso (seg)', 'Notas']
+
+        // Create CSV content
+        let csvContent = `${template.name}\n`
+        if (template.description) {
+          csvContent += `Descripción: ${template.description}\n`
+        }
+        csvContent += '\n' // Empty line
+        csvContent += headers.join(',') + '\n'
+
+        // Add exercises
+        template.exercises.forEach((ex: any) => {
+          const row = [
+            // Exercise name - we might need to fetch it if it's not in the template
+            // For now assuming the template might have it or we use ID
+            ex.name || `Ejercicio ${ex.exerciseId}`,
+            ex.sets,
+            `"${ex.reps}"`, // Quote to handle potential commas
+            `"${ex.load_target || ''}"`,
+            ex.rest_seconds,
+            `"${ex.notes || ''}"`
+          ]
+          csvContent += row.join(',') + '\n'
+        })
+
+        // Create blob with BOM for Excel UTF-8 compatibility
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+
+        // Create download link
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `${template.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`)
+        link.style.visibility = 'hidden'
+
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      } catch (error) {
+        console.error('Error exporting routine:', error)
+      }
     }
   }
 }
-

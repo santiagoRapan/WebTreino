@@ -164,6 +164,9 @@ export async function loadRoutineV2(routineId: string): Promise<RoutineWithBlock
           *,
           block_exercise_v2 (
             *,
+            exercises (
+              name
+            ),
             block_exercise_set_v2 (
               *
             )
@@ -195,6 +198,7 @@ export async function loadRoutineV2(routineId: string): Promise<RoutineWithBlock
               display_order: exercise.display_order,
               superset_group: exercise.superset_group,
               notes: exercise.notes,
+              exercises: exercise.exercises, // Pass through the joined data
               sets
             }
           })
@@ -239,6 +243,9 @@ export async function loadAllRoutinesV2(ownerId: string): Promise<RoutineWithBlo
           *,
           block_exercise_v2 (
             *,
+            exercises (
+              name
+            ),
             block_exercise_set_v2 (
               *
             )
@@ -275,6 +282,7 @@ export async function loadAllRoutinesV2(ownerId: string): Promise<RoutineWithBlo
                 display_order: exercise.display_order,
                 superset_group: exercise.superset_group,
                 notes: exercise.notes,
+                exercises: exercise.exercises, // Pass through the joined data
                 sets
               }
             })

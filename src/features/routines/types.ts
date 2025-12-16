@@ -209,6 +209,7 @@ export interface BlockExerciseV2 {
   display_order: number
   superset_group?: string | null // Renamed from is_superset_group for clarity
   notes?: string | null
+  exercises?: { name: string } // Joined data from exercises table
 }
 
 /**

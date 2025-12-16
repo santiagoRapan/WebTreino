@@ -22,25 +22,25 @@ export function RoutinesTab() {
   const { authUser, customUser } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
-  
+
   // Routine Database hook
   const routineDatabase = useRoutineDatabase()
-  
+
   // Routine Assignments hook
   const { assignRoutineToStudent } = useRoutineAssignments()
-  
+
   // Optimized exercise search hook for exercise selector dialog
-  const exerciseSearch = useExerciseSearch({ 
+  const exerciseSearch = useExerciseSearch({
     debounceMs: 300,
     pageSize: 50,
   })
-  
+
   // Separate hook for exercise catalog
   const catalogExerciseSearch = useExerciseSearch({
     debounceMs: 300,
     pageSize: 50,
   })
-  
+
   const {
     state: {
       routineFolders,
@@ -98,7 +98,7 @@ export function RoutinesTab() {
   const [assignedCounts, setAssignedCounts] = useState<Record<string, number>>({})
   // Track if we've already handled the newRoutine action
   const hasHandledNewRoutine = useRef(false)
-  
+
   // Exercise inputs state (per-set configuration)
   const [perSetInputs, setPerSetInputs] = useState<{
     numSets: number
@@ -111,7 +111,7 @@ export function RoutinesTab() {
       { set_index: 3, reps: '10', load_kg: null, unit: 'kg' }
     ]
   })
-  
+
   // Store exercise sets data (maps exerciseId to its sets data)
   const [exerciseSetsData, setExerciseSetsData] = useState<Record<string, SetInputV2[]>>({})
 
@@ -119,7 +119,7 @@ export function RoutinesTab() {
   const [loadedRoutinesData, setLoadedRoutinesData] = useState<typeof routineFolders>([])
   const [loadedRoutines, setLoadedRoutines] = useState<any[]>([]) // Store raw routine data
   const hasLoadedInitial = useRef(false)
-  
+
   const currentFolder = loadedRoutinesData.find((f) => f.id === selectedFolderId) || loadedRoutinesData[0] || routineFolders[0]
 
   // Load routine data when editing
@@ -131,19 +131,19 @@ export function RoutinesTab() {
 
     // Find the routine in our loaded routines
     const routine = loadedRoutines.find(r => r.id === editingRoutine.id)
-    
+
     if (routine) {
       console.log('📝 Loading data for editing routine:', editingRoutine.id)
-      
+
       // Populate exerciseSetsData with the full sets information
       const setsData: Record<string, SetInputV2[]> = {}
-      
+
       routine.blocks.forEach((block: any) => {
         block.exercises?.forEach((exercise: any) => {
           setsData[exercise.exercise_id] = exercise.sets
         })
       })
-      
+
       setExerciseSetsData(setsData)
       console.log('✅ Loaded sets data for', Object.keys(setsData).length, 'exercises')
     }
@@ -152,25 +152,25 @@ export function RoutinesTab() {
   // Load routines initially
   useEffect(() => {
     if (!customUser?.id || hasLoadedInitial.current) return
-    
+
     let cancelled = false
-    
+
     const loadRoutines = async () => {
       try {
         console.log('📚 Loading routines for user:', customUser.id)
         const routines = await routineDatabase.loadRoutinesV2(customUser.id)
-        
+
         if (cancelled) return
-        
+
         hasLoadedInitial.current = true
-        
+
         // Store the full routines for later use (editing)
         setLoadedRoutines(routines)
-        
+
         // Transform routines for display
         const transformedTemplates = routines.map(routine => {
           const allExercises: any[] = []
-          
+
           // Flatten blocks and exercises
           routine.blocks.forEach(block => {
             block.exercises?.forEach(exercise => {
@@ -178,6 +178,7 @@ export function RoutinesTab() {
               const firstSet = exercise.sets[0]
               allExercises.push({
                 exerciseId: exercise.exercise_id,
+                name: exercise.exercises?.name, // Add exercise name
                 sets: exercise.sets.length,
                 reps: firstSet?.reps || '10',
                 rest_seconds: 90, // Default
@@ -185,7 +186,7 @@ export function RoutinesTab() {
               })
             })
           })
-          
+
           return {
             id: routine.id,
             name: routine.name,
@@ -193,27 +194,27 @@ export function RoutinesTab() {
             exercises: allExercises
           }
         })
-        
+
         const folders = [{
           id: '1',
           name: 'Mis rutinas',
           templates: transformedTemplates
         }]
-        
+
         setLoadedRoutinesData(folders)
         console.log(`✅ Loaded ${transformedTemplates.length} routines`)
       } catch (error) {
         console.error('Error loading routines:', error)
       }
     }
-    
+
     loadRoutines()
-    
+
     return () => {
       cancelled = true
     }
   }, [customUser?.id])
-  
+
   // Check for action parameter to open new routine dialog directly
   useEffect(() => {
     if (searchParams.get('action') === 'newRoutine' && !hasHandledNewRoutine.current) {
@@ -262,23 +263,24 @@ export function RoutinesTab() {
   // Helper function to refresh routine data
   const refreshRoutineData = useCallback(async () => {
     if (!customUser?.id) return
-    
+
     try {
       console.log('🔄 Refreshing routine data...')
       const refreshedRoutines = await routineDatabase.refreshRoutinesV2(customUser.id)
-      
+
       // Store full routine data
       setLoadedRoutines(refreshedRoutines)
-      
+
       // Transform and update display
       const transformedTemplates = refreshedRoutines.map(routine => {
         const allExercises: any[] = []
-        
+
         routine.blocks.forEach(block => {
           block.exercises?.forEach(exercise => {
             const firstSet = exercise.sets[0]
             allExercises.push({
               exerciseId: exercise.exercise_id,
+              name: exercise.exercises?.name, // Add exercise name
               sets: exercise.sets.length,
               reps: firstSet?.reps || '10',
               rest_seconds: 90,
@@ -286,7 +288,7 @@ export function RoutinesTab() {
             })
           })
         })
-        
+
         return {
           id: routine.id,
           name: routine.name,
@@ -294,13 +296,13 @@ export function RoutinesTab() {
           exercises: allExercises
         }
       })
-      
+
       const folders = [{
         id: '1',
         name: 'Mis rutinas',
         templates: transformedTemplates
       }]
-      
+
       setLoadedRoutinesData(folders)
       console.log('✅ Routine data refreshed, found', refreshedRoutines.length, 'routines')
     } catch (error) {
@@ -324,7 +326,7 @@ export function RoutinesTab() {
     if (!customUser?.id) return
 
     console.log('📡 Setting up real-time subscription for routines...')
-    
+
     // Set up real-time subscription
     const channel = supabase
       .channel(`routines_changes_${customUser.id}`)
@@ -393,7 +395,7 @@ export function RoutinesTab() {
           { set_index: 1, reps: ex.reps?.toString() || '10', load_kg: null, unit: 'kg' }
         ]
       }))
-      
+
       const blocks = [{
         name: 'Ejercicios',
         block_order: 1,
@@ -402,12 +404,12 @@ export function RoutinesTab() {
       }]
 
       // Check if this is an edit (existing routine) or create (new routine)
-      const isEdit = editingRoutine.id && 
-                     typeof editingRoutine.id === 'string' && 
-                     !editingRoutine.id.startsWith('temp-')
-      
+      const isEdit = editingRoutine.id &&
+        typeof editingRoutine.id === 'string' &&
+        !editingRoutine.id.startsWith('temp-')
+
       let success = false
-      
+
       if (isEdit) {
         // Update existing routine
         console.log('🔄 Updating existing routine:', editingRoutine.id)
@@ -435,7 +437,7 @@ export function RoutinesTab() {
         setIsRoutineEditorOpen(false)
         setEditingRoutine(null)
         setExerciseSetsData({})
-        
+
         // Reload routines and update UI
         await refreshRoutineData()
       }
@@ -450,7 +452,7 @@ export function RoutinesTab() {
   const handleDeleteTemplateWithRefresh = async (templateId: string | number) => {
     // Call the original delete function
     await handleDeleteTemplate(templateId)
-    
+
     // Refresh routines to update UI
     await refreshRoutineData()
   }
@@ -458,18 +460,18 @@ export function RoutinesTab() {
   // Delete exercise from routine
   const deleteExerciseFromRoutine = (exerciseIndex: number) => {
     if (!editingRoutine) return
-    
+
     const exerciseToDelete = editingRoutine.exercises[exerciseIndex]
-    
+
     // Remove from exercises array
     const updatedExercises = editingRoutine.exercises.filter((_, idx) => idx !== exerciseIndex)
-    
+
     // Update editing routine
     setEditingRoutine({
       ...editingRoutine,
       exercises: updatedExercises
     })
-    
+
     // Remove from exerciseSetsData
     if (exerciseToDelete) {
       setExerciseSetsData(prev => {
@@ -478,7 +480,7 @@ export function RoutinesTab() {
         return updated
       })
     }
-    
+
     console.log(`🗑️ Deleted exercise at index ${exerciseIndex}`)
   }
 
@@ -489,13 +491,13 @@ export function RoutinesTab() {
     const { exercise } = pendingExercise
     const totalSets = perSetInputs.sets.length
     const firstSet = perSetInputs.sets[0]
-    
+
     // Store sets data for this exercise
     setExerciseSetsData(prev => ({
       ...prev,
       [exercise.id]: perSetInputs.sets
     }))
-    
+
     // For display purposes, add to editing routine
     const exerciseForRoutine = {
       exerciseId: exercise.id.toString(),
@@ -510,7 +512,7 @@ export function RoutinesTab() {
     }
 
     setEditingRoutine(updatedRoutine)
-    
+
     // Reset states
     setPerSetInputs({
       numSets: 3,
@@ -520,7 +522,7 @@ export function RoutinesTab() {
         { set_index: 3, reps: '10', load_kg: null, unit: 'kg' }
       ]
     })
-    
+
     // Close dialogs
     setIsExerciseSelectorOpen(false)
   }
@@ -542,13 +544,13 @@ export function RoutinesTab() {
         onToggleNewFolder={() => setShowNewFolderInput(true)}
         onToggleNewRoutine={handleCreateTemplate}
         onCancelNewFolder={() => {
-                  setShowNewFolderInput(false)
-                  setNewFolderName("")
-                }}
+          setShowNewFolderInput(false)
+          setNewFolderName("")
+        }}
         onCancelNewRoutine={() => {
-                  setShowNewRoutineInput(false)
-                  setNewRoutineName("")
-                }}
+          setShowNewRoutineInput(false)
+          setNewRoutineName("")
+        }}
         translations={{
           newFolder: t("routines.actions.newFolder"),
           newRoutine: t("routines.actions.newRoutine"),
@@ -587,19 +589,19 @@ export function RoutinesTab() {
               if (!routine) {
                 throw new Error('Routine not found')
               }
-              
+
               // Find the client
               const client = allClients.find(c => c.id === clientId)
               if (!client) {
                 throw new Error('Client not found')
               }
-              
+
               // Convert RoutineWithBlocksV2 to RoutineTemplate format
               const routineTemplate: RoutineTemplate = {
                 id: routine.id,
                 name: routine.name,
                 description: routine.description,
-                exercises: routine.blocks.flatMap(block => 
+                exercises: routine.blocks.flatMap(block =>
                   block.exercises?.map(exercise => ({
                     exerciseId: exercise.exercise_id,
                     sets: exercise.sets?.length || 0,
@@ -611,7 +613,7 @@ export function RoutinesTab() {
                   })) || []
                 )
               }
-              
+
               // Assign the routine using the proper function
               // Use client.userId (the actual user ID) instead of client.id
               const success = await assignRoutineToStudent(
@@ -620,7 +622,7 @@ export function RoutinesTab() {
                 authUser?.id || '',
                 undefined // notes
               )
-              
+
               if (success) {
                 // Optimistically bump assignment count for this routine
                 setAssignedCounts(prev => ({
@@ -666,9 +668,9 @@ export function RoutinesTab() {
         showCatalog={showExerciseCatalog}
         onToggleCatalog={() => setShowExerciseCatalog((prev) => !prev)}
         onCreateExercise={() => {
-                  setIsExerciseSelectorOpen(false)
-                  setIsCreateExerciseDialogOpen(true)
-                }}
+          setIsExerciseSelectorOpen(false)
+          setIsCreateExerciseDialogOpen(true)
+        }}
         exerciseSearch={catalogExerciseSearch}
         translations={{
           catalogTitle: t("routines.exercises.catalogTitle"),
