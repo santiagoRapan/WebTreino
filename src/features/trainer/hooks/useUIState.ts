@@ -8,20 +8,15 @@ export interface UseUIStateReturn {
   setActiveTab: Dispatch<SetStateAction<string>>
   sidebarCollapsed: boolean
   setSidebarCollapsed: Dispatch<SetStateAction<boolean>>
-<<<<<<< HEAD:src/hooks/trainer/useUIState.ts
-=======
   sidebarMobileOpen: boolean
   setSidebarMobileOpen: Dispatch<SetStateAction<boolean>>
-  theme: "dark" | "light"
-  setTheme: Dispatch<SetStateAction<"dark" | "light">>
->>>>>>> agent2.0:src/features/trainer/hooks/useUIState.ts
-  
+
   // Search and Filter States
   searchTerm: string
   setSearchTerm: Dispatch<SetStateAction<string>>
   clientFilter: "all" | "active" | "pending"
   setClientFilter: Dispatch<SetStateAction<"all" | "active" | "pending">>
-  
+
   // Dialog States
   isEditDialogOpen: boolean
   setIsEditDialogOpen: Dispatch<SetStateAction<boolean>>
@@ -34,7 +29,7 @@ export interface UseUIStateReturn {
   // History dialog
   isHistoryDialogOpen: boolean
   setIsHistoryDialogOpen: Dispatch<SetStateAction<boolean>>
-  
+
   // UI Interaction States
   expandedClientIds: Set<string>
   setExpandedClientIds: Dispatch<SetStateAction<Set<string>>>
@@ -47,11 +42,7 @@ export function useUIState(): UseUIStateReturn {
   // Main UI State
   const [activeTab, setActiveTab] = useState<string>("dashboard")
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false)
-<<<<<<< HEAD:src/hooks/trainer/useUIState.ts
-=======
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState<boolean>(false)
-  const [theme, setTheme] = useState<"dark" | "light">("dark")
->>>>>>> agent2.0:src/features/trainer/hooks/useUIState.ts
 
   // Search and Filter States
   const [searchTerm, setSearchTerm] = useState<string>("")
@@ -90,13 +81,8 @@ export function useUIState(): UseUIStateReturn {
     setActiveTab,
     sidebarCollapsed,
     setSidebarCollapsed,
-<<<<<<< HEAD:src/hooks/trainer/useUIState.ts
-=======
     sidebarMobileOpen,
     setSidebarMobileOpen,
-    theme,
-    setTheme,
->>>>>>> agent2.0:src/features/trainer/hooks/useUIState.ts
     searchTerm,
     setSearchTerm,
     clientFilter,
@@ -105,7 +91,7 @@ export function useUIState(): UseUIStateReturn {
     setIsEditDialogOpen,
     isNewClientDialogOpen,
     setIsNewClientDialogOpen,
-  // chat dialog removed
+    // chat dialog removed
     // calendar dialogs removed
     isCreateExerciseDialogOpen,
     setIsCreateExerciseDialogOpen,

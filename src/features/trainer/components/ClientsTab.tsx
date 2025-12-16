@@ -1,12 +1,7 @@
 "use client"
 
-<<<<<<< HEAD:src/components/features/trainer/ClientsTab.tsx
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-=======
 import { useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
->>>>>>> agent2.0:src/features/trainer/components/ClientsTab.tsx
 import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
 import { Card, CardContent } from "@/components/ui/card"
 import { ClientsHeader } from "./ClientsHeader"
@@ -16,38 +11,15 @@ import { EditClientDialog } from "./EditClientDialog"
 import { NewClientDialog } from "./NewClientDialog"
 import { ClientHistoryDialog } from "./ClientHistoryDialog"
 
-<<<<<<< HEAD:src/components/features/trainer/ClientsTab.tsx
-interface ClientsTabProps {
-  action?: string | null
-}
-
-export function ClientsTab({ action }: ClientsTabProps) {
-  const router = useRouter()
-=======
 export function ClientsTab() {
   const router = useRouter()
   const searchParams = useSearchParams()
->>>>>>> agent2.0:src/features/trainer/components/ClientsTab.tsx
   const {
     state,
     data,
     actions,
   } = useTrainerDashboard()
 
-<<<<<<< HEAD:src/components/features/trainer/ClientsTab.tsx
-  const [actionProcessed, setActionProcessed] = useState(false)
-
-  // Handle action parameter to open specific dialogs
-  useEffect(() => {
-    if (action === 'new' && !actionProcessed) {
-      // Open the new client dialog when accessed via URL parameter, but only once
-      setActionProcessed(true)
-      actions.setIsNewClientDialogOpen(true)
-      // Clear the URL parameter to prevent reopening
-      router.replace('/alumnos', { scroll: false })
-    }
-  }, [action, actionProcessed, actions, router])
-=======
   // Check for action parameter to open new client dialog
   useEffect(() => {
     if (searchParams.get('action') === 'newClient') {
@@ -56,7 +28,6 @@ export function ClientsTab() {
       router.replace('/alumnos', { scroll: false })
     }
   }, [searchParams, actions, router])
->>>>>>> agent2.0:src/features/trainer/components/ClientsTab.tsx
 
   return (
     <>

@@ -5,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronDown, ChevronUp, Trash2, Plus, GripVertical, Activity } from "lucide-react"
+import { ChevronDown, ChevronUp, Trash2, Plus, GripVertical, Activity, Maximize2 } from "lucide-react"
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog"
 import type { Exercise, SetInputV2 } from "@/features/routines/types"
 
 interface EditableExerciseCardProps {
@@ -46,7 +47,7 @@ export function EditableExerciseCard({
   const [localSets, setLocalSets] = useState<SetInputV2[]>(setsData)
 
   const handleSetChange = (setIndex: number, field: keyof SetInputV2, value: any) => {
-    const newSets = localSets.map((set, idx) => 
+    const newSets = localSets.map((set, idx) =>
       idx === setIndex ? { ...set, [field]: value } : set
     )
     setLocalSets(newSets)
@@ -69,11 +70,11 @@ export function EditableExerciseCard({
 
   const handleRemoveSet = (setIndex: number) => {
     if (localSets.length <= 1) return
-    
+
     const newSets = localSets
       .filter((_, idx) => idx !== setIndex)
       .map((set, idx) => ({ ...set, set_index: idx + 1 }))
-    
+
     setLocalSets(newSets)
     onUpdateSets(index, newSets)
   }
@@ -89,13 +90,32 @@ export function EditableExerciseCard({
           </div>
 
           {/* Exercise Image */}
-          <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center overflow-hidden flex-shrink-0">
+          <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center overflow-hidden flex-shrink-0 relative group">
             {exerciseData?.gif_URL ? (
-              <img
-                src={exerciseData.gif_URL}
-                alt={exerciseData.name}
-                className="w-full h-full object-cover rounded-md"
-              />
+              <Dialog>
+                <DialogTrigger asChild>
+                  <div className="cursor-pointer w-full h-full relative">
+                    <img
+                      src={exerciseData.gif_URL}
+                      alt={exerciseData.name}
+                      className="w-full h-full object-cover rounded-md"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                      <Maximize2 className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </div>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl w-full p-0 overflow-hidden bg-transparent border-none shadow-none">
+                  <DialogTitle className="sr-only">Vista previa de {exerciseData.name}</DialogTitle>
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <img
+                      src={exerciseData.gif_URL}
+                      alt={exerciseData.name}
+                      className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
             ) : (
               <Activity className="w-6 h-6 text-muted-foreground" />
             )}
@@ -151,8 +171,8 @@ export function EditableExerciseCard({
             {/* Set rows */}
             <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
               {localSets.map((set, setIdx) => (
-                <div 
-                  key={setIdx} 
+                <div
+                  key={setIdx}
                   className="grid grid-cols-[50px_80px_100px_100px_40px] gap-2 p-2 rounded-md bg-muted/30 hover:bg-muted/40 transition-colors border border-border/40 group"
                 >
                   <div className="flex items-center justify-center text-sm font-medium">

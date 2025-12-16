@@ -1,13 +1,8 @@
 "use client"
 
 import { useEffect } from "react"
-<<<<<<< HEAD
 import { useRouter, useSearchParams } from "next/navigation"
-import { useAuth } from "@/services/auth"
-=======
-import { useRouter } from "next/navigation"
 import { useAuth } from "@/features/auth/services/auth-context"
->>>>>>> agent2.0
 import { TrainerLayout } from "@/components/layout/TrainerLayout"
 import { RoutinesTab } from "@/features/routines"
 import { Loader2 } from "lucide-react"
@@ -40,14 +35,10 @@ export default function RutinasPage() {
 
   return (
     <TrainerLayout>
-<<<<<<< HEAD
-      <RoutinesTab action={searchParams.get('action')} />
-=======
       <div className="space-y-4">
-       
+
         <RoutinesTab />
       </div>
->>>>>>> agent2.0
     </TrainerLayout>
   )
 }

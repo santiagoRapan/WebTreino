@@ -32,6 +32,8 @@ export interface RoutineHandlers {
   clearPendingExercise: () => void
   handleSaveRoutine: () => Promise<void>
   handleDeleteExercise: (exerciseIndex: number) => void
+  handleDeleteBlock: (blockId: number) => void
+  toggleBlockExpansion: (blockId: number) => void
   handleExportRoutineToPDF: (template: any) => Promise<void>
   handleExportRoutineToExcel: (template: any) => Promise<void>
 }
@@ -44,7 +46,7 @@ export function createRoutineHandlers(
   routineState: any,
   uiState: any
 ): RoutineHandlers {
-  
+
   return {
     handleCreateRoutine: () => {
       if (routineState.setEditingRoutine && routineState.setIsRoutineEditorOpen) {
@@ -65,7 +67,7 @@ export function createRoutineHandlers(
     handleCreateExercise: async () => {
       // Get the current user ID (owner_id for the exercise)
       const ownerId = routineState.customUser?.id
-      
+
       if (!ownerId) {
         toast({
           title: "Error de autenticación",
@@ -170,15 +172,15 @@ export function createRoutineHandlers(
 
       try {
         console.log('🗑️ Deleting routine:', templateId)
-        
+
         // Only skip DB deletion for temporary IDs
         const isTempId = typeof templateId === 'string' && templateId.startsWith('temp-')
-        
+
         if (!isTempId) {
           // Import deleteRoutineV2 dynamically to avoid circular dependencies
           const { deleteRoutineV2 } = await import('../services/routineHandlersV2')
           const success = await deleteRoutineV2(templateId as string, routineState.customUser.id)
-          
+
           if (!success) {
             console.log('❌ Failed to delete from database')
             return
@@ -280,6 +282,33 @@ export function createRoutineHandlers(
         })
         console.log('Exercise deleted from routine:', exerciseIndex)
       }
+    },
+
+    handleDeleteBlock: (blockId: number) => {
+      if (!routineState.editingRoutine) return
+
+      const updatedRoutine = {
+        ...routineState.editingRoutine,
+        blocks: routineState.editingRoutine.blocks.filter((block: any) => block.id !== blockId)
+      }
+
+      routineState.setEditingRoutine(updatedRoutine)
+
+      toast({
+        title: "Bloque eliminado",
+        description: "El bloque ha sido eliminado de la rutina.",
+      })
+    },
+
+    toggleBlockExpansion: (blockId: number) => {
+      if (!routineState.expandedBlocks || !routineState.setExpandedBlocks) return
+      const newExpanded = new Set(routineState.expandedBlocks)
+      if (newExpanded.has(blockId)) {
+        newExpanded.delete(blockId)
+      } else {
+        newExpanded.add(blockId)
+      }
+      routineState.setExpandedBlocks(newExpanded)
     },
 
     handleExportRoutineToPDF: async (template: any) => {

@@ -16,11 +16,7 @@ export type PendingExerciseState = { exercise: Exercise; blockId: string } | nul
 export interface TrainerDashboardState {
   activeTab: string
   sidebarCollapsed: boolean
-<<<<<<< HEAD
-=======
   sidebarMobileOpen: boolean
-  theme: "dark" | "light"
->>>>>>> agent2.0
   searchTerm: string
   clientFilter: "all" | "active" | "pending"
   isEditDialogOpen: boolean
@@ -74,11 +70,7 @@ export interface TrainerDashboardData {
 export interface TrainerDashboardActions {
   setActiveTab: Dispatch<SetStateAction<string>>
   setSidebarCollapsed: Dispatch<SetStateAction<boolean>>
-<<<<<<< HEAD
-=======
   setSidebarMobileOpen: Dispatch<SetStateAction<boolean>>
-  setTheme: Dispatch<SetStateAction<"dark" | "light">>
->>>>>>> agent2.0
   setSearchTerm: Dispatch<SetStateAction<string>>
   setClientFilter: Dispatch<SetStateAction<"all" | "active" | "pending">>
   setIsEditDialogOpen: Dispatch<SetStateAction<boolean>>
@@ -141,6 +133,8 @@ export interface TrainerDashboardActions {
   clearPendingExercise: () => void
   handleSaveRoutine: () => Promise<void>
   handleDeleteExercise: (exerciseIndex: number) => void
+  handleDeleteBlock: (blockId: number) => void
+  toggleBlockExpansion: (blockId: number) => void
   handleViewAllClients: () => void
   // calendar handlers removed
   handleGoToRoutines: (clientName: string) => void

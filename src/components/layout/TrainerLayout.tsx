@@ -21,11 +21,7 @@ export function TrainerLayout({ children }: TrainerLayoutProps) {
       // UI State
       activeTab: trainerData.activeTab,
       sidebarCollapsed: trainerData.sidebarCollapsed,
-<<<<<<< HEAD
-=======
       sidebarMobileOpen: trainerData.sidebarMobileOpen,
-      theme: trainerData.theme,
->>>>>>> agent2.0
       searchTerm: trainerData.searchTerm,
       clientFilter: trainerData.clientFilter,
       isEditDialogOpen: trainerData.isEditDialogOpen,
@@ -66,11 +62,7 @@ export function TrainerLayout({ children }: TrainerLayoutProps) {
       // UI Actions
       setActiveTab: trainerData.setActiveTab,
       setSidebarCollapsed: trainerData.setSidebarCollapsed,
-<<<<<<< HEAD
-=======
       setSidebarMobileOpen: trainerData.setSidebarMobileOpen,
-      setTheme: trainerData.setTheme,
->>>>>>> agent2.0
       setSearchTerm: trainerData.setSearchTerm,
       setClientFilter: trainerData.setClientFilter,
       setIsEditDialogOpen: trainerData.setIsEditDialogOpen,
@@ -134,11 +126,8 @@ export function TrainerLayout({ children }: TrainerLayoutProps) {
       clearPendingExercise: trainerData.clearPendingExercise,
       handleSaveRoutine: trainerData.handleSaveRoutine,
       handleDeleteExercise: trainerData.handleDeleteExercise,
-<<<<<<< HEAD
       handleDeleteBlock: trainerData.handleDeleteBlock,
       toggleBlockExpansion: trainerData.toggleBlockExpansion,
-=======
->>>>>>> agent2.0
       handleExportRoutineToPDF: trainerData.handleExportRoutineToPDF,
       handleExportRoutineToExcel: trainerData.handleExportRoutineToExcel,
 

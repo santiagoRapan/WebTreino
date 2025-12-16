@@ -129,6 +129,7 @@ export type ExerciseInputsState = {
   sets: string
   reps: string
   restSec: string
+  loadTarget: string
 }
 
 /**
@@ -186,7 +187,7 @@ export interface DatabaseBlockExercise {
   sets: number | null
   reps: number | null
   rest_seconds: number | null
-  
+
   is_superset_group?: string
   notes?: string
 }

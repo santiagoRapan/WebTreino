@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react"
 import { useRoutineDatabaseV2 } from "./useRoutineDatabaseV2"
 import { useAuth } from "@/features/auth/services/auth-context"
-import type { 
-  Exercise, 
-  ExerciseFormState, 
-  ExerciseFilterState, 
+import type {
+  Exercise,
+  ExerciseFormState,
+  ExerciseFilterState,
   ExerciseInputsState,
-  RoutineFolder, 
+  RoutineFolder,
   RoutineTemplate,
   RoutineBlock,
   BlockExercise
@@ -19,13 +19,13 @@ export interface UseRoutineStateReturn {
   exercisesCatalog: Exercise[]
   setExercisesCatalog: (exercises: Exercise[]) => void
   loadingExercises: boolean
-  
+
   // Exercise Forms
   newExerciseForm: ExerciseFormState
   setNewExerciseForm: (form: ExerciseFormState) => void
   exerciseInputs: ExerciseInputsState
   setExerciseInputs: (inputs: ExerciseInputsState) => void
-  
+
   // Routine Management
   routineFolders: RoutineFolder[]
   setRoutineFolders: (folders: RoutineFolder[]) => void
@@ -35,7 +35,7 @@ export interface UseRoutineStateReturn {
   setRoutineSearch: (search: string) => void
   exerciseFilter: ExerciseFilterState
   setExerciseFilter: (filter: ExerciseFilterState) => void
-  
+
   // Routine Editor State
   editingRoutine: RoutineTemplate | null
   setEditingRoutine: (routine: RoutineTemplate | null) => void
@@ -49,7 +49,7 @@ export interface UseRoutineStateReturn {
   setViewingRoutine: (routine: RoutineTemplate | null) => void
   isRoutineViewerOpen: boolean
   setIsRoutineViewerOpen: (open: boolean) => void
-  
+
   // UI State for Routine Management
   showNewFolderInput: boolean
   setShowNewFolderInput: (show: boolean) => void
@@ -60,15 +60,12 @@ export interface UseRoutineStateReturn {
   catalogSearch: string
   setCatalogSearch: (search: string) => void
   // Exercise Selector State
-<<<<<<< HEAD:src/hooks/trainer/useRoutineState.ts
-  pendingExercise: { exercise: Exercise; blockId: number } | null
-  setPendingExercise: (exercise: { exercise: Exercise; blockId: number } | null) => void
-=======
   pendingExercise: { exercise: Exercise; blockId: string } | null
   setPendingExercise: (exercise: { exercise: Exercise; blockId: string } | null) => void
   showNewRoutineInput: boolean
   setShowNewRoutineInput: (show: boolean) => void
->>>>>>> agent2.0:src/features/routines/hooks/useRoutineState.ts
+  expandedBlocks: Set<number>
+  setExpandedBlocks: (blocks: Set<number>) => void
   newRoutineName: string
   setNewRoutineName: (name: string) => void
 
@@ -90,7 +87,7 @@ const FALLBACK_EXERCISES: Exercise[] = [
     category: "strength"
   },
   {
-    id: "2", 
+    id: "2",
     name: "Squats",
     gif_URL: "",
     target_muscles: ["quadriceps", "glutes"],
@@ -116,15 +113,15 @@ const FALLBACK_EXERCISES: Exercise[] = [
 export function useRoutineState(): UseRoutineStateReturn {
   // Auth context for user ID
   const { customUser, loading: authLoading } = useAuth()
-  
+
   // Exercise Catalog State - Don't load exercises automatically
   // They will be loaded on-demand when user searches
   const [exercisesCatalog, setExercisesCatalog] = useState<Exercise[]>([])
   const [loadingExercises, setLoadingExercises] = useState(false)
-  
+
   // Database operations for routines
   const routineDatabase = useRoutineDatabaseV2()
-  
+
   // Exercise Forms
   const [newExerciseForm, setNewExerciseForm] = useState<ExerciseFormState>({
     name: '',
@@ -147,7 +144,7 @@ export function useRoutineState(): UseRoutineStateReturn {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>('1')
   const [routineSearch, setRoutineSearch] = useState<string>("")
   const [exerciseFilter, setExerciseFilter] = useState<ExerciseFilterState>({})
-  
+
   // Routine Editor State
   const [editingRoutine, setEditingRoutine] = useState<RoutineTemplate | null>(null)
   const [isRoutineEditorOpen, setIsRoutineEditorOpen] = useState<boolean>(false)
@@ -155,23 +152,18 @@ export function useRoutineState(): UseRoutineStateReturn {
   const [exerciseSearchTerm, setExerciseSearchTerm] = useState<string>("")
   const [viewingRoutine, setViewingRoutine] = useState<RoutineTemplate | null>(null)
   const [isRoutineViewerOpen, setIsRoutineViewerOpen] = useState<boolean>(false)
-  
+
   // UI State for Routine Management
   const [showNewFolderInput, setShowNewFolderInput] = useState<boolean>(false)
   const [newFolderName, setNewFolderName] = useState<string>("")
   const [showExerciseCatalog, setShowExerciseCatalog] = useState<boolean>(false)
   const [catalogSearch, setCatalogSearch] = useState<string>("")
-<<<<<<< HEAD:src/hooks/trainer/useRoutineState.ts
-  const [restInput, setRestInput] = useState<string>("")
-  const [restBlockId, setRestBlockId] = useState<number | null>(null)
-  const [pendingExercise, setPendingExercise] = useState<{ exercise: Exercise; blockId: number } | null>(null)
-=======
   const [pendingExercise, setPendingExercise] = useState<{ exercise: Exercise; blockId: string } | null>(null)
   const [showNewRoutineInput, setShowNewRoutineInput] = useState<boolean>(false)
->>>>>>> agent2.0:src/features/routines/hooks/useRoutineState.ts
+  const [expandedBlocks, setExpandedBlocks] = useState<Set<number>>(new Set())
   const [newRoutineName, setNewRoutineName] = useState<string>("")
 
-    // Initialize routine folders
+  // Initialize routine folders
   useEffect(() => {
     let cancelled = false;
 
@@ -203,22 +195,19 @@ export function useRoutineState(): UseRoutineStateReturn {
         setSelectedFolderId('1')
         return
       }
-      
+
       try {
-<<<<<<< HEAD:src/hooks/trainer/useRoutineState.ts
-=======
         console.log('✅ Loading routines for user:', customUser.id, customUser.name || 'Unknown')
->>>>>>> agent2.0:src/features/routines/hooks/useRoutineState.ts
         // Load routines from database using the authenticated user's ID
         const v2Routines = await routineDatabase.loadRoutinesV2(customUser.id)
-        
+
         // Check if the effect was cancelled (component unmounted or deps changed)
         if (cancelled) return;
-        
+
         // Transform V2 routines to RoutineTemplate format
         const transformedTemplates: RoutineTemplate[] = v2Routines.map(routine => {
           const allExercises: any[] = []
-          
+
           // Flatten blocks and exercises
           routine.blocks.forEach(block => {
             block.exercises?.forEach(exercise => {
@@ -232,7 +221,7 @@ export function useRoutineState(): UseRoutineStateReturn {
               })
             })
           })
-          
+
           return {
             id: routine.id,
             name: routine.name,
@@ -240,7 +229,7 @@ export function useRoutineState(): UseRoutineStateReturn {
             exercises: allExercises
           }
         })
-        
+
         const defaultFolders: RoutineFolder[] = [
           { id: '1', name: 'Mis rutinas', templates: transformedTemplates }
         ]
@@ -306,6 +295,10 @@ export function useRoutineState(): UseRoutineStateReturn {
     setPendingExercise,
     newRoutineName,
     setNewRoutineName,
+    showNewRoutineInput,
+    setShowNewRoutineInput,
+    expandedBlocks,
+    setExpandedBlocks,
     // Auth
     customUser
   }

@@ -1,12 +1,7 @@
 "use client"
 
-<<<<<<< HEAD
-import { RoutineTemplate } from '@/lib/types/trainer'
-import type { Client } from '@/lib/types/trainer'
-=======
 import { RoutineTemplate } from '@/features/routines/types'
 import type { Client } from '@/features/trainer/types'
->>>>>>> agent2.0
 
 interface CacheData<T> {
   userId: string
@@ -16,11 +11,7 @@ interface CacheData<T> {
 }
 
 class DataCacheManager {
-<<<<<<< HEAD
-  private static readonly CACHE_VERSION = '1.0.0'
-=======
   private static readonly CACHE_VERSION = '1.1.0'
->>>>>>> agent2.0
   private static readonly CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000 // 24 hours
 
   /**
@@ -32,11 +23,7 @@ class DataCacheManager {
 
       const cached = localStorage.getItem(key)
       if (!cached) {
-<<<<<<< HEAD
-        console.log(`🗄️ No cached data found for key: ${key}`)
-=======
         // console.log(`🗄️ No cached data found for key: ${key}`)
->>>>>>> agent2.0
         return null
       }
 
@@ -44,22 +31,14 @@ class DataCacheManager {
 
       // Check if cache is for the correct user
       if (parsedCache.userId !== userId) {
-<<<<<<< HEAD
-        console.log(`🗄️ Cache is for different user, clearing key: ${key}`)
-=======
         // console.log(`🗄️ Cache is for different user, clearing key: ${key}`)
->>>>>>> agent2.0
         this.clearCache(key)
         return null
       }
 
       // Check cache version
       if (parsedCache.version !== this.CACHE_VERSION) {
-<<<<<<< HEAD
-        console.log(`🗄️ Cache version mismatch for key: ${key}, clearing...`)
-=======
         // console.log(`🗄️ Cache version mismatch for key: ${key}, clearing...`)
->>>>>>> agent2.0
         this.clearCache(key)
         return null
       }
@@ -70,19 +49,12 @@ class DataCacheManager {
       const timeDiff = now.getTime() - lastUpdated.getTime()
 
       if (timeDiff > this.CACHE_EXPIRY_MS) {
-<<<<<<< HEAD
-        console.log(`🗄️ Cache has expired for key: ${key}, clearing...`)
-=======
         // console.log(`🗄️ Cache has expired for key: ${key}, clearing...`)
->>>>>>> agent2.0
         this.clearCache(key)
         return null
       }
 
-<<<<<<< HEAD
-=======
       // console.log(`🚀 Loading data from cache for key: ${key}`)
->>>>>>> agent2.0
       return parsedCache.data
 
     } catch (error) {
@@ -107,10 +79,7 @@ class DataCacheManager {
       }
 
       localStorage.setItem(key, JSON.stringify(cacheData))
-<<<<<<< HEAD
-=======
       // console.log(`💾 Data cached successfully for key: ${key}`)
->>>>>>> agent2.0
 
     } catch (error) {
       console.error(`❌ Error caching data for key: ${key}`, error)
@@ -124,18 +93,14 @@ class DataCacheManager {
     try {
       if (typeof window === 'undefined') return
       localStorage.removeItem(key)
-<<<<<<< HEAD
-      console.log(`🧹 Cache cleared for key: ${key}`)
-=======
       // console.log(`🧹 Cache cleared for key: ${key}`)
->>>>>>> agent2.0
     } catch (error) {
       console.error(`❌ Error clearing cache for key: ${key}`, error)
     }
   }
 
   // =================== ROUTINES CACHE ===================
-  
+
   static getCachedRoutines(userId: string): RoutineTemplate[] | null {
     return this.getCachedData<RoutineTemplate[]>('treino_routines_cache', userId)
   }
@@ -149,16 +114,12 @@ class DataCacheManager {
       const cachedRoutines = this.getCachedRoutines(userId)
       if (!cachedRoutines) return false
 
-      const updatedRoutines = cachedRoutines.map(routine => 
+      const updatedRoutines = cachedRoutines.map(routine =>
         routine.id === updatedRoutine.id ? updatedRoutine : routine
       )
 
       this.setCachedRoutines(userId, updatedRoutines)
-<<<<<<< HEAD
-      console.log('📝 Routine updated in cache:', updatedRoutine.id)
-=======
       // console.log('📝 Routine updated in cache:', updatedRoutine.id)
->>>>>>> agent2.0
       return true
 
     } catch (error) {
@@ -173,11 +134,7 @@ class DataCacheManager {
       const updatedRoutines = [newRoutine, ...cachedRoutines]
 
       this.setCachedRoutines(userId, updatedRoutines)
-<<<<<<< HEAD
-      console.log('➕ Routine added to cache:', newRoutine.id)
-=======
       // console.log('➕ Routine added to cache:', newRoutine.id)
->>>>>>> agent2.0
       return true
 
     } catch (error) {
@@ -194,11 +151,7 @@ class DataCacheManager {
       const updatedRoutines = cachedRoutines.filter(routine => routine.id !== routineId)
 
       this.setCachedRoutines(userId, updatedRoutines)
-<<<<<<< HEAD
-      console.log('🗑️ Routine removed from cache:', routineId)
-=======
       // console.log('🗑️ Routine removed from cache:', routineId)
->>>>>>> agent2.0
       return true
 
     } catch (error) {
@@ -226,20 +179,12 @@ class DataCacheManager {
       const cachedStudents = this.getCachedStudents(userId)
       if (!cachedStudents) return false
 
-      const updatedStudents = cachedStudents.map(student => 
-<<<<<<< HEAD
-        student.userId === updatedStudent.userId ? updatedStudent : student
-      )
-
-      this.setCachedStudents(userId, updatedStudents)
-      console.log('📝 Student updated in cache:', updatedStudent.userId)
-=======
+      const updatedStudents = cachedStudents.map(student =>
         student.id === updatedStudent.id ? updatedStudent : student
       )
 
       this.setCachedStudents(userId, updatedStudents)
       // console.log('📝 Student updated in cache:', updatedStudent.id)
->>>>>>> agent2.0
       return true
 
     } catch (error) {
@@ -254,11 +199,7 @@ class DataCacheManager {
       const updatedStudents = [newStudent, ...cachedStudents]
 
       this.setCachedStudents(userId, updatedStudents)
-<<<<<<< HEAD
-      console.log('➕ Student added to cache:', newStudent.userId)
-=======
       // console.log('➕ Student added to cache:', newStudent.id)
->>>>>>> agent2.0
       return true
 
     } catch (error) {
@@ -272,17 +213,10 @@ class DataCacheManager {
       const cachedStudents = this.getCachedStudents(userId)
       if (!cachedStudents) return false
 
-<<<<<<< HEAD
-      const updatedStudents = cachedStudents.filter(student => student.userId !== studentId)
-
-      this.setCachedStudents(userId, updatedStudents)
-      console.log('🗑️ Student removed from cache:', studentId)
-=======
       const updatedStudents = cachedStudents.filter(student => student.id !== studentId)
 
       this.setCachedStudents(userId, updatedStudents)
       // console.log('🗑️ Student removed from cache:', studentId)
->>>>>>> agent2.0
       return true
 
     } catch (error) {
@@ -300,11 +234,7 @@ class DataCacheManager {
   static clearAllCaches(): void {
     this.clearRoutinesCache()
     this.clearStudentsCache()
-<<<<<<< HEAD
-    console.log('🧹 All caches cleared')
-=======
     // console.log('🧹 All caches cleared')
->>>>>>> agent2.0
   }
 
   static getCacheMetadata(key: string): { userId?: string; lastUpdated?: Date; dataCount?: number } | null {
@@ -338,8 +268,4 @@ class DataCacheManager {
   }
 }
 
-<<<<<<< HEAD
 export default DataCacheManager
-=======
-export default DataCacheManager
->>>>>>> agent2.0
