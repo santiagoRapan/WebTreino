@@ -81,33 +81,6 @@ CREATE INDEX idx_routine_block_routine_id ON routine_block(routine_id);
 CREATE INDEX idx_routine_block_order ON routine_block(routine_id, block_order);
 ```
 
-### 4. block_exercise (DEPRECATED - V1)
-**DEPRECATED:** This table is no longer used. The application now uses `block_exercise` and `block_exercise_set` (see section 4b).
-
-Legacy structure that stored exercise data with flat set/reps configuration.
-
-```sql
-CREATE TABLE block_exercise (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    block_id uuid NOT NULL REFERENCES routine_block(id) ON DELETE CASCADE,
-    exercise_id text NOT NULL REFERENCES public.exercises(id) ON DELETE CASCADE,
-    display_order int4 NOT NULL,
-    sets int4,
-    reps text, -- Can be ranges like "8-12" or specific numbers
-    load_target text, -- Target weight/resistance
-    tempo text, -- Exercise tempo (e.g., "3-1-2-1")
-    rest_seconds int4,
-    is_superset_group text, -- Groups exercises into supersets
-    notes text
-);
-
--- Indexes
-CREATE INDEX idx_block_exercise_block_id ON block_exercise(block_id);
-CREATE INDEX idx_block_exercise_exercise_id ON block_exercise(exercise_id);
-CREATE INDEX idx_block_exercise_order ON block_exercise(block_id, display_order);
-CREATE INDEX idx_block_exercise_superset ON block_exercise(is_superset_group);
-```
-
 ### 4b. block_exercise & block_exercise_set (CURRENT IMPLEMENTATION)
 **CURRENT:** This is the active implementation. Normalized structure that separates exercise-level data from per-set data.
 
@@ -190,25 +163,6 @@ CREATE INDEX idx_trainee_routine_assigned_on ON trainee_routine(assigned_on);
 CREATE UNIQUE INDEX idx_trainee_routine_unique ON trainee_routine(trainee_id, routine_id);
 ```
 
-### 6. workout_session (DEPRECATED - Use V2)
-**DEPRECATED:** This table uses V1 schema. New code should use `workout_session`.
-
-```sql
-CREATE TABLE workout_session (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    performer_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    routine_id uuid REFERENCES routines(id) ON DELETE SET NULL,
-    started_at timestamptz DEFAULT NOW(),
-    completed_at timestamptz,
-    notes text
-);
-
--- Indexes
-CREATE INDEX idx_workout_session_performer_id ON workout_session(performer_id);
-CREATE INDEX idx_workout_session_routine_id ON workout_session(routine_id);
-CREATE INDEX idx_workout_session_started_at ON workout_session(started_at);
-CREATE INDEX idx_workout_session_completed_at ON workout_session(completed_at);
-```
 
 ### 6b. workout_session (CURRENT IMPLEMENTATION)
 **CURRENT:** Records individual workout sessions with support for both routine-based and ad-hoc workouts.
@@ -232,32 +186,6 @@ CREATE INDEX IF NOT EXISTS idx_workout_session_v2_started ON workout_session(sta
 CREATE INDEX IF NOT EXISTS idx_workout_session_v2_completed ON workout_session(completed_at DESC);
 ```
 
-### 7. workout_set_log (DEPRECATED - Use V2)
-**DEPRECATED:** This table uses V1 schema. New code should use `workout_set_log`.
-
-```sql
-CREATE TABLE workout_set_log (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    session_id uuid NOT NULL REFERENCES workout_session(id) ON DELETE CASCADE,
-    exercise_id text NOT NULL REFERENCES public.exercises(id) ON DELETE CASCADE,
-    block_id uuid REFERENCES routine_block(id) ON DELETE SET NULL,
-    block_exercise_id uuid REFERENCES block_exercise(id) ON DELETE SET NULL,
-    set_index int4 NOT NULL,
-    reps int4,
-    weight numeric,
-    rpe numeric,
-    duration_sec int4,
-    rest_seconds int4,
-    notes text
-);
-
--- Indexes
-CREATE INDEX idx_workout_set_log_session_id ON workout_set_log(session_id);
-CREATE INDEX idx_workout_set_log_exercise_id ON workout_set_log(exercise_id);
-CREATE INDEX idx_workout_set_log_block_id ON workout_set_log(block_id);
-CREATE INDEX idx_workout_set_log_block_exercise_id ON workout_set_log(block_exercise_id);
-CREATE INDEX idx_workout_set_log_set_index ON workout_set_log(session_id, set_index);
-```
 
 ### 7b. workout_set_log (CURRENT IMPLEMENTATION)
 **CURRENT:** Records individual sets with V2 schema support. Handles both routine-based (linked to planned sets) and ad-hoc workouts.
@@ -685,25 +613,6 @@ CREATE POLICY "Entrenadors can manage routine assignments" ON trainee_routine
     );
 ```
 
-### Workout Session Policies (V1 - DEPRECATED)
-
-```sql
--- Users can view their own workout sessions
-CREATE POLICY "Users can view own workout sessions" ON workout_session
-    FOR SELECT USING (performer_id = auth.uid());
-
--- Users can create their own workout sessions
-CREATE POLICY "Users can create workout sessions" ON workout_session
-    FOR INSERT WITH CHECK (performer_id = auth.uid());
-
--- Users can update their own workout sessions
-CREATE POLICY "Users can update own workout sessions" ON workout_session
-    FOR UPDATE USING (performer_id = auth.uid());
-
--- Users can delete their own workout sessions
-CREATE POLICY "Users can delete own workout sessions" ON workout_session
-    FOR DELETE USING (performer_id = auth.uid());
-```
 
 ### Workout Session V2 Policies (CURRENT)
 
@@ -725,29 +634,6 @@ CREATE POLICY "Users can delete own workout sessions v2" ON workout_session
     FOR DELETE USING (performer_id = auth.uid());
 ```
 
-### Workout Set Log Policies (V1 - DEPRECATED)
-
-```sql
--- Users can view set logs for their own workout sessions
-CREATE POLICY "Users can view own workout set logs" ON workout_set_log
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM workout_session 
-            WHERE id = session_id 
-            AND performer_id = auth.uid()
-        )
-    );
-
--- Users can manage set logs for their own workout sessions
-CREATE POLICY "Users can manage own workout set logs" ON workout_set_log
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM workout_session 
-            WHERE id = session_id 
-            AND performer_id = auth.uid()
-        )
-    );
-```
 
 ### Workout Set Log V2 Policies (CURRENT)
 
