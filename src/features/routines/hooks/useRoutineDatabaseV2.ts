@@ -76,7 +76,6 @@ export function useRoutineDatabaseV2() {
     try {
       // Cache-first strategy
       if (!forceRefresh && routines.length > 0) {
-        console.log('🚀 Using in-memory cached routines V2')
         return routines
       }
 
@@ -88,7 +87,6 @@ export function useRoutineDatabaseV2() {
           try {
             const cached = JSON.parse(cachedData)
             if (cached.timestamp && Date.now() - cached.timestamp < 5 * 60 * 1000) {
-              console.log('💾 Loading routines V2 from cache')
               setRoutines(cached.data)
               setLastUpdateEvent(new Date())
               return cached.data
@@ -102,8 +100,6 @@ export function useRoutineDatabaseV2() {
       // Load from database
       setLoading(true)
       setError(null)
-
-      console.log('📚 Loading routines V2 from database...')
       const loadedRoutines = await loadAllRoutinesV2(ownerId)
 
       // Update state and cache
@@ -255,7 +251,6 @@ export function useRoutineDatabaseV2() {
    * Refresh routines (force reload from database)
    */
   const refreshRoutinesV2 = useCallback(async (ownerId: string) => {
-    console.log('🔄 Refreshing routines V2 cache...')
     return loadRoutinesV2(ownerId, true)
   }, [loadRoutinesV2])
 
@@ -266,7 +261,6 @@ export function useRoutineDatabaseV2() {
     const cacheKey = `routines_v2_${ownerId}`
     localStorage.removeItem(cacheKey)
     setRoutines([])
-    console.log('🗑️ V2 cache cleared')
   }
 
   return {

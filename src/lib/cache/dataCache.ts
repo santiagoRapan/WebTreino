@@ -23,7 +23,7 @@ class DataCacheManager {
 
       const cached = localStorage.getItem(key)
       if (!cached) {
-        // console.log(`🗄️ No cached data found for key: ${key}`)
+        // console.log(`No cached data found for key: ${key}`)
         return null
       }
 
@@ -31,14 +31,14 @@ class DataCacheManager {
 
       // Check if cache is for the correct user
       if (parsedCache.userId !== userId) {
-        // console.log(`🗄️ Cache is for different user, clearing key: ${key}`)
+        // console.log(`Cache is for different user, clearing key: ${key}`)
         this.clearCache(key)
         return null
       }
 
       // Check cache version
       if (parsedCache.version !== this.CACHE_VERSION) {
-        // console.log(`🗄️ Cache version mismatch for key: ${key}, clearing...`)
+        // console.log(`Cache version mismatch for key: ${key}, clearing...`)
         this.clearCache(key)
         return null
       }
@@ -49,16 +49,16 @@ class DataCacheManager {
       const timeDiff = now.getTime() - lastUpdated.getTime()
 
       if (timeDiff > this.CACHE_EXPIRY_MS) {
-        // console.log(`🗄️ Cache has expired for key: ${key}, clearing...`)
+        // console.log(`Cache has expired for key: ${key}, clearing...`)
         this.clearCache(key)
         return null
       }
 
-      // console.log(`🚀 Loading data from cache for key: ${key}`)
+      // console.log(`Loading data from cache for key: ${key}`)
       return parsedCache.data
 
     } catch (error) {
-      console.error(`❌ Error reading cached data for key: ${key}`, error)
+      console.error(`Error reading cached data for key: ${key}`, error)
       this.clearCache(key)
       return null
     }
@@ -79,10 +79,10 @@ class DataCacheManager {
       }
 
       localStorage.setItem(key, JSON.stringify(cacheData))
-      // console.log(`💾 Data cached successfully for key: ${key}`)
+      // console.log(`Data cached successfully for key: ${key}`)
 
     } catch (error) {
-      console.error(`❌ Error caching data for key: ${key}`, error)
+      console.error(`Error caching data for key: ${key}`, error)
     }
   }
 
@@ -93,9 +93,9 @@ class DataCacheManager {
     try {
       if (typeof window === 'undefined') return
       localStorage.removeItem(key)
-      // console.log(`🧹 Cache cleared for key: ${key}`)
+      // console.log(`Cache cleared for key: ${key}`)
     } catch (error) {
-      console.error(`❌ Error clearing cache for key: ${key}`, error)
+      console.error(`Error clearing cache for key: ${key}`, error)
     }
   }
 
@@ -119,11 +119,11 @@ class DataCacheManager {
       )
 
       this.setCachedRoutines(userId, updatedRoutines)
-      // console.log('📝 Routine updated in cache:', updatedRoutine.id)
+      // console.log('Routine updated in cache:', updatedRoutine.id)
       return true
 
     } catch (error) {
-      console.error('❌ Error updating cached routine:', error)
+      console.error('Error updating cached routine:', error)
       return false
     }
   }
@@ -134,11 +134,11 @@ class DataCacheManager {
       const updatedRoutines = [newRoutine, ...cachedRoutines]
 
       this.setCachedRoutines(userId, updatedRoutines)
-      // console.log('➕ Routine added to cache:', newRoutine.id)
+      // console.log('Routine added to cache:', newRoutine.id)
       return true
 
     } catch (error) {
-      console.error('❌ Error adding routine to cache:', error)
+      console.error('Error adding routine to cache:', error)
       return false
     }
   }
@@ -151,11 +151,11 @@ class DataCacheManager {
       const updatedRoutines = cachedRoutines.filter(routine => routine.id !== routineId)
 
       this.setCachedRoutines(userId, updatedRoutines)
-      // console.log('🗑️ Routine removed from cache:', routineId)
+      // console.log('Routine removed from cache:', routineId)
       return true
 
     } catch (error) {
-      console.error('❌ Error removing cached routine:', error)
+      console.error('Error removing cached routine:', error)
       return false
     }
   }
@@ -184,11 +184,11 @@ class DataCacheManager {
       )
 
       this.setCachedStudents(userId, updatedStudents)
-      // console.log('📝 Student updated in cache:', updatedStudent.id)
+      // console.log('Student updated in cache:', updatedStudent.id)
       return true
 
     } catch (error) {
-      console.error('❌ Error updating cached student:', error)
+      console.error('Error updating cached student:', error)
       return false
     }
   }
@@ -199,11 +199,11 @@ class DataCacheManager {
       const updatedStudents = [newStudent, ...cachedStudents]
 
       this.setCachedStudents(userId, updatedStudents)
-      // console.log('➕ Student added to cache:', newStudent.id)
+      // console.log('Student added to cache:', newStudent.id)
       return true
 
     } catch (error) {
-      console.error('❌ Error adding student to cache:', error)
+      console.error('Error adding student to cache:', error)
       return false
     }
   }
@@ -216,11 +216,11 @@ class DataCacheManager {
       const updatedStudents = cachedStudents.filter(student => student.id !== studentId)
 
       this.setCachedStudents(userId, updatedStudents)
-      // console.log('🗑️ Student removed from cache:', studentId)
+      // console.log('Student removed from cache:', studentId)
       return true
 
     } catch (error) {
-      console.error('❌ Error removing cached student:', error)
+      console.error('Error removing cached student:', error)
       return false
     }
   }
@@ -234,7 +234,7 @@ class DataCacheManager {
   static clearAllCaches(): void {
     this.clearRoutinesCache()
     this.clearStudentsCache()
-    // console.log('🧹 All caches cleared')
+    // console.log('All caches cleared')
   }
 
   static getCacheMetadata(key: string): { userId?: string; lastUpdated?: Date; dataCount?: number } | null {
@@ -252,7 +252,7 @@ class DataCacheManager {
       }
 
     } catch (error) {
-      console.error(`❌ Error reading cache metadata for key: ${key}`, error)
+      console.error(`Error reading cache metadata for key: ${key}`, error)
       return null
     }
   }

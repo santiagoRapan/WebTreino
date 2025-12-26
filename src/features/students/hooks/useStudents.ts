@@ -22,7 +22,7 @@ export function useStudents(): UseStudentsReturn {
     try {
       // Get current trainer id from auth context
       if (!authUser) {
-        // console.error('❌ No authenticated user')
+        // console.error('No authenticated user')
         setError('No se pudo obtener el usuario autenticado')
         return
       }
@@ -32,14 +32,14 @@ export function useStudents(): UseStudentsReturn {
       if (!forceRefresh) {
         // 1. Verificar cache en memoria
         if (studentsRef.current.length > 0) {
-          // console.log('🚀 Using in-memory cached students')
+          // console.log('Using in-memory cached students')
           return
         }
 
         // 2. Verificar cache persistente (localStorage)
         const cachedStudents = DataCacheManager.getCachedStudents(trainerId)
         if (cachedStudents && cachedStudents.length > 0) {
-          // console.log('💾 Loading students from persistent cache')
+          // console.log('Loading students from persistent cache')
           setStudents(cachedStudents)
           setLastUpdateEvent(new Date())
 
@@ -55,7 +55,7 @@ export function useStudents(): UseStudentsReturn {
       setLoading(true)
       setError(null)
 
-      // console.log('📚 Loading roster and pending requests...')
+      // console.log('Loading roster and pending requests...')
 
       // 1) Fetch roster (trainer_student)
       const { data: rosterRows, error: rosterError } = await supabase
@@ -64,7 +64,7 @@ export function useStudents(): UseStudentsReturn {
         .eq('trainer_id', trainerId)
 
       if (rosterError) {
-        console.error('❌ Error loading roster:', rosterError)
+        console.error('Error loading roster:', rosterError)
         setError(rosterError.message)
         return
       }
@@ -75,7 +75,7 @@ export function useStudents(): UseStudentsReturn {
         : { data: [], error: null as any }
 
       if (profilesError) {
-        console.error('❌ Error loading student profiles:', profilesError)
+        console.error('Error loading student profiles:', profilesError)
         setError(profilesError.message)
         return
       }
@@ -124,7 +124,7 @@ export function useStudents(): UseStudentsReturn {
         .eq('status', 'pending')
 
       if (pendingError) {
-        console.error('❌ Error loading pending requests:', pendingError)
+        console.error('Error loading pending requests:', pendingError)
         setError(pendingError.message)
         return
       }
@@ -135,7 +135,7 @@ export function useStudents(): UseStudentsReturn {
         : { data: [], error: null as any }
 
       if (pendingProfilesError) {
-        console.error('❌ Error loading pending profiles:', pendingProfilesError)
+        console.error('Error loading pending profiles:', pendingProfilesError)
         setError(pendingProfilesError.message)
         return
       }
@@ -193,7 +193,7 @@ export function useStudents(): UseStudentsReturn {
       }))
 
       const combined = [...rosterClients, ...pendingClients, ...guestClients]
-      // console.log(`✅ Loaded ${rosterClients.length} in roster, ${pendingClients.length} pending`)
+      // console.log(`Loaded ${rosterClients.length} in roster, ${pendingClients.length} pending`)
 
       // ✅ Actualizar both cache en memoria y persistente
       studentsRef.current = combined
@@ -202,7 +202,7 @@ export function useStudents(): UseStudentsReturn {
       DataCacheManager.setCachedStudents(trainerId, combined)
 
     } catch (err) {
-      console.error('❌ Error fetching students:', err)
+      console.error('Error fetching students:', err)
       setError('Error al cargar los alumnos')
       toast({
         title: "Error",
@@ -217,7 +217,7 @@ export function useStudents(): UseStudentsReturn {
   // 🔍 Verificar actualizaciones en background sin mostrar loading al usuario
   const checkForStudentUpdatesInBackground = useCallback(async (trainerId: string, cachedStudents: Client[]) => {
     try {
-      // console.log('🔍 Checking for student updates in background...')
+      // console.log('Checking for student updates in background...')
 
       // Verificar cambios en roster
       const { data: rosterRows, error: rosterError } = await supabase
@@ -244,10 +244,10 @@ export function useStudents(): UseStudentsReturn {
 
       // Simple check: si el número de estudiantes cambió, actualizar
       if (currentStudentCount !== cachedDbBackedCount) {
-        // console.log('🔄 Student changes detected, refreshing data...')
+        // console.log('Student changes detected, refreshing data...')
         await fetchStudents(true)
       } else {
-        // console.log('✅ No student changes detected, cache is up to date')
+        // console.log('No student changes detected, cache is up to date')
       }
 
     } catch (err) {
@@ -277,26 +277,26 @@ export function useStudents(): UseStudentsReturn {
 
     // Sessions for this student where routine is owned by trainer (using V2 tables)
     const { data: sessions, error: sessErr } = await supabase
-      .from('workout_session_v2')
+      .from('workout_session')
       .select('id, performer_id, routine_id, started_at, completed_at, notes, routines!inner(id, name, owner_id)')
       .eq('performer_id', studentId)
       .order('started_at', { ascending: false })
 
     if (sessErr) {
-      console.error('❌ Error loading sessions:', sessErr)
+      console.error('Error loading sessions:', sessErr)
       return { sessions: [], logs: [] }
     }
 
     const sessionIds = (sessions || []).map((s: any) => s.id)
     const { data: logs, error: logsErr } = sessionIds.length > 0
       ? await supabase
-        .from('workout_set_log_v2')
+        .from('workout_set_log')
         .select('id, session_id, exercise_id, set_index, reps, weight_kg, rpe, duration_sec, rest_seconds, notes, performed_at')
         .in('session_id', sessionIds)
       : { data: [], error: null as any }
 
     if (logsErr) {
-      console.error('❌ Error loading logs:', logsErr)
+      console.error('Error loading logs:', logsErr)
       return { sessions, logs: [] }
     }
 
@@ -307,7 +307,7 @@ export function useStudents(): UseStudentsReturn {
       : { data: [], error: null as any }
 
     if (exErr) {
-      console.error('❌ Error loading exercises:', exErr)
+      console.error('Error loading exercises:', exErr)
       // Non-fatal, just won't have names, but return original logs
       return { sessions: sessions || [], logs: logs || [] }
     }
@@ -333,8 +333,6 @@ export function useStudents(): UseStudentsReturn {
   // Real-time subscriptions for automatic updates
   useEffect(() => {
     if (!authUser) return
-
-    console.log('🔔 Setting up real-time subscriptions for trainer:', authUser.id)
 
     let requestsSubscription: any = null
     let relationshipSubscription: any = null
@@ -369,12 +367,12 @@ export function useStudents(): UseStudentsReturn {
         )
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
-            console.log('✅ Subscribed to trainer link requests')
+            // no-op
           } else if (status === 'CHANNEL_ERROR') {
-            console.error('❌ Error subscribing to trainer link requests:', status)
+            console.error('Error subscribing to trainer link requests:', status)
             scheduleReconnect()
           } else if (status === 'TIMED_OUT') {
-            console.warn('⏰ Subscription timed out, attempting reconnect...')
+            console.warn('Subscription timed out, attempting reconnect...')
             scheduleReconnect()
           }
         })
@@ -407,12 +405,12 @@ export function useStudents(): UseStudentsReturn {
         )
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
-            console.log('✅ Subscribed to trainer-student relationships')
+            // no-op
           } else if (status === 'CHANNEL_ERROR') {
-            console.error('❌ Error subscribing to trainer-student relationships:', status)
+            console.error('Error subscribing to trainer-student relationships:', status)
             scheduleReconnect()
           } else if (status === 'TIMED_OUT') {
-            console.warn('⏰ Relationship subscription timed out, attempting reconnect...')
+            console.warn('Relationship subscription timed out, attempting reconnect...')
             scheduleReconnect()
           }
         })
@@ -423,7 +421,6 @@ export function useStudents(): UseStudentsReturn {
         clearTimeout(reconnectTimeout)
       }
       reconnectTimeout = setTimeout(() => {
-        console.log('🔄 Attempting to reconnect subscriptions...')
         cleanupSubscriptions()
         setupSubscriptions()
       }, 5000) // Wait 5 seconds before reconnecting
@@ -446,7 +443,6 @@ export function useStudents(): UseStudentsReturn {
     // Handle page visibility to ensure subscriptions stay active
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('👁️ Tab visible - checking subscription status...')
         // Force refresh data when tab becomes visible to ensure we have latest data
         setTimeout(() => {
           fetchStudents(true)
@@ -458,7 +454,6 @@ export function useStudents(): UseStudentsReturn {
 
     // Cleanup subscriptions on unmount or auth change
     return () => {
-      console.log('🔕 Cleaning up real-time subscriptions')
       if (refreshTimeout) {
         clearTimeout(refreshTimeout)
       }

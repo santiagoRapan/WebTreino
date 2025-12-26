@@ -43,7 +43,7 @@ export interface SessionExerciseDetail {
 
 export async function getSessionDetails(sessionId: string): Promise<SessionExerciseDetail[]> {
   const { data, error } = await supabase
-    .from('workout_set_log_v2')
+    .from('workout_set_log')
     .select(`
       id,
       set_index,
@@ -111,7 +111,7 @@ export async function getStudentWorkouts(trainerId: string): Promise<FeedWorkout
   // 2. Get sessions for these students
   // Note: We fetch performer details separately because there might not be a direct FK to public.users
   const { data: sessions, error: sessionsError } = await supabase
-    .from('workout_session_v2')
+    .from('workout_session')
     .select(`
       id,
       performer_id,
@@ -130,7 +130,7 @@ export async function getStudentWorkouts(trainerId: string): Promise<FeedWorkout
         media_type,
         mime_type
       ),
-      logs:workout_set_log_v2 (
+      logs:workout_set_log (
         exercise_id
       )
     `)
@@ -244,7 +244,7 @@ export async function getWorkoutsForStudent(trainerId: string, studentId: string
   if (!rel) return []
 
   const { data: sessions, error: sessionsError } = await supabase
-    .from('workout_session_v2')
+    .from('workout_session')
     .select(`
       id,
       performer_id,
@@ -263,7 +263,7 @@ export async function getWorkoutsForStudent(trainerId: string, studentId: string
         media_type,
         mime_type
       ),
-      logs:workout_set_log_v2 (
+      logs:workout_set_log (
         exercise_id
       )
     `)

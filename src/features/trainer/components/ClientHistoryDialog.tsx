@@ -20,9 +20,6 @@ interface ClientHistoryDialogProps {
 }
 
 export function ClientHistoryDialog({ isOpen, onClose, client, sessions, logs }: ClientHistoryDialogProps) {
-  console.log("ClientHistoryDialog received sessions:", sessions);
-  console.log("ClientHistoryDialog received logs:", logs);
-  
   if (!client) return null
 
   const getLogsForSession = (sessionId: string) => {

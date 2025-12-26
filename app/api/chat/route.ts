@@ -237,9 +237,9 @@ Responde en español. Sé muy conciso.`,
                             for (let exIndex = 0; exIndex < block.exercises.length; exIndex++) {
                                 const exercise = block.exercises[exIndex];
 
-                                // Create block_exercise_v2
+                                // Create block_exercise
                                 const { data: blockExData, error: blockExError } = await supabase
-                                    .from('block_exercise_v2')
+                                    .from('block_exercise')
                                     .insert({
                                         block_id: blockId,
                                         exercise_id: exercise.exercise_id,
@@ -269,7 +269,7 @@ Responde en español. Sé muy conciso.`,
                                 }
 
                                 const { error: setsError } = await supabase
-                                    .from('block_exercise_set_v2')
+                                    .from('block_exercise_set')
                                     .insert(setsToInsert);
 
                                 if (setsError) {

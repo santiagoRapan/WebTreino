@@ -24,7 +24,7 @@ The goal is to allow users to create routines by prompting (e.g., "quiero que ha
 
 ### Tables Hierarchy
 ```
-routines (1) → routine_block (many) → block_exercise_v2 (many) → block_exercise_set_v2 (many)
+routines (1) → routine_block (many) → block_exercise (many) → block_exercise_set (many)
                                               ↓
                                          exercises (referenced by exercise_id - TEXT type)
 ```

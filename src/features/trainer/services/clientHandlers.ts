@@ -52,16 +52,6 @@ export function createClientHandlers(
 
         const studentId = client.userId // This is the auth.users id
 
-        // Debug: Log the values being used
-        console.log('🗑️ Deleting trainer_student relationship:', {
-          trainerId,
-          clientId,
-          studentId,
-          trainerIdType: typeof trainerId,
-          clientIdType: typeof clientId,
-          studentIdType: typeof studentId
-        })
-
         // First, check if the relationship exists
         const { data: existingRelationship, error: checkError } = await supabase
           .from('trainer_student')
@@ -71,7 +61,7 @@ export function createClientHandlers(
           .maybeSingle()
 
         if (checkError) {
-          console.error('❌ Error checking existing relationship:', checkError)
+          console.error('Error checking existing relationship:', checkError)
           toast({
             title: "Error",
             description: "No se pudo verificar la relación existente.",
@@ -81,7 +71,7 @@ export function createClientHandlers(
         }
 
         if (!existingRelationship) {
-          console.warn('⚠️ No trainer_student relationship found for:', { trainerId, studentId })
+          console.warn('No trainer_student relationship found for:', { trainerId, studentId })
           toast({
             title: "Relación no encontrada",
             description: "No se encontró una relación activa con este cliente.",
@@ -89,8 +79,6 @@ export function createClientHandlers(
           })
           return
         }
-
-        console.log('✅ Found existing relationship:', existingRelationship)
 
         // Delete the trainer_student relationship from Supabase
         const { error, count } = await supabase
@@ -100,7 +88,7 @@ export function createClientHandlers(
           .eq('student_id', studentId)
 
         if (error) {
-          console.error('❌ Error deleting trainer_student relationship:', error)
+          console.error('Error deleting trainer_student relationship:', error)
           console.error('Error details:', {
             code: error.code,
             message: error.message,
@@ -114,8 +102,6 @@ export function createClientHandlers(
           })
           return
         }
-
-        console.log('✅ Successfully deleted relationship. Rows affected:', count)
 
         // Remove from local state
         const updatedClients = clientState.clients.filter((c: Client) => c.id !== clientId)
@@ -221,7 +207,7 @@ export function createClientHandlers(
         .eq('id', client.requestId)
 
       if (error) {
-        console.error('❌ acceptLinkRequest error:', error)
+        console.error('acceptLinkRequest error:', error)
         toast({ title: 'Error', description: `No se pudo aceptar la solicitud: ${error.message}`, variant: 'destructive' })
         return
       }
@@ -242,7 +228,7 @@ export function createClientHandlers(
         .eq('id', client.requestId)
 
       if (error) {
-        console.error('❌ rejectLinkRequest error:', error)
+        console.error('rejectLinkRequest error:', error)
         toast({ title: 'Error', description: `No se pudo rechazar la solicitud: ${error.message}`, variant: 'destructive' })
         return
       }
@@ -263,7 +249,7 @@ export function createClientHandlers(
         .eq('id', client.requestId)
 
       if (error) {
-        console.error('❌ cancelLinkRequest error:', error)
+        console.error('cancelLinkRequest error:', error)
         toast({ title: 'Error', description: `No se pudo cancelar la solicitud: ${error.message}`, variant: 'destructive' })
         return
       }
@@ -285,9 +271,6 @@ export function createClientHandlers(
       clientState.setHistoryLogs([])
 
       const { sessions, logs } = await clientState.fetchStudentSessions(client.userId)
-
-      console.log("Fetched Sessions:", sessions);
-      console.log("Fetched Logs:", logs);
 
       clientState.setHistorySessions(sessions)
       clientState.setHistoryLogs(logs)

@@ -20,7 +20,7 @@ export function useStudentHistory(): UseStudentHistoryReturn {
     try {
       // Traer sesiones del alumno (sin requerir que la rutina sea del entrenador) - using V2 tables
       const { data: sessionsData, error: sessErr } = await supabase
-        .from('workout_session_v2')
+        .from('workout_session')
         .select('id, performer_id, routine_id, started_at, completed_at, notes, routines(id, name, owner_id)')
         .eq('performer_id', studentId)
         .order('started_at', { ascending: false })
@@ -42,7 +42,7 @@ export function useStudentHistory(): UseStudentHistoryReturn {
       if (sessions.length) {
         const sessionIds = sessions.map((s: WorkoutSession) => s.id)
         const { data: logsData, error: logsErr } = await supabase
-          .from('workout_set_log_v2')
+          .from('workout_set_log')
           .select('id, session_id, exercise_id, set_index, reps, weight_kg, rpe, duration_sec, rest_seconds, notes, performed_at')
           .in('session_id', sessionIds)
 
@@ -80,7 +80,7 @@ export function useStudentHistory(): UseStudentHistoryReturn {
       setLogs(logs)
       return { sessions, logs }
     } catch (error: any) {
-      console.error('❌ fetchHistory error:', error)
+      console.error('fetchHistory error:', error)
       toast({ title: 'Error', description: 'No se pudo cargar el historial del alumno.', variant: 'destructive' })
       setSessions([])
       setLogs([])

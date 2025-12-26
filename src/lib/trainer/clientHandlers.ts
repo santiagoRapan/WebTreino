@@ -86,7 +86,7 @@ export function createClientHandlers(
         .eq('status', 'pending')
 
       if (error) {
-        console.error('❌ acceptLinkRequest error:', error)
+        console.error('acceptLinkRequest error:', error)
         const isUniqueConstraint = (error as any)?.code === '23505' || `${error.message}`.includes('uq_open_pair') || `${error.details}`.includes('uq_open_pair')
         if (isUniqueConstraint) {
           toast({ title: 'Ya aceptada', description: 'Esta relación ya existe. Actualizando la lista...', variant: 'default' })
@@ -110,7 +110,6 @@ export function createClientHandlers(
       if (!client.requestId) return
       
       // Delete the request entirely when rejecting to avoid constraint violations
-      console.log(`🗑️ Deleting trainer link request ${client.requestId} for ${client.name}`)
       const { error } = await supabase
         .from('trainer_link_request')
         .delete()
@@ -118,7 +117,7 @@ export function createClientHandlers(
         .eq('status', 'pending')
 
       if (error) {
-        console.error('❌ rejectLinkRequest error:', error)
+        console.error('rejectLinkRequest error:', error)
         toast({ title: 'Error', description: `No se pudo rechazar la solicitud: ${error.message}`, variant: 'destructive' })
         return
       }
@@ -134,7 +133,6 @@ export function createClientHandlers(
       if (!client.requestId) return
       
       // Delete the request entirely when cancelling to avoid constraint violations
-      console.log(`🗑️ Deleting trainer link request ${client.requestId} for ${client.name}`)
       const { error } = await supabase
         .from('trainer_link_request')
         .delete()
@@ -142,7 +140,7 @@ export function createClientHandlers(
         .eq('status', 'pending')
 
       if (error) {
-        console.error('❌ cancelLinkRequest error:', error)
+        console.error('cancelLinkRequest error:', error)
         toast({ title: 'Error', description: `No se pudo cancelar la solicitud: ${error.message}`, variant: 'destructive' })
         return
       }
@@ -163,9 +161,6 @@ export function createClientHandlers(
       clientState.setHistoryLogs([])
 
       const { sessions, logs } = await clientState.fetchStudentSessions(client.userId)
-      
-      console.log("Fetched Sessions:", sessions);
-      console.log("Fetched Logs:", logs);
 
       clientState.setHistorySessions(sessions)
       clientState.setHistoryLogs(logs)

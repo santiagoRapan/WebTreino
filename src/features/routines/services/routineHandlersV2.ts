@@ -13,7 +13,7 @@ import type {
 /**
  * V2 Routine Handlers
  * ==================
- * These handlers work with the new normalized schema (block_exercise_v2 and block_exercise_set_v2)
+ * These handlers work with the new normalized schema (block_exercise and block_exercise_set)
  * Status: Ready for implementation, not yet integrated into the UI
  */
 
@@ -32,8 +32,6 @@ export async function createRoutineV2(
   }>
 ): Promise<string | null> {
   try {
-    console.log('📝 Creating routine V2:', { name, ownerId })
-
     // 1. Create the routine
     const { data: routineData, error: routineError } = await supabase
       .from('routines')
@@ -56,7 +54,6 @@ export async function createRoutineV2(
     }
 
     const routineId = routineData.id
-    console.log('✅ Routine created:', routineId)
 
     // 2. Create blocks
     for (const block of blocks) {
@@ -82,13 +79,12 @@ export async function createRoutineV2(
       }
 
       const blockId = blockData.id
-      console.log(`✅ Block created: ${block.name} (${blockId})`)
 
       // 3. Create exercises for this block
       for (const exercise of block.exercises) {
         // Insert the exercise
         const { data: exerciseData, error: exerciseError } = await supabase
-          .from('block_exercise_v2')
+          .from('block_exercise')
           .insert({
             block_id: blockId,
             exercise_id: exercise.exercise_id,
@@ -105,7 +101,6 @@ export async function createRoutineV2(
         }
 
         const exerciseV2Id = exerciseData.id
-        console.log(`✅ Exercise created: ${exercise.exercise_id}`)
 
         // 4. Create sets for this exercise
         if (exercise.sets && exercise.sets.length > 0) {
@@ -119,13 +114,11 @@ export async function createRoutineV2(
           }))
 
           const { error: setsError } = await supabase
-            .from('block_exercise_set_v2')
+            .from('block_exercise_set')
             .insert(setsToInsert)
 
           if (setsError) {
             console.error('Error creating sets:', setsError)
-          } else {
-            console.log(`✅ ${setsToInsert.length} sets created`)
           }
         }
       }
@@ -154,20 +147,18 @@ export async function createRoutineV2(
  */
 export async function loadRoutineV2(routineId: string): Promise<RoutineWithBlocksV2 | null> {
   try {
-    console.log('📖 Loading routine V2:', routineId)
-
     const { data: routineData, error: routineError } = await supabase
       .from('routines')
       .select(`
         *,
         routine_block (
           *,
-          block_exercise_v2 (
+          block_exercise (
             *,
             exercises (
               name
             ),
-            block_exercise_set_v2 (
+            block_exercise_set (
               *
             )
           )
@@ -185,10 +176,10 @@ export async function loadRoutineV2(routineId: string): Promise<RoutineWithBlock
     const blocks: RoutineBlockV2[] = (routineData.routine_block || [])
       .sort((a: any, b: any) => a.block_order - b.block_order)
       .map((block: any) => {
-        const exercises: BlockExerciseWithSetsV2[] = (block.block_exercise_v2 || [])
+        const exercises: BlockExerciseWithSetsV2[] = (block.block_exercise || [])
           .sort((a: any, b: any) => a.display_order - b.display_order)
           .map((exercise: any) => {
-            const sets: BlockExerciseSetV2[] = (exercise.block_exercise_set_v2 || [])
+            const sets: BlockExerciseSetV2[] = (exercise.block_exercise_set || [])
               .sort((a: any, b: any) => a.set_index - b.set_index)
 
             return {
@@ -233,20 +224,18 @@ export async function loadRoutineV2(routineId: string): Promise<RoutineWithBlock
  */
 export async function loadAllRoutinesV2(ownerId: string): Promise<RoutineWithBlocksV2[]> {
   try {
-    console.log('📚 Loading all routines V2 for user:', ownerId)
-
     const { data: routinesData, error: routinesError } = await supabase
       .from('routines')
       .select(`
         *,
         routine_block (
           *,
-          block_exercise_v2 (
+          block_exercise (
             *,
             exercises (
               name
             ),
-            block_exercise_set_v2 (
+            block_exercise_set (
               *
             )
           )
@@ -269,10 +258,10 @@ export async function loadAllRoutinesV2(ownerId: string): Promise<RoutineWithBlo
       const blocks: RoutineBlockV2[] = (routineData.routine_block || [])
         .sort((a: any, b: any) => a.block_order - b.block_order)
         .map((block: any) => {
-          const exercises: BlockExerciseWithSetsV2[] = (block.block_exercise_v2 || [])
+          const exercises: BlockExerciseWithSetsV2[] = (block.block_exercise || [])
             .sort((a: any, b: any) => a.display_order - b.display_order)
             .map((exercise: any) => {
-              const sets: BlockExerciseSetV2[] = (exercise.block_exercise_set_v2 || [])
+              const sets: BlockExerciseSetV2[] = (exercise.block_exercise_set || [])
                 .sort((a: any, b: any) => a.set_index - b.set_index)
 
               return {
@@ -330,8 +319,6 @@ export async function updateRoutineV2(
   }>
 ): Promise<boolean> {
   try {
-    console.log('✏️ Updating routine V2:', routineId)
-
     // 1. Update routine metadata
     const { error: routineError } = await supabase
       .from('routines')
@@ -380,7 +367,7 @@ export async function updateRoutineV2(
 
       for (const exercise of block.exercises) {
         const { data: exerciseData, error: exerciseError } = await supabase
-          .from('block_exercise_v2')
+          .from('block_exercise')
           .insert({
             block_id: blockId,
             exercise_id: exercise.exercise_id,
@@ -409,7 +396,7 @@ export async function updateRoutineV2(
           }))
 
           const { error: setsError } = await supabase
-            .from('block_exercise_set_v2')
+            .from('block_exercise_set')
             .insert(setsToInsert)
 
           if (setsError) {
@@ -441,8 +428,6 @@ export async function deleteRoutineV2(
   ownerId: string
 ): Promise<boolean> {
   try {
-    console.log('🗑️ Deleting routine V2:', routineId)
-
     const { error } = await supabase
       .from('routines')
       .delete()
@@ -481,7 +466,7 @@ export async function addExerciseToBlockV2(
   try {
     // 1. Create the exercise
     const { data: exerciseData, error: exerciseError } = await supabase
-      .from('block_exercise_v2')
+      .from('block_exercise')
       .insert({
         block_id: payload.block_id,
         exercise_id: payload.exercise_id,
@@ -512,7 +497,7 @@ export async function addExerciseToBlockV2(
       }))
 
       const { data: setsData, error: setsError } = await supabase
-        .from('block_exercise_set_v2')
+        .from('block_exercise_set')
         .insert(setsToInsert)
         .select()
 
@@ -550,7 +535,7 @@ export async function updateExerciseV2(
 
     if (Object.keys(updateData).length > 0) {
       const { error: exerciseError } = await supabase
-        .from('block_exercise_v2')
+        .from('block_exercise')
         .update(updateData)
         .eq('id', exerciseId)
 
@@ -564,7 +549,7 @@ export async function updateExerciseV2(
     if (payload.sets) {
       // Delete existing sets and recreate (simpler than selective update)
       const { error: deleteSetsError } = await supabase
-        .from('block_exercise_set_v2')
+        .from('block_exercise_set')
         .delete()
         .eq('block_exercise_id', exerciseId)
 
@@ -584,7 +569,7 @@ export async function updateExerciseV2(
       }))
 
       const { error: setsError } = await supabase
-        .from('block_exercise_set_v2')
+        .from('block_exercise_set')
         .insert(setsToInsert)
 
       if (setsError) {
@@ -607,7 +592,7 @@ export async function updateExerciseV2(
 export async function deleteExerciseV2(exerciseId: string): Promise<boolean> {
   try {
     const { error } = await supabase
-      .from('block_exercise_v2')
+      .from('block_exercise')
       .delete()
       .eq('id', exerciseId)
 

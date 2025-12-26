@@ -200,7 +200,7 @@ export interface DatabaseBlockExercise {
 
 /**
  * Block exercise V2 - exercise level data without per-set fields
- * Corresponds to block_exercise_v2 table
+ * Corresponds to block_exercise table
  */
 export interface BlockExerciseV2 {
   id: string
@@ -214,7 +214,7 @@ export interface BlockExerciseV2 {
 
 /**
  * Individual set configuration for V2 schema
- * Corresponds to block_exercise_set_v2 table
+ * Corresponds to block_exercise_set table
  */
 export interface BlockExerciseSetV2 {
   id: string

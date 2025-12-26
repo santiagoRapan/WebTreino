@@ -133,8 +133,6 @@ export function RoutinesTab() {
     const routine = loadedRoutines.find(r => r.id === editingRoutine.id)
 
     if (routine) {
-      console.log('📝 Loading data for editing routine:', editingRoutine.id)
-
       // Populate exerciseSetsData with the full sets information
       const setsData: Record<string, SetInputV2[]> = {}
 
@@ -145,7 +143,6 @@ export function RoutinesTab() {
       })
 
       setExerciseSetsData(setsData)
-      console.log('✅ Loaded sets data for', Object.keys(setsData).length, 'exercises')
     }
   }, [editingRoutine?.id])
 
@@ -157,7 +154,6 @@ export function RoutinesTab() {
 
     const loadRoutines = async () => {
       try {
-        console.log('📚 Loading routines for user:', customUser.id)
         const routines = await routineDatabase.loadRoutinesV2(customUser.id)
 
         if (cancelled) return
@@ -202,7 +198,6 @@ export function RoutinesTab() {
         }]
 
         setLoadedRoutinesData(folders)
-        console.log(`✅ Loaded ${transformedTemplates.length} routines`)
       } catch (error) {
         console.error('Error loading routines:', error)
       }
@@ -265,7 +260,6 @@ export function RoutinesTab() {
     if (!customUser?.id) return
 
     try {
-      console.log('🔄 Refreshing routine data...')
       const refreshedRoutines = await routineDatabase.refreshRoutinesV2(customUser.id)
 
       // Store full routine data
@@ -304,7 +298,6 @@ export function RoutinesTab() {
       }]
 
       setLoadedRoutinesData(folders)
-      console.log('✅ Routine data refreshed, found', refreshedRoutines.length, 'routines')
     } catch (error) {
       console.error('Error refreshing routine data:', error)
     }
@@ -313,7 +306,6 @@ export function RoutinesTab() {
   // Listen for chat assistant "routine created" events to refresh immediately
   useEffect(() => {
     const handleRoutineCreated = (event: Event) => {
-      console.log('⚡ Routine created event received from chat', event)
       refreshRoutineData()
     }
 
@@ -324,8 +316,6 @@ export function RoutinesTab() {
   // Real-time subscription + polling for routines (handles AI-created routines)
   useEffect(() => {
     if (!customUser?.id) return
-
-    console.log('📡 Setting up real-time subscription for routines...')
 
     // Set up real-time subscription
     const channel = supabase
@@ -339,12 +329,10 @@ export function RoutinesTab() {
           filter: `owner_id=eq.${customUser.id}`
         },
         (payload) => {
-          console.log('📡 Routine change detected:', payload.eventType)
           refreshRoutineData()
         }
       )
       .subscribe((status) => {
-        console.log('📡 Routines subscription status:', status)
       })
 
     // Also poll every 5 seconds as backup (in case realtime is not enabled)
@@ -355,14 +343,12 @@ export function RoutinesTab() {
     // Refresh when tab becomes visible
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('👁️ Tab visible, refreshing routines...')
         refreshRoutineData()
       }
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
-      console.log('📡 Cleaning up routines subscription')
       supabase.removeChannel(channel)
       clearInterval(pollInterval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
@@ -412,7 +398,6 @@ export function RoutinesTab() {
 
       if (isEdit) {
         // Update existing routine
-        console.log('🔄 Updating existing routine:', editingRoutine.id)
         success = await updateRoutine(
           editingRoutine.id as string,
           editingRoutine.name,
@@ -422,7 +407,6 @@ export function RoutinesTab() {
         )
       } else {
         // Create new routine
-        console.log('➕ Creating new routine')
         const routineId = await routineDatabase.saveRoutineV2(
           editingRoutine.name,
           editingRoutine.description || null,
@@ -480,8 +464,6 @@ export function RoutinesTab() {
         return updated
       })
     }
-
-    console.log(`🗑️ Deleted exercise at index ${exerciseIndex}`)
   }
 
   // Confirm add exercise with per-set data

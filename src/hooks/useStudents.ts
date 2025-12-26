@@ -43,7 +43,7 @@ export function useStudents(): UseStudentsReturn {
       isFetchingRef.current = true
       // Get current trainer id from auth context
       if (!authUser) {
-        console.error('❌ No authenticated user')
+        console.error('No authenticated user')
         setError('No se pudo obtener el usuario autenticado')
         return
       }
@@ -85,7 +85,7 @@ export function useStudents(): UseStudentsReturn {
         .eq('trainer_id', trainerId)
 
       if (rosterError) {
-        console.error('❌ Error loading roster:', rosterError)
+        console.error('Error loading roster:', rosterError)
         setError(rosterError.message)
         return
       }
@@ -96,7 +96,7 @@ export function useStudents(): UseStudentsReturn {
         : { data: [], error: null as any }
 
       if (profilesError) {
-        console.error('❌ Error loading student profiles:', profilesError)
+        console.error('Error loading student profiles:', profilesError)
         setError(profilesError.message)
         return
       }
@@ -127,7 +127,7 @@ export function useStudents(): UseStudentsReturn {
         .eq('status', 'pending')
 
       if (pendingError) {
-        console.error('❌ Error loading pending requests:', pendingError)
+        console.error('Error loading pending requests:', pendingError)
         setError(pendingError.message)
         return
       }
@@ -138,7 +138,7 @@ export function useStudents(): UseStudentsReturn {
         : { data: [], error: null as any }
 
       if (pendingProfilesError) {
-        console.error('❌ Error loading pending profiles:', pendingProfilesError)
+        console.error('Error loading pending profiles:', pendingProfilesError)
         setError(pendingProfilesError.message)
         return
       }
@@ -180,7 +180,7 @@ export function useStudents(): UseStudentsReturn {
       DataCacheManager.setCachedStudents(trainerId, combined)
 
     } catch (err) {
-      console.error('❌ Error fetching students:', err)
+      console.error('Error fetching students:', err)
       setError('Error al cargar los alumnos')
       toast({
         title: "Error",
@@ -258,7 +258,7 @@ export function useStudents(): UseStudentsReturn {
       .order('started_at', { ascending: false })
 
     if (sessErr) {
-      console.error('❌ Error loading sessions:', sessErr)
+      console.error('Error loading sessions:', sessErr)
       return { sessions: [], logs: [] }
     }
 
@@ -271,7 +271,7 @@ export function useStudents(): UseStudentsReturn {
       : { data: [], error: null as any }
 
     if (logsErr) {
-      console.error('❌ Error loading logs:', logsErr)
+      console.error('Error loading logs:', logsErr)
       return { sessions, logs: [] }
     }
 
@@ -282,7 +282,7 @@ export function useStudents(): UseStudentsReturn {
         : { data: [], error: null as any }
 
     if (exErr) {
-        console.error('❌ Error loading exercises:', exErr)
+        console.error('Error loading exercises:', exErr)
         // Non-fatal, just won't have names, but return original logs
         return { sessions: sessions || [], logs: logs || [] }
     }
@@ -344,7 +344,7 @@ export function useStudents(): UseStudentsReturn {
             realtimeFallbackIntervalRef.current = null
           }
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('⚠️ Realtime subscribe issue (trainer link requests):', status)
+          console.warn('Realtime subscribe issue (trainer link requests):', status)
           // Start lightweight polling fallback if not already started
           if (!realtimeFallbackIntervalRef.current) {
             const interval = setInterval(() => {
@@ -391,7 +391,7 @@ export function useStudents(): UseStudentsReturn {
             realtimeFallbackIntervalRef.current = null
           }
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('⚠️ Realtime subscribe issue (trainer-student relationships):', status)
+          console.warn('Realtime subscribe issue (trainer-student relationships):', status)
           // Start lightweight polling fallback if not already started
           if (!realtimeFallbackIntervalRef.current) {
             const interval = setInterval(() => {

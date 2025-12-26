@@ -161,7 +161,7 @@ export function createRoutineHandlers(
     },
 
     handleCreateFolder: () => {
-      console.log('handleCreateFolder called - implemented in component')
+      return
     },
 
     handleDeleteTemplate: async (templateId: number | string) => {
@@ -171,8 +171,6 @@ export function createRoutineHandlers(
       }
 
       try {
-        console.log('🗑️ Deleting routine:', templateId)
-
         // Only skip DB deletion for temporary IDs
         const isTempId = typeof templateId === 'string' && templateId.startsWith('temp-')
 
@@ -182,10 +180,8 @@ export function createRoutineHandlers(
           const success = await deleteRoutineV2(templateId as string, routineState.customUser.id)
 
           if (!success) {
-            console.log('❌ Failed to delete from database')
             return
           }
-          console.log('✅ Successfully deleted from database')
         }
 
         // Remove from local state
@@ -197,12 +193,12 @@ export function createRoutineHandlers(
           routineState.setRoutineFolders(updatedFolders)
         }
       } catch (error) {
-        console.error('❌ Error deleting routine:', error)
+        console.error('Error deleting routine:', error)
       }
     },
 
     handleMoveTemplate: (templateId: number | string, targetFolderId: string | number) => {
-      console.log('handleMoveTemplate called - implemented in component')
+      return
     },
 
     handleCreateTemplate: () => {
@@ -217,16 +213,15 @@ export function createRoutineHandlers(
         }
         routineState.setEditingRoutine(newRoutine)
         routineState.setIsRoutineEditorOpen(true)
-        console.log('Created new routine template')
       }
     },
 
     handleAssignTemplateToClient: (template: any, client: any) => {
-      console.log('handleAssignTemplateToClient called - implemented in component')
+      return
     },
 
     assignRoutineToClient: async (routineId: number | string, traineeId: number | string) => {
-      console.log('assignRoutineToClient called - implemented in component')
+      return
     },
 
     handleEditRoutine: (template: any) => {

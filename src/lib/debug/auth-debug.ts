@@ -14,14 +14,14 @@ export interface AuthDebugInfo {
 }
 
 export function logAuthState(info: AuthDebugInfo) {
-  console.group('🔍 Auth Debug Info')
+  console.group('Auth Debug Info')
   console.log('Timestamp:', info.timestamp)
   console.log('Loading:', info.loading)
-  console.log('Auth User:', info.authUser ? '✅' : '❌')
-  console.log('Custom User:', info.customUser ? '✅' : '❌')
-  console.log('Session:', info.session ? '✅' : '❌')
-  console.log('Is Authenticated:', info.isAuthenticated ? '✅' : '❌')
-  console.log('Initial Load Complete:', info.initialLoadComplete ? '✅' : '❌')
+  console.log('Auth User:', info.authUser ? 'yes' : 'no')
+  console.log('Custom User:', info.customUser ? 'yes' : 'no')
+  console.log('Session:', info.session ? 'yes' : 'no')
+  console.log('Is Authenticated:', info.isAuthenticated ? 'yes' : 'no')
+  console.log('Initial Load Complete:', info.initialLoadComplete ? 'yes' : 'no')
   console.groupEnd()
 }
 

@@ -82,7 +82,7 @@ CREATE INDEX idx_routine_block_order ON routine_block(routine_id, block_order);
 ```
 
 ### 4. block_exercise (DEPRECATED - V1)
-**DEPRECATED:** This table is no longer used. The application now uses `block_exercise_v2` and `block_exercise_set_v2` (see section 4b).
+**DEPRECATED:** This table is no longer used. The application now uses `block_exercise` and `block_exercise_set` (see section 4b).
 
 Legacy structure that stored exercise data with flat set/reps configuration.
 
@@ -108,14 +108,14 @@ CREATE INDEX idx_block_exercise_order ON block_exercise(block_id, display_order)
 CREATE INDEX idx_block_exercise_superset ON block_exercise(is_superset_group);
 ```
 
-### 4b. block_exercise_v2 & block_exercise_set_v2 (CURRENT IMPLEMENTATION)
+### 4b. block_exercise & block_exercise_set (CURRENT IMPLEMENTATION)
 **CURRENT:** This is the active implementation. Normalized structure that separates exercise-level data from per-set data.
 
 **Status:** These tables are being prepared for future migration. Current application still uses `block_exercise` (section 4).
 
 **Key Changes:**
 - Removes per-set fields (sets, reps, load) from exercise level
-- Introduces dedicated `block_exercise_set_v2` table for per-set configuration
+- Introduces dedicated `block_exercise_set` table for per-set configuration
 - Allows different reps/load per set
 - Better support for drop sets, pyramid sets, and variable loading schemes
 - Renames `is_superset_group` to `superset_group` for clarity
@@ -127,7 +127,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- ==========================================
 -- v2: Block Exercise (no per-set fields)
 -- ==========================================
-CREATE TABLE IF NOT EXISTS public.block_exercise_v2 (
+CREATE TABLE IF NOT EXISTS public.block_exercise (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     block_id uuid NOT NULL
         REFERENCES public.routine_block(id) ON DELETE CASCADE,
@@ -142,18 +142,18 @@ CREATE TABLE IF NOT EXISTS public.block_exercise_v2 (
 
 -- Helpful indexes
 CREATE INDEX IF NOT EXISTS idx_block_exercise_v2_block
-    ON public.block_exercise_v2(block_id);
+    ON public.block_exercise(block_id);
 
 CREATE INDEX IF NOT EXISTS idx_block_exercise_v2_exercise
-    ON public.block_exercise_v2(exercise_id);
+    ON public.block_exercise(exercise_id);
 
 -- ==========================================
 -- v2: Per-Set table
 -- ==========================================
-CREATE TABLE IF NOT EXISTS public.block_exercise_set_v2 (
+CREATE TABLE IF NOT EXISTS public.block_exercise_set (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     block_exercise_id uuid NOT NULL
-        REFERENCES public.block_exercise_v2(id) ON DELETE CASCADE,
+        REFERENCES public.block_exercise(id) ON DELETE CASCADE,
 
     set_index integer NOT NULL,             -- 1,2,3,...
     reps text,                              -- '8', '8-10', 'AMRAP', 'to failure', etc.
@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS public.block_exercise_set_v2 (
 );
 
 CREATE INDEX IF NOT EXISTS idx_block_exercise_set_v2_parent
-    ON public.block_exercise_set_v2(block_exercise_id);
+    ON public.block_exercise_set(block_exercise_id);
 ```
 
 ### 5. trainee_routine
@@ -191,7 +191,7 @@ CREATE UNIQUE INDEX idx_trainee_routine_unique ON trainee_routine(trainee_id, ro
 ```
 
 ### 6. workout_session (DEPRECATED - Use V2)
-**DEPRECATED:** This table uses V1 schema. New code should use `workout_session_v2`.
+**DEPRECATED:** This table uses V1 schema. New code should use `workout_session`.
 
 ```sql
 CREATE TABLE workout_session (
@@ -210,11 +210,11 @@ CREATE INDEX idx_workout_session_started_at ON workout_session(started_at);
 CREATE INDEX idx_workout_session_completed_at ON workout_session(completed_at);
 ```
 
-### 6b. workout_session_v2 (CURRENT IMPLEMENTATION)
+### 6b. workout_session (CURRENT IMPLEMENTATION)
 **CURRENT:** Records individual workout sessions with support for both routine-based and ad-hoc workouts.
 
 ```sql
-CREATE TABLE IF NOT EXISTS workout_session_v2 (
+CREATE TABLE IF NOT EXISTS workout_session (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     performer_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     routine_id uuid NULL REFERENCES routines(id) ON DELETE SET NULL,
@@ -226,14 +226,14 @@ CREATE TABLE IF NOT EXISTS workout_session_v2 (
 );
 
 -- Indexes
-CREATE INDEX IF NOT EXISTS idx_workout_session_v2_performer ON workout_session_v2(performer_id);
-CREATE INDEX IF NOT EXISTS idx_workout_session_v2_routine ON workout_session_v2(routine_id);
-CREATE INDEX IF NOT EXISTS idx_workout_session_v2_started ON workout_session_v2(started_at DESC);
-CREATE INDEX IF NOT EXISTS idx_workout_session_v2_completed ON workout_session_v2(completed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_workout_session_v2_performer ON workout_session(performer_id);
+CREATE INDEX IF NOT EXISTS idx_workout_session_v2_routine ON workout_session(routine_id);
+CREATE INDEX IF NOT EXISTS idx_workout_session_v2_started ON workout_session(started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_workout_session_v2_completed ON workout_session(completed_at DESC);
 ```
 
 ### 7. workout_set_log (DEPRECATED - Use V2)
-**DEPRECATED:** This table uses V1 schema. New code should use `workout_set_log_v2`.
+**DEPRECATED:** This table uses V1 schema. New code should use `workout_set_log`.
 
 ```sql
 CREATE TABLE workout_set_log (
@@ -259,25 +259,25 @@ CREATE INDEX idx_workout_set_log_block_exercise_id ON workout_set_log(block_exer
 CREATE INDEX idx_workout_set_log_set_index ON workout_set_log(session_id, set_index);
 ```
 
-### 7b. workout_set_log_v2 (CURRENT IMPLEMENTATION)
+### 7b. workout_set_log (CURRENT IMPLEMENTATION)
 **CURRENT:** Records individual sets with V2 schema support. Handles both routine-based (linked to planned sets) and ad-hoc workouts.
 
 **Key Features:**
-- Links to `block_exercise_set_v2` for routine-based workouts
+- Links to `block_exercise_set` for routine-based workouts
 - Supports ad-hoc exercises without routine planning
 - Smart uniqueness constraints
 - Tracks actual performance vs planned targets
 
 ```sql
-CREATE TABLE IF NOT EXISTS workout_set_log_v2 (
+CREATE TABLE IF NOT EXISTS workout_set_log (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     
     -- Link to the session (required)
-    session_id uuid NOT NULL REFERENCES workout_session_v2(id) ON DELETE CASCADE,
+    session_id uuid NOT NULL REFERENCES workout_session(id) ON DELETE CASCADE,
     
     -- When following a routine:
-    block_exercise_id uuid NULL REFERENCES block_exercise_v2(id) ON DELETE SET NULL,
-    block_exercise_set_id uuid NULL REFERENCES block_exercise_set_v2(id) ON DELETE SET NULL,
+    block_exercise_id uuid NULL REFERENCES block_exercise(id) ON DELETE SET NULL,
+    block_exercise_set_id uuid NULL REFERENCES block_exercise_set(id) ON DELETE SET NULL,
     
     -- Exercise reference (required for all logs)
     exercise_id text NOT NULL REFERENCES exercises(id),
@@ -302,20 +302,20 @@ CREATE TABLE IF NOT EXISTS workout_set_log_v2 (
 );
 
 -- Fast lookups
-CREATE INDEX IF NOT EXISTS idx_set_log_v2_session ON workout_set_log_v2(session_id);
-CREATE INDEX IF NOT EXISTS idx_set_log_v2_block_set ON workout_set_log_v2(block_exercise_set_id);
-CREATE INDEX IF NOT EXISTS idx_set_log_v2_exercise ON workout_set_log_v2(exercise_id);
-CREATE INDEX IF NOT EXISTS idx_set_log_v2_performed ON workout_set_log_v2(performed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_set_log_v2_session ON workout_set_log(session_id);
+CREATE INDEX IF NOT EXISTS idx_set_log_v2_block_set ON workout_set_log(block_exercise_set_id);
+CREATE INDEX IF NOT EXISTS idx_set_log_v2_exercise ON workout_set_log(exercise_id);
+CREATE INDEX IF NOT EXISTS idx_set_log_v2_performed ON workout_set_log(performed_at DESC);
 
 -- Uniqueness rules per session:
 -- 1) If linked to a prescribed set: one log per (session, prescribed set)
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_log_v2_by_prescribed
-    ON workout_set_log_v2(session_id, block_exercise_set_id)
+    ON workout_set_log(session_id, block_exercise_set_id)
     WHERE block_exercise_set_id IS NOT NULL;
 
 -- 2) If ad-hoc (no prescribed set): one log per (session, exercise, set_index)
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_log_v2_by_manual
-    ON workout_set_log_v2(session_id, exercise_id, set_index)
+    ON workout_set_log(session_id, exercise_id, set_index)
     WHERE block_exercise_set_id IS NULL;
 ```
 
@@ -709,19 +709,19 @@ CREATE POLICY "Users can delete own workout sessions" ON workout_session
 
 ```sql
 -- Users can view their own workout sessions
-CREATE POLICY "Users can view own workout sessions v2" ON workout_session_v2
+CREATE POLICY "Users can view own workout sessions v2" ON workout_session
     FOR SELECT USING (performer_id = auth.uid());
 
 -- Users can create their own workout sessions
-CREATE POLICY "Users can create workout sessions v2" ON workout_session_v2
+CREATE POLICY "Users can create workout sessions v2" ON workout_session
     FOR INSERT WITH CHECK (performer_id = auth.uid());
 
 -- Users can update their own workout sessions
-CREATE POLICY "Users can update own workout sessions v2" ON workout_session_v2
+CREATE POLICY "Users can update own workout sessions v2" ON workout_session
     FOR UPDATE USING (performer_id = auth.uid());
 
 -- Users can delete their own workout sessions
-CREATE POLICY "Users can delete own workout sessions v2" ON workout_session_v2
+CREATE POLICY "Users can delete own workout sessions v2" ON workout_session
     FOR DELETE USING (performer_id = auth.uid());
 ```
 
@@ -753,40 +753,40 @@ CREATE POLICY "Users can manage own workout set logs" ON workout_set_log
 
 ```sql
 -- Users can view set logs for their own workout sessions
-CREATE POLICY "Users can view own workout set logs v2" ON workout_set_log_v2
+CREATE POLICY "Users can view own workout set logs v2" ON workout_set_log
     FOR SELECT USING (
         EXISTS (
-            SELECT 1 FROM workout_session_v2 
+            SELECT 1 FROM workout_session 
             WHERE id = session_id 
             AND performer_id = auth.uid()
         )
     );
 
 -- Users can create set logs for their own workout sessions
-CREATE POLICY "Users can create workout set logs v2" ON workout_set_log_v2
+CREATE POLICY "Users can create workout set logs v2" ON workout_set_log
     FOR INSERT WITH CHECK (
         EXISTS (
-            SELECT 1 FROM workout_session_v2 
+            SELECT 1 FROM workout_session 
             WHERE id = session_id 
             AND performer_id = auth.uid()
         )
     );
 
 -- Users can update set logs for their own workout sessions
-CREATE POLICY "Users can update workout set logs v2" ON workout_set_log_v2
+CREATE POLICY "Users can update workout set logs v2" ON workout_set_log
     FOR UPDATE USING (
         EXISTS (
-            SELECT 1 FROM workout_session_v2 
+            SELECT 1 FROM workout_session 
             WHERE id = session_id 
             AND performer_id = auth.uid()
         )
     );
 
 -- Users can delete set logs for their own workout sessions
-CREATE POLICY "Users can delete workout set logs v2" ON workout_set_log_v2
+CREATE POLICY "Users can delete workout set logs v2" ON workout_set_log
     FOR DELETE USING (
         EXISTS (
-            SELECT 1 FROM workout_session_v2 
+            SELECT 1 FROM workout_session 
             WHERE id = session_id 
             AND performer_id = auth.uid()
         )
@@ -1171,8 +1171,8 @@ SELECT
     bes.notes as set_notes
 FROM routines r
 JOIN routine_block rb ON rb.routine_id = r.id
-JOIN block_exercise_v2 be ON be.block_id = rb.id
-JOIN block_exercise_set_v2 bes ON bes.block_exercise_id = be.id
+JOIN block_exercise be ON be.block_id = rb.id
+JOIN block_exercise_set bes ON bes.block_exercise_id = be.id
 JOIN exercises e ON e.id = be.exercise_id
 WHERE r.id = $1
 ORDER BY rb.block_order, be.display_order, bes.set_index;
@@ -1182,12 +1182,12 @@ ORDER BY rb.block_order, be.display_order, bes.set_index;
 
 ```sql
 -- Insert the exercise
-INSERT INTO block_exercise_v2 (block_id, exercise_id, display_order, superset_group, notes)
+INSERT INTO block_exercise (block_id, exercise_id, display_order, superset_group, notes)
 VALUES ($1, $2, $3, NULL, 'Focus on form')
 RETURNING id;
 
 -- Insert sets with different parameters (e.g., pyramid set)
-INSERT INTO block_exercise_set_v2 (block_exercise_id, set_index, reps, load_kg, unit)
+INSERT INTO block_exercise_set (block_exercise_id, set_index, reps, load_kg, unit)
 VALUES 
     ($exerciseId, 1, '12', 50, 'kg'),
     ($exerciseId, 2, '10', 60, 'kg'),
@@ -1212,9 +1212,9 @@ SELECT
             'notes', bes.notes
         ) ORDER BY bes.set_index
     ) as sets
-FROM block_exercise_v2 be
+FROM block_exercise be
 JOIN exercises e ON e.id = be.exercise_id
-JOIN block_exercise_set_v2 bes ON bes.block_exercise_id = be.id
+JOIN block_exercise_set bes ON bes.block_exercise_id = be.id
 WHERE be.block_id = $1 
   AND be.superset_group IS NOT NULL
 GROUP BY be.superset_group, e.name, be.display_order
@@ -1230,8 +1230,8 @@ SELECT
     COUNT(DISTINCT be.id) as total_exercises
 FROM routines r
 JOIN routine_block rb ON rb.routine_id = r.id
-JOIN block_exercise_v2 be ON be.block_id = rb.id
-LEFT JOIN block_exercise_set_v2 bes ON bes.block_exercise_id = be.id
+JOIN block_exercise be ON be.block_id = rb.id
+LEFT JOIN block_exercise_set bes ON bes.block_exercise_id = be.id
 WHERE r.id = $1
 GROUP BY r.id, r.name;
 ```
@@ -1457,23 +1457,23 @@ For complete implementation examples, see `/docs/chat-implementation.md` and `/s
 
 ### Migration from V1 to V2 (COMPLETED)
 
-**Status:** ✅ Migration complete. The application now exclusively uses `block_exercise_v2` and `block_exercise_set_v2` tables.
+**Status:** ✅ Migration complete. The application now exclusively uses `block_exercise` and `block_exercise_set` tables.
 
 **What Changed:**
 - Removed flat set/reps structure from `block_exercise` (V1)
-- Introduced per-set customization with `block_exercise_set_v2`
+- Introduced per-set customization with `block_exercise_set`
 - All V1 handlers, hooks, and components have been removed
 - Export aliases created for backward compatibility
 
 **If you have legacy data in `block_exercise` table, migrate it using:**
    ```sql
    -- Example migration logic
-   INSERT INTO block_exercise_v2 (block_id, exercise_id, display_order, superset_group, notes)
+    INSERT INTO block_exercise (block_id, exercise_id, display_order, superset_group, notes)
    SELECT block_id, exercise_id, display_order, is_superset_group, notes
    FROM block_exercise;
    
    -- For each exercise, create sets based on the old 'sets' field
-   INSERT INTO block_exercise_set_v2 (block_exercise_id, set_index, reps, load_kg)
+    INSERT INTO block_exercise_set (block_exercise_id, set_index, reps, load_kg)
    SELECT 
        v2.id,
        generate_series(1, COALESCE(v1.sets, 1)),
@@ -1481,7 +1481,7 @@ For complete implementation examples, see `/docs/chat-implementation.md` and `/s
        -- Parse load_target to extract numeric value if possible
        NULL
    FROM block_exercise v1
-   JOIN block_exercise_v2 v2 ON v1.block_id = v2.block_id 
+    JOIN block_exercise v2 ON v1.block_id = v2.block_id 
        AND v1.exercise_id = v2.exercise_id 
        AND v1.display_order = v2.display_order;
    ```
@@ -1490,8 +1490,8 @@ For complete implementation examples, see `/docs/chat-implementation.md` and `/s
 **RLS Policies:**
 ```sql
 -- Enable RLS
-ALTER TABLE block_exercise_v2 ENABLE ROW LEVEL SECURITY;
-ALTER TABLE block_exercise_set_v2 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE block_exercise ENABLE ROW LEVEL SECURITY;
+ALTER TABLE block_exercise_set ENABLE ROW LEVEL SECURITY;
 
 -- Add policies as needed (follow existing patterns from other tables)
 -- SELECT, INSERT, UPDATE, DELETE policies

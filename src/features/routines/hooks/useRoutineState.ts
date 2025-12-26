@@ -170,14 +170,12 @@ export function useRoutineState(): UseRoutineStateReturn {
     const initializeRoutineFolders = async () => {
       // Wait for auth to finish loading before attempting to load routines
       if (authLoading) {
-        console.log('⏳ Auth is still loading, waiting...')
         return
       }
 
       // Don't initialize until we have a customUser (if auth is in progress)
       // customUser will be set after fetchCustomUser completes
       if (!customUser) {
-        console.log('⚠️ No user authenticated, using empty routines')
         const defaultFolders: RoutineFolder[] = [
           { id: '1', name: 'Mis rutinas', templates: [] }
         ]
@@ -187,7 +185,6 @@ export function useRoutineState(): UseRoutineStateReturn {
       }
 
       if (!customUser.id) {
-        console.log('⚠️ User missing ID, using fallback data')
         const defaultFolders: RoutineFolder[] = [
           { id: '1', name: 'Mis rutinas', templates: [] }
         ]
@@ -197,7 +194,6 @@ export function useRoutineState(): UseRoutineStateReturn {
       }
 
       try {
-        console.log('✅ Loading routines for user:', customUser.id, customUser.name || 'Unknown')
         // Load routines from database using the authenticated user's ID
         const v2Routines = await routineDatabase.loadRoutinesV2(customUser.id)
 
@@ -235,10 +231,9 @@ export function useRoutineState(): UseRoutineStateReturn {
         ]
         setRoutineFolders(defaultFolders)
         setSelectedFolderId('1')
-        console.log(`📚 Loaded ${transformedTemplates.length} routines from database`)
       } catch (error) {
         if (cancelled) return;
-        console.error('❌ Error loading routines from database:', error)
+        console.error('Error loading routines from database:', error)
         // Fallback to default folders
         const defaultFolders: RoutineFolder[] = [
           { id: '1', name: 'Mis rutinas', templates: [] }

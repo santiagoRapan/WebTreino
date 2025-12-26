@@ -75,15 +75,10 @@ export function createRoutineHandlers(
 
     handleDeleteTemplate: async (templateId: number | string) => {
       try {
-        console.log('🗑️ Starting delete process for routine:', templateId)
-        
         // Get the user ID from the routine state
         const ownerId = routineState.customUser?.id
-        
-        console.log('👤 User ID:', ownerId)
-        
+
         if (!ownerId) {
-          console.log('❌ No authenticated user found')
           toast({
             title: "Error",
             description: "No se encontró un usuario autenticado. Por favor, inicia sesión.",
@@ -95,20 +90,16 @@ export function createRoutineHandlers(
         // Only skip DB deletion for temporary IDs (created but never saved)
         const isTempId = typeof templateId === 'string' && templateId.startsWith('temp-')
         if (isTempId) {
-          console.log('� Routine has temporary ID, skipping database deletion:', templateId)
         } else {
           // Delete from database for any persisted ID (number or UUID string)
-          console.log('🗄️ Deleting routine from database:', templateId)
           const success = await routineState.routineDatabase.deleteRoutineFromDatabase(
             templateId as any,
             ownerId
           )
 
           if (!success) {
-            console.log('❌ Failed to delete from database')
             throw new Error("Error al eliminar la rutina de la base de datos")
           }
-          console.log('✅ Successfully deleted from database')
         }
 
         // Remove from local state
@@ -118,14 +109,13 @@ export function createRoutineHandlers(
         }))
 
         routineState.setRoutineFolders(updatedFolders)
-        console.log('✅ Removed from local state')
 
         toast({
           title: "Rutina eliminada",
           description: "La rutina ha sido eliminada exitosamente.",
         })
       } catch (error) {
-        console.error("❌ Error deleting routine:", error)
+        console.error("Error deleting routine:", error)
         toast({
           title: "Error",
           description: "No se pudo eliminar la rutina. Inténtalo de nuevo.",
