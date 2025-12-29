@@ -15,7 +15,7 @@ import ReactMarkdown from 'react-markdown'
 export function TrainerAssistant() {
     const [isOpen, setIsOpen] = useState(false)
     const [inputValue, setInputValue] = useState('')
-    const { authUser, session } = useAuth()
+    const { authUser, session, loading, isAuthenticated } = useAuth()
     
     // Use ref to always get latest authUser and session in the transport body function
     const authUserRef = useRef(authUser)
@@ -104,6 +104,10 @@ export function TrainerAssistant() {
             }
         }
     }, [messages])
+
+    // Hide the assistant entrypoint (floating button/logo) when the user is not authenticated.
+    // Keep this check after hooks to preserve stable hook ordering across renders.
+    if (loading || !isAuthenticated) return null
 
     if (!isOpen) {
         return (

@@ -15,6 +15,7 @@ import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
 import { useTranslation } from "@/lib/i18n/LanguageProvider"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useAuth } from "@/features/auth/services/auth-context"
 
 const NAV_ITEMS = [
   { id: "dashboard", translationKey: "navigation.dashboard", icon: BarChart3, href: "/dashboard" },
@@ -33,6 +34,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const { t } = useTranslation()
   const isMobile = useIsMobile()
+  const { loading: authLoading, isAuthenticated } = useAuth()
 
   const sidebarContent = (
     <>
@@ -58,7 +60,10 @@ export function Sidebar() {
       </div>
 
       <nav className="p-4 space-y-2">
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter((item) => {
+          if (item.id !== "chat") return true
+          return !authLoading && isAuthenticated
+        }).map((item) => {
           const isActive = pathname === item.href
           const label = t(item.translationKey)
           return (

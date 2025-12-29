@@ -371,6 +371,13 @@ ALTER TABLE block_exercise ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trainee_routine ENABLE ROW LEVEL SECURITY;
 ALTER TABLE workout_session ENABLE ROW LEVEL SECURITY;
 ALTER TABLE workout_set_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_follow ENABLE ROW LEVEL SECURITY;
+ALTER TABLE follow_request ENABLE ROW LEVEL SECURITY;
+ALTER TABLE friend_request ENABLE ROW LEVEL SECURITY;
+ALTER TABLE friendship ENABLE ROW LEVEL SECURITY;
+ALTER TABLE lead_conversation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE lead_message ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workout_session_media ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trainer_student ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trainer_link_request ENABLE ROW LEVEL SECURITY;
@@ -789,6 +796,395 @@ CREATE POLICY "Users can delete their own messages" ON message
     FOR DELETE USING (
         sender_id = auth.uid()
     );
+```
+
+### User Follow Policies (`user_follow`)
+
+```sql
+-- Everyone authenticated can see follow relationships
+CREATE POLICY user_follow_select_all_authenticated
+ON public.user_follow
+FOR SELECT
+TO authenticated
+USING (true);
+
+-- A user can create follows only as themselves (follower_id = auth.uid())
+CREATE POLICY user_follow_insert_self
+ON public.user_follow
+FOR INSERT
+TO authenticated
+WITH CHECK (follower_id = auth.uid());
+
+-- A user can unfollow (delete) only their own follow rows
+CREATE POLICY user_follow_delete_self
+ON public.user_follow
+FOR DELETE
+TO authenticated
+USING (follower_id = auth.uid());
+```
+
+### Workout Session Media Policies (`workout_session_media`)
+
+```sql
+-- Read access: owner of the session OR the trainer of that owner
+CREATE POLICY workout_session_media_select_owner_or_trainer
+ON public.workout_session_media
+FOR SELECT
+TO authenticated
+USING (
+    EXISTS (
+        SELECT 1
+        FROM public.workout_session ws
+        WHERE ws.id = workout_session_media.session_id
+            AND (
+                ws.performer_id = auth.uid()
+                OR EXISTS (
+                    SELECT 1
+                    FROM public.trainer_student ts
+                    WHERE ts.student_id = ws.performer_id
+                        AND ts.trainer_id = auth.uid()
+                )
+            )
+    )
+);
+
+-- Insert: only the session owner can attach media to their own session
+CREATE POLICY workout_session_media_insert_owner
+ON public.workout_session_media
+FOR INSERT
+TO authenticated
+WITH CHECK (
+    EXISTS (
+        SELECT 1
+        FROM public.workout_session ws
+        WHERE ws.id = workout_session_media.session_id
+            AND ws.performer_id = auth.uid()
+    )
+);
+
+-- Update: only the session owner can modify metadata (sort_index, etc.)
+CREATE POLICY workout_session_media_update_owner
+ON public.workout_session_media
+FOR UPDATE
+TO authenticated
+USING (
+    EXISTS (
+        SELECT 1
+        FROM public.workout_session ws
+        WHERE ws.id = workout_session_media.session_id
+            AND ws.performer_id = auth.uid()
+    )
+)
+WITH CHECK (
+    EXISTS (
+        SELECT 1
+        FROM public.workout_session ws
+        WHERE ws.id = workout_session_media.session_id
+            AND ws.performer_id = auth.uid()
+    )
+);
+
+-- Delete: only the session owner can delete their media rows
+CREATE POLICY workout_session_media_delete_owner
+ON public.workout_session_media
+FOR DELETE
+TO authenticated
+USING (
+    EXISTS (
+        SELECT 1
+        FROM public.workout_session ws
+        WHERE ws.id = workout_session_media.session_id
+            AND ws.performer_id = auth.uid()
+    )
+);
+
+-- Supabase Storage (bucket: workout-images)
+-- These policies are required for authenticated users to generate signed URLs
+-- (and read) objects that belong to a session they can access.
+
+-- Allow read (and signed URL generation) for session owner OR their trainer
+CREATE POLICY workout_images_select_owner_or_trainer
+ON storage.objects
+FOR SELECT
+TO authenticated
+USING (
+    bucket_id = 'workout-images'
+    AND EXISTS (
+        SELECT 1
+        FROM public.workout_session_media wsm
+        JOIN public.workout_session ws ON ws.id = wsm.session_id
+        WHERE wsm.storage_path = storage.objects.name
+            AND (
+                ws.performer_id = auth.uid()
+                OR EXISTS (
+                    SELECT 1
+                    FROM public.trainer_student ts
+                    WHERE ts.student_id = ws.performer_id
+                        AND ts.trainer_id = auth.uid()
+                )
+            )
+    )
+);
+
+-- Only the uploader/owner can write/manage objects in the bucket
+-- (keeps deletes/edits restricted even if trainers can view)
+CREATE POLICY workout_images_insert_owner
+ON storage.objects
+FOR INSERT
+TO authenticated
+WITH CHECK (
+    bucket_id = 'workout-images'
+    AND owner = auth.uid()
+);
+
+CREATE POLICY workout_images_update_owner
+ON storage.objects
+FOR UPDATE
+TO authenticated
+USING (
+    bucket_id = 'workout-images'
+    AND owner = auth.uid()
+)
+WITH CHECK (
+    bucket_id = 'workout-images'
+    AND owner = auth.uid()
+);
+
+CREATE POLICY workout_images_delete_owner
+ON storage.objects
+FOR DELETE
+TO authenticated
+USING (
+    bucket_id = 'workout-images'
+    AND owner = auth.uid()
+);
+```
+
+### Follow Request Policies (`follow_request`)
+
+```sql
+-- Visibility: only requester or requested can see the row
+CREATE POLICY follow_request_select_participants
+ON public.follow_request
+FOR SELECT
+TO authenticated
+USING (requester_id = auth.uid() OR requested_id = auth.uid());
+
+-- Create: only the requester can create a request as themselves
+CREATE POLICY follow_request_insert_requester
+ON public.follow_request
+FOR INSERT
+TO authenticated
+WITH CHECK (requester_id = auth.uid());
+
+-- Requester can cancel while pending
+CREATE POLICY follow_request_requester_cancel_pending
+ON public.follow_request
+FOR UPDATE
+TO authenticated
+USING (requester_id = auth.uid() AND status = 'pending')
+WITH CHECK (
+    requester_id = auth.uid()
+    AND status = 'canceled'
+);
+
+-- Requested user can accept/reject while pending
+CREATE POLICY follow_request_requested_accept_reject
+ON public.follow_request
+FOR UPDATE
+TO authenticated
+USING (requested_id = auth.uid() AND status = 'pending')
+WITH CHECK (
+    requested_id = auth.uid()
+    AND status IN ('accepted','rejected')
+);
+
+-- Optional: allow requester to delete their own request rows
+CREATE POLICY follow_request_delete_requester
+ON public.follow_request
+FOR DELETE
+TO authenticated
+USING (requester_id = auth.uid());
+```
+
+### Friend Request Policies (`friend_request`)
+
+```sql
+-- Visibility: only requester or requested can see the row
+CREATE POLICY friend_request_select_participants
+ON public.friend_request
+FOR SELECT
+TO authenticated
+USING (requester_id = auth.uid() OR requested_id = auth.uid());
+
+-- Create: only the requester can create a request as themselves
+CREATE POLICY friend_request_insert_requester
+ON public.friend_request
+FOR INSERT
+TO authenticated
+WITH CHECK (requester_id = auth.uid());
+
+-- Requester can cancel while pending
+CREATE POLICY friend_request_requester_cancel_pending
+ON public.friend_request
+FOR UPDATE
+TO authenticated
+USING (requester_id = auth.uid() AND status = 'pending')
+WITH CHECK (
+    requester_id = auth.uid()
+    AND status = 'canceled'
+);
+
+-- Requested user can accept/reject while pending
+CREATE POLICY friend_request_requested_accept_reject
+ON public.friend_request
+FOR UPDATE
+TO authenticated
+USING (requested_id = auth.uid() AND status = 'pending')
+WITH CHECK (
+    requested_id = auth.uid()
+    AND status IN ('accepted','rejected')
+);
+
+-- Optional: allow requester to delete their own request rows
+CREATE POLICY friend_request_delete_requester
+ON public.friend_request
+FOR DELETE
+TO authenticated
+USING (requester_id = auth.uid());
+```
+
+### Friendship Policies (`friendship`)
+
+```sql
+-- Visibility: any authenticated user can see friendships
+CREATE POLICY friendship_select_all_authenticated
+ON public.friendship
+FOR SELECT
+TO authenticated
+USING (true);
+
+-- Writes: keep restricted to participants (optional but recommended)
+CREATE POLICY friendship_insert_participant
+ON public.friendship
+FOR INSERT
+TO authenticated
+WITH CHECK (user_id_1 = auth.uid() OR user_id_2 = auth.uid());
+
+CREATE POLICY friendship_update_participant
+ON public.friendship
+FOR UPDATE
+TO authenticated
+USING (user_id_1 = auth.uid() OR user_id_2 = auth.uid())
+WITH CHECK (user_id_1 = auth.uid() OR user_id_2 = auth.uid());
+
+CREATE POLICY friendship_delete_participant
+ON public.friendship
+FOR DELETE
+TO authenticated
+USING (user_id_1 = auth.uid() OR user_id_2 = auth.uid());
+```
+
+### Lead Conversation Policies (`lead_conversation`)
+
+```sql
+-- Only the two participants can see the conversation
+CREATE POLICY lead_conversation_select_participants
+ON public.lead_conversation
+FOR SELECT
+TO authenticated
+USING (trainer_id = auth.uid() OR student_id = auth.uid());
+
+-- Only a participant can create a conversation row
+CREATE POLICY lead_conversation_insert_participant
+ON public.lead_conversation
+FOR INSERT
+TO authenticated
+WITH CHECK (trainer_id = auth.uid() OR student_id = auth.uid());
+
+-- Only participants can update/delete the conversation
+CREATE POLICY lead_conversation_update_participant
+ON public.lead_conversation
+FOR UPDATE
+TO authenticated
+USING (trainer_id = auth.uid() OR student_id = auth.uid())
+WITH CHECK (trainer_id = auth.uid() OR student_id = auth.uid());
+
+CREATE POLICY lead_conversation_delete_participant
+ON public.lead_conversation
+FOR DELETE
+TO authenticated
+USING (trainer_id = auth.uid() OR student_id = auth.uid());
+```
+
+### Lead Message Policies (`lead_message`)
+
+```sql
+-- Only participants of the referenced lead_conversation can see messages
+CREATE POLICY lead_message_select_if_in_conversation
+ON public.lead_message
+FOR SELECT
+TO authenticated
+USING (
+    EXISTS (
+        SELECT 1
+        FROM public.lead_conversation lc
+        WHERE lc.id = lead_message.conversation_id
+            AND (lc.trainer_id = auth.uid() OR lc.student_id = auth.uid())
+    )
+);
+
+-- Only participants can insert messages into the conversation
+CREATE POLICY lead_message_insert_if_in_conversation
+ON public.lead_message
+FOR INSERT
+TO authenticated
+WITH CHECK (
+    EXISTS (
+        SELECT 1
+        FROM public.lead_conversation lc
+        WHERE lc.id = lead_message.conversation_id
+            AND (lc.trainer_id = auth.uid() OR lc.student_id = auth.uid())
+    )
+);
+
+-- If you later add sender_id, you can further restrict:
+-- AND lead_message.sender_id = auth.uid()
+
+-- Only participants can update/delete messages (optional)
+CREATE POLICY lead_message_update_if_in_conversation
+ON public.lead_message
+FOR UPDATE
+TO authenticated
+USING (
+    EXISTS (
+        SELECT 1
+        FROM public.lead_conversation lc
+        WHERE lc.id = lead_message.conversation_id
+            AND (lc.trainer_id = auth.uid() OR lc.student_id = auth.uid())
+    )
+)
+WITH CHECK (
+    EXISTS (
+        SELECT 1
+        FROM public.lead_conversation lc
+        WHERE lc.id = lead_message.conversation_id
+            AND (lc.trainer_id = auth.uid() OR lc.student_id = auth.uid())
+    )
+);
+
+CREATE POLICY lead_message_delete_if_in_conversation
+ON public.lead_message
+FOR DELETE
+TO authenticated
+USING (
+    EXISTS (
+        SELECT 1
+        FROM public.lead_conversation lc
+        WHERE lc.id = lead_message.conversation_id
+            AND (lc.trainer_id = auth.uid() OR lc.student_id = auth.uid())
+    )
+);
 ```
 
 ## Functions and Triggers

@@ -23,6 +23,8 @@ export function RoutinesTab() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
+  const ownerId = customUser?.id ?? authUser?.id
+
   // Routine Database hook
   const routineDatabase = useRoutineDatabase()
 
@@ -148,13 +150,13 @@ export function RoutinesTab() {
 
   // Load routines initially
   useEffect(() => {
-    if (!customUser?.id || hasLoadedInitial.current) return
+    if (!ownerId || hasLoadedInitial.current) return
 
     let cancelled = false
 
     const loadRoutines = async () => {
       try {
-        const routines = await routineDatabase.loadRoutinesV2(customUser.id)
+        const routines = await routineDatabase.loadRoutinesV2(ownerId)
 
         if (cancelled) return
 
@@ -208,7 +210,7 @@ export function RoutinesTab() {
     return () => {
       cancelled = true
     }
-  }, [customUser?.id])
+  }, [ownerId])
 
   // Check for action parameter to open new routine dialog directly
   useEffect(() => {
@@ -257,10 +259,10 @@ export function RoutinesTab() {
 
   // Helper function to refresh routine data
   const refreshRoutineData = useCallback(async () => {
-    if (!customUser?.id) return
+    if (!ownerId) return
 
     try {
-      const refreshedRoutines = await routineDatabase.refreshRoutinesV2(customUser.id)
+      const refreshedRoutines = await routineDatabase.refreshRoutinesV2(ownerId)
 
       // Store full routine data
       setLoadedRoutines(refreshedRoutines)
@@ -301,7 +303,7 @@ export function RoutinesTab() {
     } catch (error) {
       console.error('Error refreshing routine data:', error)
     }
-  }, [customUser?.id, routineDatabase])
+  }, [ownerId, routineDatabase])
 
   // Listen for chat assistant "routine created" events to refresh immediately
   useEffect(() => {
@@ -315,18 +317,18 @@ export function RoutinesTab() {
 
   // Real-time subscription + polling for routines (handles AI-created routines)
   useEffect(() => {
-    if (!customUser?.id) return
+    if (!ownerId) return
 
     // Set up real-time subscription
     const channel = supabase
-      .channel(`routines_changes_${customUser.id}`)
+      .channel(`routines_changes_${ownerId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'routines',
-          filter: `owner_id=eq.${customUser.id}`
+          filter: `owner_id=eq.${ownerId}`
         },
         (payload) => {
           refreshRoutineData()
@@ -353,11 +355,11 @@ export function RoutinesTab() {
       clearInterval(pollInterval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [customUser?.id, refreshRoutineData])
+  }, [ownerId, refreshRoutineData])
 
   const saveRoutine = async () => {
     if (!editingRoutine) return
-    if (!customUser?.id) {
+    if (!ownerId) {
       console.error('No user ID available')
       return
     }
@@ -402,7 +404,7 @@ export function RoutinesTab() {
           editingRoutine.id as string,
           editingRoutine.name,
           editingRoutine.description || null,
-          customUser.id,
+          ownerId,
           blocks
         )
       } else {
@@ -410,7 +412,7 @@ export function RoutinesTab() {
         const routineId = await routineDatabase.saveRoutineV2(
           editingRoutine.name,
           editingRoutine.description || null,
-          customUser.id,
+          ownerId,
           blocks
         )
         success = !!routineId

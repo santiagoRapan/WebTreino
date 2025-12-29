@@ -42,8 +42,17 @@ export async function POST(req: Request) {
     console.log('[API/chat] Owner ID:', ownerId);
     console.log('[API/chat] Has access token:', !!accessToken);
 
-    // Use authenticated client if access token is provided, otherwise use server client
-    const supabase = accessToken ? createAuthenticatedClient(accessToken) : supabaseServer;
+    // Require authentication for trainer assistant.
+    // If the user is not logged in, the UI should not show the assistant, and the API should reject the call.
+    if (!accessToken) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    }
+
+    // Use authenticated client
+    const supabase = createAuthenticatedClient(accessToken);
 
     // Convert UI messages to simple format for the model
     const modelMessages = messages.map((msg: any) => {
