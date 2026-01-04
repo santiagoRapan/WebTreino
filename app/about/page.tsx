@@ -9,7 +9,6 @@ import { Users, Code, Heart, Target } from "lucide-react"
 interface TeamMember {
   id: number
   name: string
-  role: string
   image: string
   description: string
 }
@@ -20,52 +19,33 @@ export default function AboutPage() {
     {
       id: 1,
       name: "Rodrigo Hernández",
-      role: "Product Manager & Mobile Developer",
       image: "/placeholder-user.jpg",
-      description: "Desarrollador especializado en aplicaciones móviles."
+      description: "Estudiante de ingeniería informática en el ITBA"
     },
     {
       id: 2,
       name: "Joaquín Nolasco de Carlés", 
-      role: "Backend Developer",
       image: "/placeholder-user.jpg",
-      description: "Desarrollador especializado en Backend y APIs."
+      description: "Estudiante de ingeniería informática en el ITBA"
     },
     {
       id: 3,
       name: "Santiago Rapan",
-      role: "Backend Developer", 
       image: "/placeholder-user.jpg",
-      description: "Desarrollador especializado en Backend y APIs."
+      description: "Estudiante de ingeniería informática en el ITBA"
     },
     {
-      id: 4,
-      name: "Nicanor Novotny",
-      role: "Backend Developer",
-      image: "/placeholder-user.jpg", 
-      description: "Desarrollador especializado en Backend y APIs."
+      id:4,
+      name: "Federico Falotico",
+      image: "/placeholder-user.jpg",
+      description: "Estudiante de marketing en UADE"
     },
     {
       id: 5,
       name: "Agustin Korman",
-      role: "Mobile Developer",
       image: "/placeholder-user.jpg",
-      description: "Desarrollador especializado en aplicaciones móviles."
+      description: "Estudiante de ingeniería informática en el ITBA"
     },
-    {
-      id: 6,
-      name: "Franco M. Pampuri",
-      role: "Frontend Developer",
-      image: "/placeholder-user.jpg",
-      description: "Desarrollador especializado en Frontend y UI/UX"
-    },
-    {
-      id: 7,
-      name: "Jonas Glaubart",
-      role: "Frontend Developer",
-      image: "/placeholder-user.jpg",
-      description: "Desarrollador especializado en Frontend y UI/UX"
-    }
   ]
 
   return (
@@ -139,7 +119,7 @@ export default function AboutPage() {
             <div className="text-center space-y-4 mb-12">
               <h2 className="text-3xl md:text-5xl font-bold">Nuestro Equipo</h2>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Los talentosos profesionales que hacen posible Treino
+                Los estudiantes que hacen Treino
               </p>
             </div>
             
@@ -158,9 +138,6 @@ export default function AboutPage() {
                     <h3 className="text-lg font-semibold text-foreground mb-1">
                       {member.name}
                     </h3>
-                    <p className="text-primary font-medium mb-3">
-                      {member.role}
-                    </p>
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       {member.description}
                     </p>

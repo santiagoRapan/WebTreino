@@ -38,7 +38,7 @@ export function NavigationBar() {
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex space-x-8">
-            <a href="#features" className="text-foreground hover:text-primary transition-colors">{t("nav.features")}</a>
+            <a href="/#features" className="text-foreground hover:text-primary transition-colors">{t("nav.features")}</a>
             <a href="#contact" className="text-foreground hover:text-primary transition-colors">{t("nav.contact")}</a>
           </div>
 
@@ -75,7 +75,7 @@ export function NavigationBar() {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col space-y-4">
-              <a href="#features" className="text-foreground hover:text-primary transition-colors">{t("nav.features")}</a>
+              <a href="/#features" className="text-foreground hover:text-primary transition-colors">{t("nav.features")}</a>
               <a href="#contact" className="text-foreground hover:text-primary transition-colors">{t("nav.contact")}</a>
               <div className="flex flex-col space-y-2 pt-4">
                 <Button 

@@ -6,7 +6,7 @@ export function Footer() {
   return (
       <footer className="border-t border-border py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-4">
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 relative">
@@ -27,15 +27,6 @@ export function Footer() {
                 <Shield className="w-5 h-5 text-muted-foreground hover:text-primary cursor-pointer" />
               </div>
             </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Producto</h4>
-              <div className="space-y-2 text-muted-foreground">
-                <div className="hover:text-primary cursor-pointer">Características</div>
-                <div className="hover:text-primary cursor-pointer">Precios</div> 
-              </div>
-            </div>
-
 
             <div>
               <h4 className="font-semibold mb-4">Empresa</h4>
@@ -60,13 +51,13 @@ export function Footer() {
                   <span>info@treino.com (Proximamente)</span>
                 </a> */}
                 <a 
-                  href="https://www.instagram.com/treino.coach/"
+                  href="https://www.instagram.com/treinoarg/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center space-x-2 hover:text-primary cursor-pointer transition-colors"
                 >
                   <Instagram className="w-4 h-4" />
-                  <span>treino.coach</span>
+                  <span>treinoarg</span>
                 </a>
                 <div className="flex items-center space-x-2 hover:text-primary cursor-pointer">
                   <Phone className="w-4 h-4" />
