@@ -57,11 +57,6 @@ export function ConversationList({
       .slice(0, 2)
   }
 
-  const truncateMessage = (text: string, maxLength: number = 50) => {
-    if (text.length <= maxLength) return text
-    return text.substring(0, maxLength) + '...'
-  }
-
   return (
     <div className="w-full border-r border-border bg-card flex flex-col h-full">
       {/* Header */}

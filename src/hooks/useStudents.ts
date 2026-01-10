@@ -17,7 +17,7 @@ export interface UseStudentsReturn {
 }
 
 export function useStudents(): UseStudentsReturn {
-  const { authUser, customUser } = useAuth()
+  const { authUser } = useAuth()
   const [students, setStudents] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

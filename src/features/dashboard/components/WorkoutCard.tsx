@@ -182,7 +182,9 @@ export function WorkoutCard({ session }: WorkoutCardProps) {
                   key={index}
                   className="relative h-full w-44 shrink-0 rounded-md overflow-hidden bg-muted cursor-pointer group"
                   onClick={() => {
-                    item.public_url && setSelectedMedia({ url: item.public_url, type: item.media_type })
+                    if (item.public_url) {
+                      setSelectedMedia({ url: item.public_url, type: item.media_type })
+                    }
                   }}
                 >
                   <div className="absolute inset-0 z-20 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">

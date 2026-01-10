@@ -138,41 +138,61 @@ export function useChatState(): ChatState {
       .filter(c => c.status !== 'archived')
       .reduce((sum, c) => sum + c.unreadCount, 0)
   }, [conversations])
-  
-  return {
-    // Data State
-    conversations,
-    messages,
-    activeConversationId,
-    typingIndicators,
-    
-    // UI State
-    chatFilter,
-    searchTerm,
-    isSidebarCollapsed,
-    
-    // Loading States
-    loadingConversations,
-    loadingMessages,
-    sendingMessage,
-    
-    // Setters
-    setConversations,
-    setMessages,
-    setActiveConversationId,
-    setTypingIndicators,
-    setChatFilter,
-    setSearchTerm,
-    setIsSidebarCollapsed,
-    setLoadingConversations,
-    setLoadingMessages,
-    setSendingMessage,
-  appendMessage,
-    
-    // Computed
-    getActiveConversation,
-    getActiveMessages,
-    getFilteredConversations,
-    getUnreadCount,
-  }
+
+  return useMemo(
+    () => ({
+      // Data State
+      conversations,
+      messages,
+      activeConversationId,
+      typingIndicators,
+
+      // UI State
+      chatFilter,
+      searchTerm,
+      isSidebarCollapsed,
+
+      // Loading States
+      loadingConversations,
+      loadingMessages,
+      sendingMessage,
+
+      // Setters
+      setConversations,
+      setMessages,
+      setActiveConversationId,
+      setTypingIndicators,
+      setChatFilter,
+      setSearchTerm,
+      setIsSidebarCollapsed,
+      setLoadingConversations,
+      setLoadingMessages,
+      setSendingMessage,
+      appendMessage,
+
+      // Computed
+      getActiveConversation,
+      getActiveMessages,
+      getFilteredConversations,
+      getUnreadCount,
+    }),
+    [
+      conversations,
+      messages,
+      activeConversationId,
+      typingIndicators,
+      chatFilter,
+      searchTerm,
+      isSidebarCollapsed,
+      loadingConversations,
+      loadingMessages,
+      sendingMessage,
+      setMessages,
+      appendMessage,
+      getActiveConversation,
+      getActiveMessages,
+      getFilteredConversations,
+      getUnreadCount,
+    ]
+  )
 }

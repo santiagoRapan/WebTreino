@@ -1,16 +1,15 @@
 "use client"
 
 import { useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useAuth } from "@/features/auth/services/auth-context"
 import { TrainerLayout } from "@/components/layout/TrainerLayout"
 import { ClientsTab } from "@/features/trainer"
 import { Loader2 } from "lucide-react"
 
 export default function AlumnosPage() {
-  const { authUser, loading, isAuthenticated } = useAuth()
+  const { loading, isAuthenticated } = useAuth()
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {

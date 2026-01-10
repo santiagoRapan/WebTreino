@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Activity, DollarSign, Users, ChevronRight } from "lucide-react"
+import { Activity, Users, ChevronRight } from "lucide-react"
 import { useTranslation } from "@/lib/i18n/LanguageProvider"
 
 export function DashboardTab() {
@@ -15,7 +15,6 @@ export function DashboardTab() {
       handleViewAllClients,
       handleNewClient,
       handleCreateRoutine,
-      handleRegisterPayment,
     },
   } = useTrainerDashboard()
   

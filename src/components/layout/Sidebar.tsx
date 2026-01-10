@@ -9,6 +9,7 @@ import {
   Users,
   X,
 } from "lucide-react"
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
@@ -47,7 +48,13 @@ export function Sidebar() {
             {isMobile ? (
               <X className="w-6 h-6 text-sidebar-foreground" />
             ) : (
-              <img src="/images/treinologo.png" alt="Toggle Sidebar" className="w-full h-full object-contain" />
+              <Image
+                src="/images/treinologo.png"
+                alt="Toggle Sidebar"
+                width={40}
+                height={40}
+                className="w-full h-full object-contain"
+              />
             )}
           </button>
           {(!sidebarCollapsed || isMobile) && <span className="text-lg font-semibold text-sidebar-foreground">Treino</span>}

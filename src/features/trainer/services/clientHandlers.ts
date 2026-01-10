@@ -81,7 +81,7 @@ export function createClientHandlers(
         }
 
         // Delete the trainer_student relationship from Supabase
-        const { error, count } = await supabase
+        const { error } = await supabase
           .from('trainer_student')
           .delete()
           .eq('trainer_id', trainerId)
@@ -157,6 +157,8 @@ export function createClientHandlers(
             .from('trainer_student')
             .update({ status: newStatus })
             .eq('id', relationshipId)
+
+          if (error) throw error
         }
 
         // Optimistic update

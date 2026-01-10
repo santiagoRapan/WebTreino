@@ -1,6 +1,5 @@
 import { toast } from "@/hooks/use-toast"
 import jsPDF from "jspdf"
-import html2canvas from "html2canvas"
 import ExcelJS from "exceljs"
 import { saveAs } from "file-saver"
 import { supabase } from "@/services/database"
@@ -345,6 +344,7 @@ export function createRoutineHandlers(
     },
 
     handleAddExerciseToBlock: (blockId?: number) => {
+      void blockId
       // Always use the first block (index 0)
       routineState.setSelectedBlockId(1)
       routineState.setIsExerciseSelectorOpen(true)
@@ -589,7 +589,7 @@ export function createRoutineHandlers(
           title: "PDF exportado",
           description: "La rutina ha sido exportada a PDF.",
         })
-      } catch (error) {
+      } catch {
         toast({
           title: "Error",
           description: "Error al exportar la rutina a PDF.",

@@ -51,7 +51,7 @@ export async function ensureAppUser(): Promise<void> {
       if (existingUser.role !== 'entrenador') {
         
         // Use database function to bypass RLS policies
-        const { data, error } = await supabase.rpc('set_user_as_entrenador');
+        const { error } = await supabase.rpc('set_user_as_entrenador');
         
         if (error) {
           console.error('[ensureAppUser] Failed to update role:', error.message || error);

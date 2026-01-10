@@ -7,7 +7,13 @@ import { useTranslation } from "@/lib/i18n/LanguageProvider"
 import { useExerciseSearch } from "@/features/exercises"
 import { useAuth } from "@/features/auth/services/auth-context"
 import { supabase } from "@/services/database"
-import { useRoutineDatabase, createRoutine, updateRoutine, type CreateBlockExerciseV2Payload, useRoutineAssignments, type RoutineTemplate } from "@/features/routines"
+import {
+  useRoutineDatabase,
+  updateRoutine,
+  type CreateBlockExerciseV2Payload,
+  useRoutineAssignments,
+  type RoutineTemplate,
+} from "@/features/routines"
 import { RoutinesHeader } from "./RoutinesHeader"
 import { RoutinesFoldersList } from "./RoutinesFoldersList"
 import { RoutinesTemplatesList } from "./RoutinesTemplatesList"
@@ -57,7 +63,6 @@ export function RoutinesTab() {
       isExerciseSelectorOpen,
       isCreateExerciseDialogOpen,
       showExerciseCatalog,
-      exerciseInputs,
       pendingExercise,
       newExerciseForm,
     },
@@ -74,7 +79,6 @@ export function RoutinesTab() {
       setIsExerciseSelectorOpen,
       setIsCreateExerciseDialogOpen,
       setShowExerciseCatalog,
-      setExerciseInputs,
       setNewExerciseForm,
       handleCreateExercise,
       handleCreateFolder,
@@ -82,15 +86,11 @@ export function RoutinesTab() {
       handleMoveTemplate,
       handleCreateTemplate,
       handleAssignTemplateToClient,
-      assignRoutineToClient,
       handleEditRoutine,
       handleAddExerciseToRoutine,
-      confirmAddExercise,
       cancelAddExercise,
       clearPendingExercise,
       handleSelectExercise,
-      handleSaveRoutine,
-      handleDeleteExercise,
       handleExportRoutineToExcel,
     },
   } = useTrainerDashboard()
@@ -146,7 +146,7 @@ export function RoutinesTab() {
 
       setExerciseSetsData(setsData)
     }
-  }, [editingRoutine?.id])
+  }, [editingRoutine?.id, loadedRoutines])
 
   // Load routines initially
   useEffect(() => {
@@ -210,7 +210,7 @@ export function RoutinesTab() {
     return () => {
       cancelled = true
     }
-  }, [ownerId])
+  }, [ownerId, routineDatabase])
 
   // Check for action parameter to open new routine dialog directly
   useEffect(() => {
@@ -307,7 +307,7 @@ export function RoutinesTab() {
 
   // Listen for chat assistant "routine created" events to refresh immediately
   useEffect(() => {
-    const handleRoutineCreated = (event: Event) => {
+    const handleRoutineCreated = () => {
       refreshRoutineData()
     }
 
@@ -330,12 +330,11 @@ export function RoutinesTab() {
           table: 'routines',
           filter: `owner_id=eq.${ownerId}`
         },
-        (payload) => {
+        () => {
           refreshRoutineData()
         }
       )
-      .subscribe((status) => {
-      })
+      .subscribe(() => {})
 
     // Also poll every 5 seconds as backup (in case realtime is not enabled)
     const pollInterval = setInterval(() => {

@@ -2,12 +2,11 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Bell, Menu, Moon, Sun } from "lucide-react"
+import { Menu, Moon, Sun } from "lucide-react"
 import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
 import { useAuth } from "@/features/auth/services/auth-context"
 import { useTheme } from "next-themes"
 import { useTranslation } from "@/lib/i18n/LanguageProvider"
-import { useIsMobile } from "@/hooks/use-mobile"
 
 export function TrainerHeader() {
   const {
@@ -18,7 +17,6 @@ export function TrainerHeader() {
   const { customUser } = useAuth()
   const { theme, setTheme } = useTheme()
   const { t } = useTranslation()
-  const isMobile = useIsMobile()
 
   const getTabTitle = (tab: string) => {
     const tabMap: Record<string, string> = {

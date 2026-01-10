@@ -161,7 +161,7 @@ export function ExerciseCatalog({
           >
             {exerciseSearch.exercises.map((ex) => (
               <div
-                key={ex.id}
+                key={String(ex.id)}
                 className="p-3 rounded bg-muted/50 flex items-center justify-between hover:bg-muted transition-colors"
               >
                 <div className="flex items-center gap-3 flex-1">

@@ -68,7 +68,6 @@ export function createChatHandlers(
         chatState.setSendingMessage(true)
         // Ensure we have a real trainer_student id for this conversation
         let conversationId = chatState.activeConversationId
-        let baseMessages = chatState.messages[conversationId] || []
         const active = chatState.getActiveConversation()
         if (active && conversationId.includes(':')) {
           const realId = await chatDatabase.resolveConversationId(userId, active.participantId)
@@ -77,9 +76,6 @@ export function createChatHandlers(
             const existing = chatState.messages[conversationId] || []
             if (existing.length) {
               chatState.setMessages(realId, existing)
-              baseMessages = existing
-            } else {
-              baseMessages = chatState.messages[realId] || []
             }
             // Update conversations array id
             const updated = chatState.conversations.map((c) =>

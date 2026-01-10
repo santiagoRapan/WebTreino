@@ -7,8 +7,7 @@
 
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
-import { Card } from '@/components/ui/card'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -33,14 +32,39 @@ export function ChatTab() {
   const { authUser } = useAuth()
   const chatState = useChatState()
   const [showMobileMessages, setShowMobileMessages] = useState(false)
-  
-  // Create handlers
-  const handlers = createChatHandlers(chatState, authUser?.id || '')
+
+  // Create handlers (used by render callbacks)
+  const handlers = useMemo(
+    () => createChatHandlers(chatState, authUser?.id || ''),
+    [chatState, authUser?.id]
+  )
+
+  // Avoid re-loading conversations due to handler identity changes
+  const loadConversationsRef = useRef<() => void>(() => {})
+  useEffect(() => {
+    loadConversationsRef.current = handlers.handleLoadConversations
+  }, [handlers.handleLoadConversations])
+
+  // Keep latest conversation list available to realtime callback
+  const conversationsRef = useRef(chatState.conversations)
+  useEffect(() => {
+    conversationsRef.current = chatState.conversations
+  }, [chatState.conversations])
+
+  const appendMessageRef = useRef(chatState.appendMessage)
+  useEffect(() => {
+    appendMessageRef.current = chatState.appendMessage
+  }, [chatState.appendMessage])
+
+  const setConversationsRef = useRef(chatState.setConversations)
+  useEffect(() => {
+    setConversationsRef.current = chatState.setConversations
+  }, [chatState.setConversations])
 
   // Load conversations on mount
   useEffect(() => {
     if (authUser?.id) {
-      handlers.handleLoadConversations()
+      loadConversationsRef.current()
     }
   }, [authUser?.id])
 
@@ -63,13 +87,8 @@ export function ChatTab() {
     const conversationId = chatState.activeConversationId
     if (!conversationId || !authUser?.id) return
 
-    // Si el id actual es sintético trainer:student, escuchar también el id real si logra resolverse
+    // Si el id actual es sintético trainer:student, por ahora escuchamos solo ese id
     const idsToListen = [conversationId]
-    const active = chatState.getActiveConversation()
-    if (active && conversationId.includes(':')) {
-      // Nota: no esperamos, el resolve se hace durante el envío; por ahora escuchamos solo el sintético
-      // El servicio puede soportar array más adelante cuando tengamos el real.
-    }
 
     unsubscribeRef.current = chatDatabase.subscribeToConversation(
       idsToListen,
@@ -110,10 +129,10 @@ export function ChatTab() {
           isOwnMessage: dbMessage.sender_id === authUser.id,
         }
 
-        chatState.appendMessage(dbMessage.conversation_id, m)
+        appendMessageRef.current(dbMessage.conversation_id, m)
 
         // Update last message for conversation list ordering
-        const updatedConversations = chatState.conversations.map((conv) =>
+        const updatedConversations = conversationsRef.current.map((conv) =>
           conv.id === dbMessage.conversation_id
             ? {
                 ...conv,
@@ -126,7 +145,7 @@ export function ChatTab() {
               }
             : conv
         )
-        chatState.setConversations(updatedConversations)
+        setConversationsRef.current(updatedConversations)
       }
     )
 

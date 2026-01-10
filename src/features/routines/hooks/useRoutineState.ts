@@ -9,9 +9,7 @@ import type {
   ExerciseFilterState,
   ExerciseInputsState,
   RoutineFolder,
-  RoutineTemplate,
-  RoutineBlock,
-  BlockExercise
+  RoutineTemplate
 } from "../types"
 
 export interface UseRoutineStateReturn {
@@ -73,51 +71,15 @@ export interface UseRoutineStateReturn {
   customUser: any // User from auth context
 }
 
-// Fallback exercises data
-const FALLBACK_EXERCISES: Exercise[] = [
-  {
-    id: "1",
-    name: "Push-ups",
-    gif_URL: "",
-    target_muscles: ["chest", "triceps"],
-    body_parts: ["upper body"],
-    equipments: ["body weight"],
-    description: "Classic bodyweight exercise for upper body strength",
-    secondary_muscles: ["shoulders", "core"],
-    category: "strength"
-  },
-  {
-    id: "2",
-    name: "Squats",
-    gif_URL: "",
-    target_muscles: ["quadriceps", "glutes"],
-    body_parts: ["lower body"],
-    equipments: ["body weight"],
-    description: "Fundamental lower body exercise",
-    secondary_muscles: ["hamstrings", "calves"],
-    category: "strength"
-  },
-  {
-    id: "3",
-    name: "Plank",
-    gif_URL: "",
-    target_muscles: ["core", "abs"],
-    body_parts: ["core"],
-    equipments: ["body weight"],
-    description: "Isometric core strengthening exercise",
-    secondary_muscles: ["shoulders", "glutes"],
-    category: "core"
-  }
-]
-
 export function useRoutineState(): UseRoutineStateReturn {
   // Auth context for user ID
   const { customUser, loading: authLoading } = useAuth()
+  const customUserId = customUser?.id
 
   // Exercise Catalog State - Don't load exercises automatically
   // They will be loaded on-demand when user searches
   const [exercisesCatalog, setExercisesCatalog] = useState<Exercise[]>([])
-  const [loadingExercises, setLoadingExercises] = useState(false)
+  const [loadingExercises] = useState(false)
 
   // Database operations for routines
   const routineDatabase = useRoutineDatabaseV2()
@@ -175,16 +137,7 @@ export function useRoutineState(): UseRoutineStateReturn {
 
       // Don't initialize until we have a customUser (if auth is in progress)
       // customUser will be set after fetchCustomUser completes
-      if (!customUser) {
-        const defaultFolders: RoutineFolder[] = [
-          { id: '1', name: 'Mis rutinas', templates: [] }
-        ]
-        setRoutineFolders(defaultFolders)
-        setSelectedFolderId('1')
-        return
-      }
-
-      if (!customUser.id) {
+      if (!customUserId) {
         const defaultFolders: RoutineFolder[] = [
           { id: '1', name: 'Mis rutinas', templates: [] }
         ]
@@ -195,7 +148,7 @@ export function useRoutineState(): UseRoutineStateReturn {
 
       try {
         // Load routines from database using the authenticated user's ID
-        const v2Routines = await routineDatabase.loadRoutinesV2(customUser.id)
+        const v2Routines = await routineDatabase.loadRoutinesV2(customUserId)
 
         // Check if the effect was cancelled (component unmounted or deps changed)
         if (cancelled) return;
@@ -248,7 +201,8 @@ export function useRoutineState(): UseRoutineStateReturn {
     return () => {
       cancelled = true;
     }
-  }, [authLoading, customUser?.id]) // Re-run when auth completes or user ID changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, customUserId]) // Re-run when auth completes or user ID changes (routineDatabase is stable)
 
   return {
     exercisesCatalog,

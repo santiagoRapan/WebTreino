@@ -6,7 +6,6 @@
  */
 
 import { toast } from "@/hooks/use-toast"
-import { supabase } from "@/services/database"
 import {
   createCustomExercise,
   musclesArrayToDb,
@@ -198,6 +197,8 @@ export function createRoutineHandlers(
     },
 
     handleMoveTemplate: (templateId: number | string, targetFolderId: string | number) => {
+      void templateId
+      void targetFolderId
       return
     },
 
@@ -217,10 +218,14 @@ export function createRoutineHandlers(
     },
 
     handleAssignTemplateToClient: (template: any, client: any) => {
+      void template
+      void client
       return
     },
 
     assignRoutineToClient: async (routineId: number | string, traineeId: number | string) => {
+      void routineId
+      void traineeId
       return
     },
 
@@ -307,6 +312,7 @@ export function createRoutineHandlers(
     },
 
     handleExportRoutineToPDF: async (template: any) => {
+      void template
       console.log('handleExportRoutineToPDF called - not yet implemented')
     },
 

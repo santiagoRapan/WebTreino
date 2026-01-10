@@ -59,6 +59,7 @@ export function createChatHandlers(
     },
 
     handleStartChat: (clientId: number) => {
+      void clientId
       uiState.setIsNewChatDialogOpen(true)
     },
 

@@ -1,27 +1,24 @@
 "use client"
 
-import React from 'react';
+import { useEffect, useState } from "react"
 import { useAuth } from "@/features/auth/services/auth-context"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { LogOut, User, Shield, Palette, Bell, RefreshCw, Globe } from "lucide-react"
+import { Globe, LogOut, Palette, RefreshCw, User } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { useTheme } from "next-themes"
-import { useState } from "react"
 import { useTranslation } from "@/lib/i18n/LanguageProvider"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { useEffect } from "react"
 
 export function SettingsTab() {
   const { signOut, authUser, customUser, updateUserProfile } = useAuth()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const { t, locale, setLocale } = useTranslation()
-  const [isRefreshing, setIsRefreshing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [name, setName] = useState("")
   const [avatarUrl, setAvatarUrl] = useState("")
@@ -159,14 +156,7 @@ export function SettingsTab() {
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">{t("settings.profile.role")}</label>
                     <p className="text-foreground">
-                      {isRefreshing ? (
-                        <span className="flex items-center gap-2">
-                          <RefreshCw className="w-3 h-3 animate-spin" />
-                          {t("settings.profile.loading")}
-                        </span>
-                      ) : (
-                        customUser?.role || t("settings.profile.notAvailable")
-                      )}
+                      {customUser?.role || t("settings.profile.notAvailable")}
                     </p>
                   </div>
                   <div className="flex justify-end pt-2">

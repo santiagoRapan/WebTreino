@@ -8,7 +8,7 @@ import { ChatTab } from "@/features/chat"
 import { Loader2 } from "lucide-react"
 
 export default function ChatPage() {
-  const { authUser, loading, isAuthenticated } = useAuth()
+  const { loading, isAuthenticated } = useAuth()
   const router = useRouter()
 
   useEffect(() => {

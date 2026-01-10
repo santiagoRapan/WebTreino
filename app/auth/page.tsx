@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/features/auth/services/auth-context"
-import { AuthPage } from "@/features/auth"
 import {
   Dumbbell,
   Loader2,
@@ -16,7 +15,7 @@ import {
 export default function AuthPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { authUser, loading, isAuthenticated, signInWithGoogle } = useAuth()
+  const { loading, isAuthenticated, signInWithGoogle } = useAuth()
   const [isSigningIn, setIsSigningIn] = useState(false)
   
   const isSignUp = searchParams.get('mode') === 'signup'

@@ -19,6 +19,8 @@ export function useRoutineAssignments() {
     trainerId: string,
     notes?: string
   ): Promise<boolean> => {
+    void trainerId
+    void notes
     try {
       // First check if this routine is already assigned to this student
       const { data: existingAssignment, error: checkError } = await supabase

@@ -1,7 +1,7 @@
 import { google } from '@ai-sdk/google';
 import { streamText, tool, stepCountIs } from 'ai';
 import { z } from 'zod';
-import { supabaseServer, createAuthenticatedClient } from '@/services/database/supabaseServer';
+import { createAuthenticatedClient } from '@/services/database/supabaseServer';
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;

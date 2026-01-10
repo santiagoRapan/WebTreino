@@ -9,23 +9,23 @@ interface RoutinesHeaderProps {
   subtitle: string
   showNewFolderInput: boolean
   newFolderName: string
-  showNewRoutineInput: boolean // Kept for compatibility but won't be used
-  newRoutineName: string // Kept for compatibility but won't be used
+  showNewRoutineInput: boolean // Kept for compatibility
+  newRoutineName: string // Kept for compatibility
   onFolderNameChange: (name: string) => void
-  onRoutineNameChange: (name: string) => void // Kept for compatibility but won't be used
+  onRoutineNameChange: (name: string) => void // Kept for compatibility
   onCreateFolder: () => void
   onCreateRoutine: () => void // Now directly opens dialog
   onToggleNewFolder: () => void
   onToggleNewRoutine: () => void // Now directly opens dialog
   onCancelNewFolder: () => void
-  onCancelNewRoutine: () => void // Kept for compatibility but won't be used
+  onCancelNewRoutine: () => void // Kept for compatibility
   translations: {
     newFolder: string
     newRoutine: string
     create: string
     cancel: string
     folderPlaceholder: string
-    routinePlaceholder: string // Kept for compatibility but won't be used
+    routinePlaceholder: string // Kept for compatibility
   }
 }
 
@@ -34,16 +34,11 @@ export function RoutinesHeader({
   subtitle,
   showNewFolderInput,
   newFolderName,
-  showNewRoutineInput,
-  newRoutineName,
   onFolderNameChange,
-  onRoutineNameChange,
   onCreateFolder,
-  onCreateRoutine,
   onToggleNewFolder,
   onToggleNewRoutine,
   onCancelNewFolder,
-  onCancelNewRoutine,
   translations,
 }: RoutinesHeaderProps) {
   return (

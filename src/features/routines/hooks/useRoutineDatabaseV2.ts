@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from 'react'
 import { toast } from '@/hooks/use-toast'
-import DataCacheManager from '@/lib/cache/dataCache'
 import type { RoutineWithBlocksV2, CreateBlockExerciseV2Payload } from '../types'
 import {
   createRoutineV2,

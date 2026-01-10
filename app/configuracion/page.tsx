@@ -8,7 +8,7 @@ import { SettingsTab } from "@/features/dashboard"
 import { Loader2 } from "lucide-react"
 
 export default function ConfiguracionPage() {
-  const { authUser, loading, isAuthenticated } = useAuth()
+  const { loading, isAuthenticated } = useAuth()
   const router = useRouter()
 
   useEffect(() => {

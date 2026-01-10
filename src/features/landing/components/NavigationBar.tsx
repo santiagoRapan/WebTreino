@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { Menu, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n/LanguageProvider";
 
 export function NavigationBar() {
@@ -38,7 +39,7 @@ export function NavigationBar() {
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex space-x-8">
-            <a href="/#features" className="text-foreground hover:text-primary transition-colors">{t("nav.features")}</a>
+            <Link href="/#features" className="text-foreground hover:text-primary transition-colors">{t("nav.features")}</Link>
             <a href="#contact" className="text-foreground hover:text-primary transition-colors">{t("nav.contact")}</a>
           </div>
 
@@ -75,7 +76,7 @@ export function NavigationBar() {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col space-y-4">
-              <a href="/#features" className="text-foreground hover:text-primary transition-colors">{t("nav.features")}</a>
+              <Link href="/#features" className="text-foreground hover:text-primary transition-colors">{t("nav.features")}</Link>
               <a href="#contact" className="text-foreground hover:text-primary transition-colors">{t("nav.contact")}</a>
               <div className="flex flex-col space-y-2 pt-4">
                 <Button 

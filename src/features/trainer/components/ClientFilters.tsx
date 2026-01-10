@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
-import type { Client, ClientStatus } from "../types"
+import type { Client } from "../types"
 import { useTranslation } from "@/lib/i18n/LanguageProvider"
 
 interface ClientFiltersProps {

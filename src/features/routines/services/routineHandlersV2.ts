@@ -1,7 +1,6 @@
 import { toast } from "@/hooks/use-toast"
 import { supabase } from "@/services/database"
 import type {
-  BlockExerciseV2,
   BlockExerciseSetV2,
   BlockExerciseWithSetsV2,
   RoutineBlockV2,

@@ -4,7 +4,6 @@ import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { NavigationBar, Footer } from "@/features/landing"
-import { Users, Code, Heart, Target } from "lucide-react"
 
 interface TeamMember {
   id: number

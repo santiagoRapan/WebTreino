@@ -296,6 +296,8 @@ export class ChatDatabase {
    * Mark messages as read - no-op as schema does not include read tracking
    */
   async markAsRead(_conversationId: string, _userId: string): Promise<void> {
+    void _conversationId
+    void _userId
     return
   }
 
@@ -304,6 +306,8 @@ export class ChatDatabase {
    * This method tries to ensure a pair exists and returns its conversation id.
    */
   async createConversation(_userId: string, _participantId: string): Promise<Conversation> {
+    void _userId
+    void _participantId
     throw new Error('La creación de conversaciones depende de la relación trainer_student. Crea el vínculo primero.')
   }
 
@@ -311,6 +315,7 @@ export class ChatDatabase {
    * Archive a conversation - not supported at DB level; handled in UI only
    */
   async archiveConversation(_conversationId: string): Promise<void> {
+    void _conversationId
     return
   }
 
@@ -318,6 +323,7 @@ export class ChatDatabase {
    * Delete a conversation - not supported (would imply deleting trainer_student)
    */
   async deleteConversation(_conversationId: string): Promise<void> {
+    void _conversationId
     return
   }
 
@@ -325,6 +331,7 @@ export class ChatDatabase {
    * Search users - simple search by name
    */
   async searchUsers(query: string, _currentUserId: string): Promise<ChatUser[]> {
+    void _currentUserId
     const q = query.trim()
     if (!q) return []
 

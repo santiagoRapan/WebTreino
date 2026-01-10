@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -288,7 +288,7 @@ export function ExerciseSelectorDialogV2({
               >
                 {exerciseSearch.exercises.map((exercise) => (
                   <Card
-                    key={exercise.id}
+                    key={String(exercise.id)}
                     className="cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={() => onSelectExercise(exercise)}
                   >

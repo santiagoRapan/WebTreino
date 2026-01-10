@@ -5,7 +5,6 @@ import { DefaultChatTransport } from 'ai'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Bot, Send, User, X, Sparkles, Loader2, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -161,12 +160,12 @@ export function TrainerAssistant() {
                                 <Button variant="outline" size="sm" className="justify-start h-auto py-2 px-3" onClick={() => {
                                     setInputValue("Hace una rutina de pecho para un principiante");
                                 }}>
-                                    "Hace una rutina de pecho..."
+                                    Hace una rutina de pecho...
                                 </Button>
                                 <Button variant="outline" size="sm" className="justify-start h-auto py-2 px-3" onClick={() => {
                                     setInputValue("Sugiere alternativas para Press de Banca");
                                 }}>
-                                    "Alternativas para Press de Banca..."
+                                    Alternativas para Press de Banca...
                                 </Button>
                             </div>
                         </div>

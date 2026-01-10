@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/services/database'
 import type { Exercise, UseExercisesOptions } from '../types'
 
@@ -17,16 +17,33 @@ export function useExercises(options: UseExercisesOptions = {}) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(true)
-  const [page, setPage] = useState(0)
+  const pageRef = useRef(0)
+
+  // Guards against repeated fetches for the same page (can happen with fast scroll events).
+  const requestedPagesRef = useRef<Set<number>>(new Set())
+
+  // Reset paging guard when filters change.
+  useEffect(() => {
+    requestedPagesRef.current.clear()
+    pageRef.current = 0
+  }, [searchTerm, category, equipment, pageSize])
 
   const fetchExercises = useCallback(async (pageNumber: number = 0, append: boolean = false) => {
     try {
+      if (!append) {
+        requestedPagesRef.current.clear()
+      } else {
+        if (requestedPagesRef.current.has(pageNumber)) return
+        requestedPagesRef.current.add(pageNumber)
+      }
+
       setLoading(true)
       
       let query = supabase
         .from('exercises')
         .select('*', { count: 'exact' })
         .order('name', { ascending: true })
+        .order('id', { ascending: true })
         .range(pageNumber * pageSize, (pageNumber + 1) * pageSize - 1)
 
       // Apply search filter
@@ -49,8 +66,11 @@ export function useExercises(options: UseExercisesOptions = {}) {
       if (queryError) {
         console.error('Error fetching exercises:', queryError)
         setError(queryError.message)
+        if (append) requestedPagesRef.current.delete(pageNumber)
         return
       }
+
+      const totalCount = typeof count === 'number' ? count : null
 
       // Transform the data to match our Exercise type
       const transformedExercises: Exercise[] = (data || []).map((exercise: any) => ({
@@ -66,20 +86,39 @@ export function useExercises(options: UseExercisesOptions = {}) {
       }))
 
       if (append) {
-        setExercises(prev => [...prev, ...transformedExercises])
+        setExercises(prev => {
+          const merged = [...prev, ...transformedExercises]
+          const seen = new Set<string>()
+          const unique = merged.filter((ex) => {
+            const key = String(ex.id)
+            if (seen.has(key)) return false
+            seen.add(key)
+            return true
+          })
+
+          if (totalCount !== null) {
+            setHasMore(unique.length < totalCount)
+          } else {
+            setHasMore(transformedExercises.length === pageSize)
+          }
+
+          return unique
+        })
       } else {
         setExercises(transformedExercises)
+
+        if (totalCount !== null) {
+          setHasMore(transformedExercises.length < totalCount)
+        } else {
+          setHasMore(transformedExercises.length === pageSize)
+        }
       }
 
-      // Check if there are more results
-      const totalLoaded = append 
-        ? exercises.length + transformedExercises.length 
-        : transformedExercises.length
-      setHasMore(count ? totalLoaded < count : false)
       setError(null)
     } catch (err) {
       console.error('Error fetching exercises:', err)
       setError('Error al cargar ejercicios')
+      if (append) requestedPagesRef.current.delete(pageNumber)
     } finally {
       setLoading(false)
     }
@@ -88,26 +127,27 @@ export function useExercises(options: UseExercisesOptions = {}) {
   // Fetch exercises when filters change or on initial load
   useEffect(() => {
     if (initialLoad || searchTerm || category || equipment) {
-      setPage(0)
+      pageRef.current = 0
       fetchExercises(0, false)
     }
   }, [searchTerm, category, equipment, initialLoad, fetchExercises])
 
   const loadMore = useCallback(() => {
     if (!loading && hasMore) {
-      const nextPage = page + 1
-      setPage(nextPage)
-      fetchExercises(nextPage, true)
+      const nextPage = pageRef.current + 1
+      pageRef.current = nextPage
+      void fetchExercises(nextPage, true)
     }
-  }, [loading, hasMore, page, fetchExercises])
+  }, [loading, hasMore, fetchExercises])
 
   const refetch = useCallback(() => {
-    setPage(0)
+    pageRef.current = 0
     fetchExercises(0, false)
   }, [fetchExercises])
 
   const search = useCallback((filters: Partial<UseExercisesOptions>) => {
-    setPage(0)
+    void filters
+    pageRef.current = 0
     fetchExercises(0, false)
   }, [fetchExercises])
 

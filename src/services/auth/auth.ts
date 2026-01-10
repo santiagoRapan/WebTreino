@@ -15,7 +15,7 @@ export interface CustomUserResponse {
 // Iniciar sesión con Google y crear/actualizar usuario en tabla custom
 export const signInWithGoogle = async (redirectTo?: string): Promise<AuthResponse> => {
   try {
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: redirectTo || `${window.location.origin}/dashboard`
