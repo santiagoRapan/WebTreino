@@ -29,6 +29,10 @@ export function RoutinesTab() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
+  const goToNewRoutine = useCallback(() => {
+    router.push('/rutinas/nueva')
+  }, [router])
+
   const ownerId = customUser?.id ?? authUser?.id
 
   // Routine Database hook
@@ -212,20 +216,13 @@ export function RoutinesTab() {
     }
   }, [ownerId, routineDatabase])
 
-  // Check for action parameter to open new routine dialog directly
+  // Legacy URL param support: redirect to the new creation screen
   useEffect(() => {
     if (searchParams.get('action') === 'newRoutine' && !hasHandledNewRoutine.current) {
       hasHandledNewRoutine.current = true
-      // Ensure main folder is selected
-      if (selectedFolderId == null) {
-        setSelectedFolderId("1")
-      }
-      // Open the routine editor directly
-      handleCreateTemplate()
-      // Clean up URL parameter
-      router.replace('/rutinas', { scroll: false })
+      router.replace('/rutinas/nueva', { scroll: false })
     }
-  }, [searchParams, selectedFolderId, setSelectedFolderId, handleCreateTemplate, router])
+  }, [searchParams, router])
 
   // Load assignment counts for routines owned by the trainer
   useEffect(() => {
@@ -523,9 +520,9 @@ export function RoutinesTab() {
         onFolderNameChange={setNewFolderName}
         onRoutineNameChange={setNewRoutineName}
         onCreateFolder={handleCreateFolder}
-        onCreateRoutine={handleCreateTemplate}
+        onCreateRoutine={goToNewRoutine}
         onToggleNewFolder={() => setShowNewFolderInput(true)}
-        onToggleNewRoutine={handleCreateTemplate}
+        onToggleNewRoutine={goToNewRoutine}
         onCancelNewFolder={() => {
           setShowNewFolderInput(false)
           setNewFolderName("")

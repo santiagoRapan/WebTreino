@@ -21,7 +21,7 @@ export function RoutinesTab({ action }: RoutinesTabProps) {
     if (action !== "create") return
 
     processed.current = true
-    router.replace("/rutinas?action=newRoutine", { scroll: false })
+    router.replace("/rutinas/nueva", { scroll: false })
   }, [action, router])
 
   return <FeatureRoutinesTab />

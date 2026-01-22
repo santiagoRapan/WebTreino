@@ -37,8 +37,7 @@ export function createRoutineHandlers(
   return {
     handleCreateRoutine: () => {
       if (router) {
-        // Navigate to dedicated routines page with create action
-        router.push('/rutinas?action=create')
+        router.push('/rutinas/nueva')
       } else {
         // Fallback to tab-based navigation
         uiState.setActiveTab("routines")
