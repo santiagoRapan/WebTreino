@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 
@@ -11,6 +11,21 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useExerciseSearch, type Exercise } from "@/features/exercises"
 import { loadRoutineV2, updateRoutineV2 } from "@/features/routines/services/routineHandlersV2"
+import {
+  buildMissingRepsLabels,
+  buildRepsRange,
+  ensurePerSet,
+  getIncompleteRoutineToast,
+  getMissingRepsToast,
+  getRepsRangeParts,
+  getSafeSets,
+  getSessionRequiredToast,
+  getSingleRepsValue,
+  isMissingReps,
+  isValidRest,
+  sanitizeDigits,
+  type RoutineExerciseDraft,
+} from "@/features/routines/shared/routineFormUtils"
 import { supabase } from "@/services/database"
 import { toast } from "@/hooks/use-toast"
 import { Trash2 } from "lucide-react"
@@ -18,91 +33,16 @@ import { ExercisePickerModal } from "@/components/features/routines/ExercisePick
 
 const DEFAULT_BLOCK_NAME = "Rutina"
 
-type SetData = {
-  reps: string
-  weight: string
-  rpe: string
-  rest: string
-}
-
-type SeriesMode = "iguales" | "distintas"
-
-type RepsMode = "single" | "range"
-
-type RoutineExerciseDraft = {
-  id: string
-  exerciseId: string | null
-  exerciseName: string
-  exerciseGifUrl: string
-  sets: number
-  reps: string
-  weight: string
-  rpe: string
-  notes: string
-  rest: string
-  seriesMode: SeriesMode
-  repsMode?: RepsMode
-  perSet?: SetData[]
-}
-
-function sanitizeDigits(value: string, maxLength: number): string {
-  const digits = value.replace(/\D/g, "")
-  return digits.slice(0, maxLength)
-}
-
-function getRepsRangeParts(value: string): { min: string; max: string } {
-  const [min = "", max = ""] = value.split("-")
-  return { min, max }
-}
-
-function buildRepsRange(min: string, max: string): string {
-  if (!min && !max) return ""
-  return `${min}-${max}`
-}
-
-function getSingleRepsValue(value: string): string {
-  const { min } = getRepsRangeParts(value)
-  return min || ""
-}
-
-function getSafeSets(value: number): number {
-  if (!Number.isFinite(value) || value <= 0) return 1
-  return value
-}
- 
-function isMissingReps(value: string, mode: RepsMode): boolean {
-  if (mode === "range") {
-    const { min, max } = getRepsRangeParts(value)
-    return !min || !max
-  }
-  return !value
-}
-
-function isValidRest(value: string): boolean {
-  if (!value) return true
-  return /^\d{1,2}:[0-5]\d$/.test(value)
-}
-
-function ensurePerSet(item: RoutineExerciseDraft): RoutineExerciseDraft {
-  const targetCount = Math.max(1, item.sets)
-  const current = item.perSet ?? []
-  const lastSet: SetData = current.length > 0
-    ? current[current.length - 1]
-    : { reps: item.reps || "", weight: item.weight || "", rpe: item.rpe || "", rest: item.rest || "" }
-
-  if (current.length === targetCount) return item
-
-  const newPerSet: SetData[] = []
-  for (let i = 0; i < targetCount; i++) {
-    newPerSet.push(current[i] ?? { ...lastSet })
-  }
-  return { ...item, perSet: newPerSet }
-}
-
 export default function EditRutinaPage() {
   const router = useRouter()
   const params = useParams()
   const routineId = params?.routineId as string | undefined
+
+  const initialSnapshotRef = useRef<{
+    routineName: string
+    routineDescription: string
+    items: RoutineExerciseDraft[]
+  } | null>(null)
 
   const [routineName, setRoutineName] = useState("")
   const [routineDescription, setRoutineDescription] = useState("")
@@ -195,6 +135,11 @@ export default function EditRutinaPage() {
           setItems(mappedItems)
           setRestTouched({})
           setPerSetRestTouched({})
+          initialSnapshotRef.current = {
+            routineName: routine.name,
+            routineDescription: routine.description ?? "",
+            items: mappedItems,
+          }
         }
       } finally {
         if (isMounted) setIsLoading(false)
@@ -230,37 +175,22 @@ export default function EditRutinaPage() {
 
     const validItems = items.filter((item) => item.exerciseId)
     if (validItems.length === 0) {
-      toast({
-        title: "Rutina incompleta",
-        description: "Agrega al menos un ejercicio antes de guardar.",
-        variant: "destructive",
-      })
+      toast(getIncompleteRoutineToast())
       return
     }
 
     const missingRepsItems = validItems.filter((item) => {
       const repsMode = item.repsMode ?? "single"
       if (item.seriesMode === "distintas") {
-        const normalized = ensurePerSet({ ...item, sets: getSafeSets(item.sets) })
+        const normalized = ensurePerSet({ ...item, sets: getSafeSets(item.sets, 1) })
         return (normalized.perSet ?? []).some((set) => isMissingReps(set.reps || "", repsMode))
       }
       return isMissingReps(item.reps || "", repsMode)
     })
 
     if (missingRepsItems.length > 0) {
-      const labels = missingRepsItems.map((item) => {
-        const name = item.exerciseName?.trim()
-        if (name) return name
-        const index = items.findIndex((p) => p.id === item.id)
-        return index >= 0 ? `Ejercicio ${index + 1}` : "Ejercicio"
-      })
-
-      toast({
-        title: "Faltan repeticiones",
-        description: `Completa repeticiones en: ${labels.join(", ")}.`,
-        variant: "destructive",
-        duration: 4000,
-      })
+      const labels = buildMissingRepsLabels(items, missingRepsItems)
+      toast(getMissingRepsToast(labels))
       return
     }
 
@@ -268,11 +198,7 @@ export default function EditRutinaPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        toast({
-          title: "Sesión requerida",
-          description: "Inicia sesión para guardar la rutina.",
-          variant: "destructive",
-        })
+        toast(getSessionRequiredToast())
         return
       }
 
@@ -346,6 +272,17 @@ export default function EditRutinaPage() {
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const handleCancel = () => {
+    if (initialSnapshotRef.current) {
+      setRoutineName(initialSnapshotRef.current.routineName)
+      setRoutineDescription(initialSnapshotRef.current.routineDescription)
+      setItems(initialSnapshotRef.current.items)
+      setRestTouched({})
+      setPerSetRestTouched({})
+    }
+    router.push('/rutinas')
   }
 
   if (isLoading) {
@@ -1082,7 +1019,7 @@ export default function EditRutinaPage() {
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={() => router.push('/rutinas')}
+                  onClick={handleCancel}
                 >
                   Cancelar
                 </Button>

@@ -11,6 +11,22 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useExerciseSearch, type Exercise } from "@/features/exercises"
 import { createRoutineV2 } from "@/features/routines/services/routineHandlersV2"
+import {
+  buildRepsRange,
+  buildMissingRepsLabels,
+  ensurePerSet,
+  getIncompleteRoutineToast,
+  getMissingRepsToast,
+  getRepsRangeParts,
+  getSafeSets,
+  getSessionRequiredToast,
+  getSingleRepsValue,
+  isMissingReps,
+  isValidRest,
+  normalizeRepsRange,
+  sanitizeDigits,
+  type RoutineExerciseDraft,
+} from "@/features/routines/shared/routineFormUtils"
 import { supabase } from "@/services/database"
 import { toast } from "@/hooks/use-toast"
 import { Trash2 } from "lucide-react"
@@ -18,79 +34,6 @@ import { ExercisePickerModal } from "@/components/features/routines/ExercisePick
 
 const DRAFT_STORAGE_KEY = "rutina-nueva-draft"
 const DEFAULT_SETS = 3
-
-type SetData = {
-  reps: string
-  weight: string
-  rpe: string
-  rest: string
-}
-
-type SeriesMode = "iguales" | "distintas"
-type RepsMode = "single" | "range"
-
-type RoutineExerciseDraft = {
-  id: string
-  exerciseId: string | null
-  exerciseName: string
-  exerciseGifUrl: string
-  sets: number
-  reps: string
-  weight: string
-  rpe: string
-  notes: string
-  rest: string
-  seriesMode: SeriesMode
-  repsMode?: RepsMode
-  perSet?: SetData[]
-}
-
-function sanitizeDigits(value: string, maxLength: number): string {
-  const digits = value.replace(/\D/g, "")
-  return digits.slice(0, maxLength)
-}
-
-function getRepsRangeParts(value: string): { min: string; max: string } {
-  const [min = "", max = ""] = value.split("-")
-  return { min, max }
-}
-
-function buildRepsRange(min: string, max: string): string {
-  if (!min && !max) return ""
-  return `${min}-${max}`
-}
-
-function getSingleRepsValue(value: string): string {
-  const { min } = getRepsRangeParts(value)
-  return min || ""
-}
-
-function isMissingReps(value: string, mode: RepsMode): boolean {
-  if (mode === "range") {
-    const { min, max } = getRepsRangeParts(value)
-    return !min || !max
-  }
-  return !value
-}
-
-function normalizeRepsRange(min: string, max: string): { min: string; max: string } {
-  if (!min || !max) return { min, max }
-  const minValue = Number(min)
-  const maxValue = Number(max)
-  if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) return { min, max }
-  if (maxValue < minValue) return { min, max: min }
-  return { min, max }
-}
-
-function getSafeSets(value: number): number {
-  if (!Number.isFinite(value) || value <= 0) return DEFAULT_SETS
-  return value
-}
-
-function isValidRest(value: string): boolean {
-  if (!value) return true
-  return /^\d{1,2}:[0-5]\d$/.test(value)
-}
 
 function createEmptyExercise(): RoutineExerciseDraft {
   return {
@@ -124,22 +67,6 @@ function createExerciseFromDb(ex: Exercise): RoutineExerciseDraft {
     seriesMode: "iguales",
     repsMode: "single",
   }
-}
-
-function ensurePerSet(item: RoutineExerciseDraft): RoutineExerciseDraft {
-  const targetCount = Math.max(1, item.sets)
-  const current = item.perSet ?? []
-  const lastSet: SetData = current.length > 0
-    ? current[current.length - 1]
-    : { reps: item.reps || "", weight: item.weight || "", rpe: item.rpe || "", rest: item.rest || "" }
-
-  if (current.length === targetCount) return item
-
-  const newPerSet: SetData[] = []
-  for (let i = 0; i < targetCount; i++) {
-    newPerSet.push(current[i] ?? { ...lastSet })
-  }
-  return { ...item, perSet: newPerSet }
 }
 
 function loadDraftFromStorage(): {
@@ -234,37 +161,22 @@ export default function NuevaRutinaPage() {
 
     const validItems = items.filter((item) => item.exerciseId)
     if (validItems.length === 0) {
-      toast({
-        title: "Rutina incompleta",
-        description: "Agrega al menos un ejercicio antes de guardar.",
-        variant: "destructive",
-      })
+      toast(getIncompleteRoutineToast())
       return
     }
 
     const missingRepsItems = validItems.filter((item) => {
       const repsMode = item.repsMode ?? "single"
       if (item.seriesMode === "distintas") {
-        const normalized = ensurePerSet({ ...item, sets: getSafeSets(item.sets) })
+        const normalized = ensurePerSet({ ...item, sets: getSafeSets(item.sets, DEFAULT_SETS) })
         return (normalized.perSet ?? []).some((set) => isMissingReps(set.reps || "", repsMode))
       }
       return isMissingReps(item.reps || "", repsMode)
     })
 
     if (missingRepsItems.length > 0) {
-      const labels = missingRepsItems.map((item) => {
-        const name = item.exerciseName?.trim()
-        if (name) return name
-        const index = items.findIndex((p) => p.id === item.id)
-        return index >= 0 ? `Ejercicio ${index + 1}` : "Ejercicio"
-      })
-
-      toast({
-        title: "Faltan repeticiones",
-        description: `Completa repeticiones en: ${labels.join(", ")}.`,
-        variant: "destructive",
-        duration: 4000,
-      })
+      const labels = buildMissingRepsLabels(items, missingRepsItems)
+      toast(getMissingRepsToast(labels))
       return
     }
 
@@ -272,11 +184,7 @@ export default function NuevaRutinaPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        toast({
-          title: "Sesión requerida",
-          description: "Inicia sesión para guardar la rutina.",
-          variant: "destructive",
-        })
+        toast(getSessionRequiredToast())
         return
       }
 
@@ -285,7 +193,7 @@ export default function NuevaRutinaPage() {
         const exercise_id = item.exerciseId as string
         const notes = item.notes || undefined
 
-        const setsCount = getSafeSets(item.sets)
+        const setsCount = getSafeSets(item.sets, DEFAULT_SETS)
 
         if (item.seriesMode === "distintas") {
           const normalized = ensurePerSet({ ...item, sets: setsCount })
