@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 
 import { TrainerLayout } from "@/components/layout/TrainerLayout"
@@ -10,14 +10,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useExerciseSearch, type Exercise } from "@/features/exercises"
-import { createRoutineV2 } from "@/features/routines/services/routineHandlersV2"
+import { loadRoutineV2, updateRoutineV2 } from "@/features/routines/services/routineHandlersV2"
 import { supabase } from "@/services/database"
 import { toast } from "@/hooks/use-toast"
 import { Trash2 } from "lucide-react"
 import { ExercisePickerModal } from "@/components/features/routines/ExercisePickerModal"
 
-const DRAFT_STORAGE_KEY = "rutina-nueva-draft"
-const DEFAULT_SETS = 3
+const DEFAULT_BLOCK_NAME = "Rutina"
 
 type SetData = {
   reps: string
@@ -27,6 +26,7 @@ type SetData = {
 }
 
 type SeriesMode = "iguales" | "distintas"
+
 type RepsMode = "single" | "range"
 
 type RoutineExerciseDraft = {
@@ -65,6 +65,11 @@ function getSingleRepsValue(value: string): string {
   return min || ""
 }
 
+function getSafeSets(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 1
+  return value
+}
+ 
 function isMissingReps(value: string, mode: RepsMode): boolean {
   if (mode === "range") {
     const { min, max } = getRepsRangeParts(value)
@@ -73,57 +78,9 @@ function isMissingReps(value: string, mode: RepsMode): boolean {
   return !value
 }
 
-function normalizeRepsRange(min: string, max: string): { min: string; max: string } {
-  if (!min || !max) return { min, max }
-  const minValue = Number(min)
-  const maxValue = Number(max)
-  if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) return { min, max }
-  if (maxValue < minValue) return { min, max: min }
-  return { min, max }
-}
-
-function getSafeSets(value: number): number {
-  if (!Number.isFinite(value) || value <= 0) return DEFAULT_SETS
-  return value
-}
-
 function isValidRest(value: string): boolean {
   if (!value) return true
   return /^\d{1,2}:[0-5]\d$/.test(value)
-}
-
-function createEmptyExercise(): RoutineExerciseDraft {
-  return {
-    id: `ex-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    exerciseId: null,
-    exerciseName: "",
-    exerciseGifUrl: "",
-    sets: DEFAULT_SETS,
-    reps: "10",
-    weight: "",
-    rpe: "",
-    notes: "",
-    rest: "",
-    seriesMode: "iguales",
-    repsMode: "single",
-  }
-}
-
-function createExerciseFromDb(ex: Exercise): RoutineExerciseDraft {
-  return {
-    id: `ex-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    exerciseId: String(ex.id),
-    exerciseName: ex.name || "",
-    exerciseGifUrl: ex.gif_URL || "",
-    sets: DEFAULT_SETS,
-    reps: "",
-    weight: "",
-    rpe: "",
-    notes: "",
-    rest: "",
-    seriesMode: "iguales",
-    repsMode: "single",
-  }
 }
 
 function ensurePerSet(item: RoutineExerciseDraft): RoutineExerciseDraft {
@@ -142,75 +99,114 @@ function ensurePerSet(item: RoutineExerciseDraft): RoutineExerciseDraft {
   return { ...item, perSet: newPerSet }
 }
 
-function loadDraftFromStorage(): {
-  routineName: string
-  routineDescription: string
-  items: RoutineExerciseDraft[]
-} | null {
-  if (typeof window === "undefined") return null
-  try {
-    const stored = localStorage.getItem(DRAFT_STORAGE_KEY)
-    if (!stored) return null
-    return JSON.parse(stored) as {
-      routineName: string
-      routineDescription: string
-      items: RoutineExerciseDraft[]
-    }
-  } catch {
-    return null
-  }
-}
-
-function saveDraftToStorage(draft: {
-  routineName: string
-  routineDescription: string
-  items: RoutineExerciseDraft[]
-}): void {
-  if (typeof window === "undefined") return
-  try {
-    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft))
-  } catch {
-    // ignore storage errors
-  }
-}
-
-function clearDraftFromStorage(): void {
-  if (typeof window === "undefined") return
-  try {
-    localStorage.removeItem(DRAFT_STORAGE_KEY)
-  } catch {
-    // ignore storage errors
-  }
-}
-
-export default function NuevaRutinaPage() {
+export default function EditRutinaPage() {
   const router = useRouter()
+  const params = useParams()
+  const routineId = params?.routineId as string | undefined
 
   const [routineName, setRoutineName] = useState("")
   const [routineDescription, setRoutineDescription] = useState("")
   const [items, setItems] = useState<RoutineExerciseDraft[]>([])
-  const [isHydrated, setIsHydrated] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   const [restTouched, setRestTouched] = useState<Record<string, boolean>>({})
   const [perSetRestTouched, setPerSetRestTouched] = useState<Record<string, Record<number, boolean>>>({})
-  const [isSaving, setIsSaving] = useState(false)
-
-  useEffect(() => {
-    const draft = loadDraftFromStorage()
-    if (draft) {
-      setRoutineName(draft.routineName)
-      setRoutineDescription(draft.routineDescription)
-      setItems(draft.items)
-    }
-    setIsHydrated(true)
-  }, [])
-
-  useEffect(() => {
-    if (!isHydrated) return
-    saveDraftToStorage({ routineName, routineDescription, items })
-  }, [routineName, routineDescription, items, isHydrated])
 
   const [isExerciseModalOpen, setIsExerciseModalOpen] = useState(false)
   const exerciseSearch = useExerciseSearch({ debounceMs: 250, pageSize: 8 })
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadRoutine = async () => {
+      if (!routineId) return
+      setIsLoading(true)
+      try {
+        const routine = await loadRoutineV2(routineId)
+        if (!routine) {
+          toast({
+            title: "No encontrada",
+            description: "No pudimos cargar la rutina.",
+            variant: "destructive",
+          })
+          router.push("/rutinas")
+          return
+        }
+
+        const blocks = routine.blocks ?? []
+        const blockExercises = blocks
+          .flatMap((block) => block.exercises ?? [])
+          .sort((a, b) => a.display_order - b.display_order)
+
+        const exerciseIds = Array.from(new Set(blockExercises.map((ex) => ex.exercise_id)))
+        const { data: exerciseData } = await supabase
+          .from("exercises")
+          .select("id, name, gif_URL")
+          .in("id", exerciseIds)
+
+        const exerciseMap = new Map(
+          (exerciseData ?? []).map((ex) => [String(ex.id), ex])
+        )
+
+        const mappedItems: RoutineExerciseDraft[] = blockExercises.map((exercise, index) => {
+          const sets = exercise.sets ?? []
+          const repsList = sets.map((set) => set.reps ?? "")
+          const weightList = sets.map((set) => (set.load_kg ?? "").toString())
+          const repsHasRange = repsList.some((rep) => rep.includes("-"))
+
+          const uniqueReps = new Set(repsList)
+          const uniqueWeight = new Set(weightList)
+          const hasDistinct = uniqueReps.size > 1 || uniqueWeight.size > 1
+
+          const repsValue = repsList[0] ?? ""
+          const weightValue = weightList[0] ?? ""
+
+          const perSet = sets.map((set) => ({
+            reps: set.reps ?? "",
+            weight: set.load_kg != null ? String(set.load_kg) : "",
+            rpe: "",
+            rest: "",
+          }))
+
+          const exerciseMeta = exerciseMap.get(exercise.exercise_id)
+          const displayName = exerciseMeta?.name ?? exercise.exercises?.name ?? ""
+          const gifUrl = exerciseMeta?.gif_URL ?? ""
+
+          return {
+            id: `ex-${Date.now()}-${index}-${Math.random().toString(16).slice(2)}`,
+            exerciseId: exercise.exercise_id,
+            exerciseName: displayName,
+            exerciseGifUrl: gifUrl,
+            sets: Math.max(1, sets.length || 1),
+            reps: repsValue,
+            weight: weightValue,
+            rpe: "",
+            notes: exercise.notes ?? "",
+            rest: "",
+            seriesMode: hasDistinct ? "distintas" : "iguales",
+            repsMode: repsHasRange ? "range" : "single",
+            perSet: hasDistinct ? perSet : undefined,
+          }
+        })
+
+        if (isMounted) {
+          setRoutineName(routine.name)
+          setRoutineDescription(routine.description ?? "")
+          setItems(mappedItems)
+          setRestTouched({})
+          setPerSetRestTouched({})
+        }
+      } finally {
+        if (isMounted) setIsLoading(false)
+      }
+    }
+
+    loadRoutine()
+
+    return () => {
+      isMounted = false
+    }
+  }, [routineId, router])
 
   const totalSets = useMemo(() => {
     return items.reduce((sum, item) => sum + (Number.isFinite(item.sets) ? item.sets : 0), 0)
@@ -228,7 +224,7 @@ export default function NuevaRutinaPage() {
   const canSave = routineName.trim().length > 0 && items.length > 0 && !hasInvalidRest && !isSaving
 
   const handleSaveRoutine = async () => {
-    if (isSaving) return
+    if (isSaving || !routineId) return
     const trimmedName = routineName.trim()
     if (!trimmedName) return
 
@@ -285,10 +281,8 @@ export default function NuevaRutinaPage() {
         const exercise_id = item.exerciseId as string
         const notes = item.notes || undefined
 
-        const setsCount = getSafeSets(item.sets)
-
         if (item.seriesMode === "distintas") {
-          const normalized = ensurePerSet({ ...item, sets: setsCount })
+          const normalized = ensurePerSet(item)
           const setsPayload = (normalized.perSet ?? []).map((set, setIndex) => {
             const loadValue = set.weight ? Number(set.weight) : null
             return {
@@ -311,7 +305,7 @@ export default function NuevaRutinaPage() {
 
         const loadValue = item.weight ? Number(item.weight) : null
         const repsValue = item.reps || undefined
-        const setsPayload = Array.from({ length: Math.max(1, setsCount) }).map((_, setIndex) => ({
+        const setsPayload = Array.from({ length: Math.max(1, item.sets) }).map((_, setIndex) => ({
           set_index: setIndex + 1,
           reps: repsValue,
           load_kg: Number.isFinite(loadValue) ? loadValue : null,
@@ -328,13 +322,14 @@ export default function NuevaRutinaPage() {
         }
       })
 
-      const routineId = await createRoutineV2(
+      const updated = await updateRoutineV2(
+        routineId,
         trimmedName,
         routineDescription.trim() || null,
         user.id,
         [
           {
-            name: "Rutina",
+            name: DEFAULT_BLOCK_NAME,
             block_order: 1,
             notes: null,
             exercises: exercisesPayload,
@@ -342,8 +337,7 @@ export default function NuevaRutinaPage() {
         ]
       )
 
-      if (routineId) {
-        clearDraftFromStorage()
+      if (updated) {
         window.dispatchEvent(new CustomEvent('treino:routine-created', {
           detail: { routineId }
         }))
@@ -354,14 +348,22 @@ export default function NuevaRutinaPage() {
     }
   }
 
+  if (isLoading) {
+    return (
+      <TrainerLayout>
+        <div className="mx-auto w-full p-6 text-sm text-muted-foreground">Cargando rutina...</div>
+      </TrainerLayout>
+    )
+  }
+
   return (
     <TrainerLayout>
       <div className="mx-auto w-full space-y-4 p-4 md:p-6 lg:px-8">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">Nueva rutina</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Editar rutina</h1>
             <p className="text-sm text-muted-foreground">
-              Completa los ejercicios y luego guarda la rutina.
+              Modifica los ejercicios y luego guarda los cambios.
             </p>
           </div>
         </div>
@@ -570,8 +572,7 @@ export default function NuevaRutinaPage() {
                                                 if (p.id !== item.id) return p
                                                 const cleaned = sanitizeDigits(e.target.value, 4)
                                                 const parts = getRepsRangeParts(p.reps)
-                                                const next = normalizeRepsRange(parts.min, cleaned)
-                                                return { ...p, reps: buildRepsRange(next.min, next.max) }
+                                                return { ...p, reps: buildRepsRange(parts.min, cleaned) }
                                               })
                                             )
                                           }
@@ -856,10 +857,9 @@ export default function NuevaRutinaPage() {
                                                       const next = ensurePerSet(p)
                                                       const cleaned = sanitizeDigits(e.target.value, 4)
                                                       const parts = getRepsRangeParts(next.perSet![setIdx]?.reps ?? "")
-                                                      const range = normalizeRepsRange(parts.min, cleaned)
                                                       next.perSet![setIdx] = {
                                                         ...next.perSet![setIdx],
-                                                        reps: buildRepsRange(range.min, range.max),
+                                                        reps: buildRepsRange(parts.min, cleaned),
                                                       }
                                                       return { ...next }
                                                     })
@@ -1031,7 +1031,20 @@ export default function NuevaRutinaPage() {
                     trigger={<Button variant="outline">Agregar ejercicio +</Button>}
                     exerciseSearch={exerciseSearch}
                     onSelect={(ex: Exercise) => {
-                      setItems((prev) => [...prev, createExerciseFromDb(ex)])
+                      setItems((prev) => [...prev, {
+                        id: `ex-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                        exerciseId: String(ex.id),
+                        exerciseName: ex.name || "",
+                        exerciseGifUrl: ex.gif_URL || "",
+                        sets: 3,
+                        reps: "",
+                        weight: "",
+                        rpe: "",
+                        notes: "",
+                        rest: "",
+                        seriesMode: "iguales",
+                        repsMode: "single",
+                      }])
                       setIsExerciseModalOpen(false)
                     }}
                   />
@@ -1069,10 +1082,7 @@ export default function NuevaRutinaPage() {
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={() => {
-                    clearDraftFromStorage()
-                    router.push('/rutinas')
-                  }}
+                  onClick={() => router.push('/rutinas')}
                 >
                   Cancelar
                 </Button>

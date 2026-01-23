@@ -33,6 +33,10 @@ export function RoutinesTab() {
     router.push('/rutinas/nueva')
   }, [router])
 
+  const goToEditRoutine = useCallback((template: RoutineTemplate) => {
+    router.push(`/rutinas/${template.id}`)
+  }, [router])
+
   const ownerId = customUser?.id ?? authUser?.id
 
   // Routine Database hook
@@ -557,7 +561,7 @@ export function RoutinesTab() {
           allFolders={loadedRoutinesData.length > 0 ? loadedRoutinesData : routineFolders}
           searchTerm={routineSearch}
           onSearchChange={setRoutineSearch}
-          onEditRoutine={handleEditRoutine}
+          onEditRoutine={goToEditRoutine}
           onMoveTemplate={handleMoveTemplate}
           onDeleteTemplate={handleDeleteTemplateWithRefresh}
           onExportToExcel={handleExportRoutineToExcel}

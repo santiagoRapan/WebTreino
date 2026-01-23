@@ -7,7 +7,6 @@ import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from "@/features/auth"
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider"
 import { ThemeProvider } from "@/components/common/theme-provider"
-import { TrainerAssistantGate } from "@/features/trainer/components"
 
 export const metadata: Metadata = {
   title: "Treino",
@@ -35,7 +34,6 @@ export default function RootLayout({
           <LanguageProvider>
             <AuthProvider>
               {children}
-              <TrainerAssistantGate />
             </AuthProvider>
           </LanguageProvider>
           <Toaster />

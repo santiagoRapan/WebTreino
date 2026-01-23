@@ -45,24 +45,8 @@ export function ExercisePickerModal({
   onSelect,
 }: ExercisePickerModalProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
-  const restoreScrollTopRef = useRef<number | null>(null)
   const loadMoreLockRef = useRef(false)
   const prevCountRef = useRef(0)
-
-  useEffect(() => {
-    const needsRestore = restoreScrollTopRef.current
-    if (needsRestore == null) return
-
-    const el = scrollRef.current
-    if (!el) return
-
-    // Restore on next paint to avoid jump-to-top after DOM changes.
-    requestAnimationFrame(() => {
-      if (!scrollRef.current) return
-      scrollRef.current.scrollTop = needsRestore
-      restoreScrollTopRef.current = null
-    })
-  }, [exerciseSearch.exercises.length])
 
   useEffect(() => {
     // Release loadMore lock after new items arrive.
@@ -84,7 +68,6 @@ export function ExercisePickerModal({
         !loadMoreLockRef.current
       ) {
         loadMoreLockRef.current = true
-        restoreScrollTopRef.current = el.scrollTop
         exerciseSearch.loadMore()
       }
     }
@@ -158,23 +141,23 @@ export function ExercisePickerModal({
                   </div>
                 ) : null}
 
+                {/* Loading indicator that doesn't block interaction */}
+                {exerciseSearch.loading ? (
+                  <div className="col-span-2 md:col-span-4 flex items-center justify-center py-2">
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <div
+                        className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground animate-spin"
+                        aria-hidden
+                      />
+                      <span>Cargando…</span>
+                    </div>
+                  </div>
+                ) : null}
+
                 {/* Extra padding at bottom so last row isn't glued to edge */}
                 <div aria-hidden className="col-span-2 md:col-span-4 h-1" />
               </div>
             </div>
-
-            {/* Loading overlay keeps size and avoids blank list */}
-            {exerciseSearch.loading ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <div
-                    className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground animate-spin"
-                    aria-hidden
-                  />
-                  <span>Cargando…</span>
-                </div>
-              </div>
-            ) : null}
           </div>
         </div>
       </DialogContent>
