@@ -16,7 +16,10 @@ export interface FeedWorkoutSession {
     avatar_url: string | null
   }
   media: {
-    storage_path: string
+    id: string
+    r2_key: string
+    mime_type: string | null
+    sort_index: number | null
     media_type: 'image' | 'video'
     public_url: string
   }[]
@@ -25,6 +28,36 @@ export interface FeedWorkoutSession {
     setCount: number
     duration: string
   }
+}
+
+async function fetchSignedMediaUrls(params: {
+  accessToken: string
+  mediaIds: string[]
+  expiresInSeconds?: number
+}): Promise<Map<string, { url: string; mime_type: string | null }>> {
+  if (params.mediaIds.length === 0) return new Map()
+
+  const res = await fetch("/api/media/signed-urls", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      accessToken: params.accessToken,
+      mediaIds: params.mediaIds,
+      expiresInSeconds: params.expiresInSeconds ?? 3600,
+    }),
+  })
+
+  if (!res.ok) {
+    console.error("Error fetching signed media URLs:", await res.text())
+    return new Map()
+  }
+
+  const json = (await res.json()) as { media?: Array<{ id: string; url: string; mime_type: string | null }> }
+  const map = new Map<string, { url: string; mime_type: string | null }>()
+  for (const item of json.media || []) {
+    map.set(item.id, { url: item.url, mime_type: item.mime_type ?? null })
+  }
+  return map
 }
 
 export interface SessionExerciseDetail {
@@ -96,7 +129,7 @@ export async function getSessionDetails(sessionId: string): Promise<SessionExerc
   return Array.from(grouped.values())
 }
 
-export async function getStudentWorkouts(trainerId: string): Promise<FeedWorkoutSession[]> {
+export async function getStudentWorkouts(trainerId: string, accessToken: string): Promise<FeedWorkoutSession[]> {
   // 1. Get all students for this trainer
   const { data: students, error: studentsError } = await supabase
     .from('trainer_student')
@@ -126,9 +159,10 @@ export async function getStudentWorkouts(trainerId: string): Promise<FeedWorkout
         description
       ),
       media:workout_session_media (
-        storage_path,
-        media_type,
-        mime_type
+        id,
+        r2_key,
+        mime_type,
+        sort_index
       ),
       logs:workout_set_log (
         exercise_id
@@ -159,6 +193,19 @@ export async function getStudentWorkouts(trainerId: string): Promise<FeedWorkout
 
   const performersMap = new Map(performers?.map((p: any) => [p.id, p]) || [])
 
+  const allMediaIds: string[] = []
+  for (const s of sessions) {
+    for (const m of s.media || []) {
+      if (m?.id) allMediaIds.push(m.id)
+    }
+  }
+
+  const signedMediaMap = await fetchSignedMediaUrls({
+    accessToken,
+    mediaIds: allMediaIds,
+    expiresInSeconds: 3600,
+  })
+
   // 4. Transform data
   const transformedSessions = await Promise.all(sessions.map(async (session: any) => {
     let durationSeconds = 0
@@ -181,31 +228,25 @@ export async function getStudentWorkouts(trainerId: string): Promise<FeedWorkout
 
     const performer = performersMap.get(session.performer_id)
 
-    // Generate signed URLs for media (since bucket is private)
-    const mediaWithUrls = await Promise.all((session.media || []).map(async (item: any) => {
-      try {
-        const { data, error } = await supabase.storage
-          .from('workout-images')
-          .createSignedUrl(item.storage_path, 3600) // 1 hour expiry
+    const mediaSorted = [...(session.media || [])].sort(
+      (a: any, b: any) => (a.sort_index ?? 0) - (b.sort_index ?? 0)
+    )
 
-        if (error) {
-          console.error("Error creating signed URL:", error)
-          return { ...item, public_url: null }
-        }
-
-        // Determine if video based on mime_type or media_type
-        const isVideo = item.mime_type?.startsWith('video/') || item.media_type === 'video'
-
+    const mediaWithUrls = mediaSorted
+      .map((item: any) => {
+        const signed = signedMediaMap.get(item.id)
+        const mimeType = signed?.mime_type ?? item.mime_type ?? null
+        const isVideo = typeof mimeType === "string" ? mimeType.startsWith("video/") : false
         return {
-          ...item,
-          media_type: isVideo ? 'video' : 'image',
-          public_url: data.signedUrl
+          id: item.id,
+          r2_key: item.r2_key,
+          mime_type: mimeType,
+          sort_index: item.sort_index ?? null,
+          media_type: isVideo ? "video" : "image",
+          public_url: signed?.url || "",
         }
-      } catch (err) {
-        console.error("Exception creating signed URL:", err)
-        return { ...item, public_url: null }
-      }
-    }))
+      })
+      .filter((m: any) => !!m.public_url)
 
     return {
       id: session.id,
@@ -231,7 +272,7 @@ export async function getStudentWorkouts(trainerId: string): Promise<FeedWorkout
   return transformedSessions
 }
 
-export async function getWorkoutsForStudent(trainerId: string, studentId: string): Promise<FeedWorkoutSession[]> {
+export async function getWorkoutsForStudent(trainerId: string, studentId: string, accessToken: string): Promise<FeedWorkoutSession[]> {
   // Ensure this student belongs to the trainer (avoid leaking data if RLS is permissive)
   const { data: rel, error: relErr } = await supabase
     .from('trainer_student')
@@ -259,9 +300,10 @@ export async function getWorkoutsForStudent(trainerId: string, studentId: string
         description
       ),
       media:workout_session_media (
-        storage_path,
-        media_type,
-        mime_type
+        id,
+        r2_key,
+        mime_type,
+        sort_index
       ),
       logs:workout_set_log (
         exercise_id
@@ -287,6 +329,19 @@ export async function getWorkoutsForStudent(trainerId: string, studentId: string
     console.error("Error fetching performer:", JSON.stringify(performerError, null, 2))
   }
 
+  const allMediaIds: string[] = []
+  for (const s of sessions) {
+    for (const m of s.media || []) {
+      if (m?.id) allMediaIds.push(m.id)
+    }
+  }
+
+  const signedMediaMap = await fetchSignedMediaUrls({
+    accessToken,
+    mediaIds: allMediaIds,
+    expiresInSeconds: 3600,
+  })
+
   const transformedSessions = await Promise.all(sessions.map(async (session: any) => {
     let durationSeconds = 0
     if (session.duration_seconds) {
@@ -305,28 +360,25 @@ export async function getWorkoutsForStudent(trainerId: string, studentId: string
     const uniqueExercises = new Set((session.logs || []).map((l: any) => l.exercise_id)).size
     const setCount = (session.logs || []).length
 
-    const mediaWithUrls = await Promise.all((session.media || []).map(async (item: any) => {
-      try {
-        const { data, error } = await supabase.storage
-          .from('workout-images')
-          .createSignedUrl(item.storage_path, 3600)
+    const mediaSorted = [...(session.media || [])].sort(
+      (a: any, b: any) => (a.sort_index ?? 0) - (b.sort_index ?? 0)
+    )
 
-        if (error) {
-          console.error("Error creating signed URL:", error)
-          return { ...item, public_url: null }
-        }
-
-        const isVideo = item.mime_type?.startsWith('video/') || item.media_type === 'video'
+    const mediaWithUrls = mediaSorted
+      .map((item: any) => {
+        const signed = signedMediaMap.get(item.id)
+        const mimeType = signed?.mime_type ?? item.mime_type ?? null
+        const isVideo = typeof mimeType === "string" ? mimeType.startsWith("video/") : false
         return {
-          ...item,
-          media_type: isVideo ? 'video' : 'image',
-          public_url: data.signedUrl
+          id: item.id,
+          r2_key: item.r2_key,
+          mime_type: mimeType,
+          sort_index: item.sort_index ?? null,
+          media_type: isVideo ? "video" : "image",
+          public_url: signed?.url || "",
         }
-      } catch (err) {
-        console.error("Exception creating signed URL:", err)
-        return { ...item, public_url: null }
-      }
-    }))
+      })
+      .filter((m: any) => !!m.public_url)
 
     return {
       id: session.id,

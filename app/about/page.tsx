@@ -23,24 +23,18 @@ export default function AboutPage() {
     },
     {
       id: 2,
-      name: "Joaquín Nolasco de Carlés", 
-      image: "/placeholder-user.jpg",
-      description: "Estudiante de ingeniería informática en el ITBA"
-    },
-    {
-      id: 3,
       name: "Santiago Rapan",
       image: "/placeholder-user.jpg",
       description: "Estudiante de ingeniería informática en el ITBA"
     },
     {
-      id:4,
+      id:3,
       name: "Federico Falotico",
       image: "/placeholder-user.jpg",
       description: "Estudiante de marketing en UADE"
     },
     {
-      id: 5,
+      id: 4,
       name: "Agustin Korman",
       image: "/placeholder-user.jpg",
       description: "Estudiante de ingeniería informática en el ITBA"

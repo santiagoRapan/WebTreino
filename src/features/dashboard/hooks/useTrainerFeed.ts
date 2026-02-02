@@ -4,19 +4,19 @@ import { getStudentWorkouts, FeedWorkoutSession } from "../services/feedService"
 import { useToast } from "@/hooks/use-toast"
 
 export function useTrainerFeed() {
-  const { authUser } = useAuth()
+  const { authUser, session } = useAuth()
   const { toast } = useToast()
   const [sessions, setSessions] = useState<FeedWorkoutSession[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchSessions = useCallback(async () => {
-    if (!authUser?.id) return
+    if (!authUser?.id || !session?.access_token) return
 
     try {
       setLoading(true)
       setError(null)
-      const data = await getStudentWorkouts(authUser.id)
+      const data = await getStudentWorkouts(authUser.id, session.access_token)
       setSessions(data)
     } catch (err) {
       console.error("Error fetching student workouts:", err)
@@ -29,7 +29,7 @@ export function useTrainerFeed() {
     } finally {
       setLoading(false)
     }
-  }, [authUser?.id, toast])
+  }, [authUser?.id, session?.access_token, toast])
 
   useEffect(() => {
     fetchSessions()
