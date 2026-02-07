@@ -125,11 +125,7 @@ export async function getStudentWorkouts(trainerId: string): Promise<FeedWorkout
         name,
         description
       ),
-      media:workout_session_media (
-        storage_path,
-        media_type,
-        mime_type
-      ),
+
       logs:workout_set_log (
         exercise_id
       )
@@ -257,11 +253,6 @@ export async function getWorkoutsForStudent(trainerId: string, studentId: string
       routine:routines (
         name,
         description
-      ),
-      media:workout_session_media (
-        storage_path,
-        media_type,
-        mime_type
       ),
       logs:workout_set_log (
         exercise_id
