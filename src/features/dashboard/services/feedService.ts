@@ -37,18 +37,24 @@ async function fetchSignedMediaUrls(params: {
 }): Promise<Map<string, { url: string; mime_type: string | null }>> {
   if (params.mediaIds.length === 0) return new Map()
 
-  const res = await fetch("/api/media/signed-urls", {
+  const supabaseUrl = "https://xuixyepowawocvniusgb.supabase.co"
+  const edgeFunctionUrl = `${supabaseUrl}/functions/v1/get-workout-media-url`
+
+  const res = await fetch(edgeFunctionUrl, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${params.accessToken}`,
+    },
     body: JSON.stringify({
-      accessToken: params.accessToken,
       mediaIds: params.mediaIds,
       expiresInSeconds: params.expiresInSeconds ?? 3600,
     }),
   })
 
   if (!res.ok) {
-    console.error("Error fetching signed media URLs:", await res.text())
+    const errorText = await res.text()
+    console.error("Error fetching signed media URLs:", res.status, errorText)
     return new Map()
   }
 
