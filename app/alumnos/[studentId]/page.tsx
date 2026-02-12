@@ -65,7 +65,7 @@ export default function AlumnoDetailsPage() {
             joinDate: relationData?.joined_at
           })
         } else if (!cancelled && profileError) {
-          console.error("Error loading student profile:", profileError)
+          console.error("Error loading student profile:", JSON.stringify(profileError, null, 2))
         } else if (!cancelled && !profileData) {
           console.warn("No profile data found for student:", studentId)
         }
@@ -206,7 +206,7 @@ export default function AlumnoDetailsPage() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {sessions.map((session) => (
                   <WorkoutCard
                     key={session.id}

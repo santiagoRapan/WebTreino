@@ -218,9 +218,17 @@ export async function getStudentWorkouts(trainerId: string, accessToken: string)
       durationSeconds = Math.floor(durationMs / 1000)
     }
 
-    const minutes = Math.floor(durationSeconds / 60)
-    const seconds = durationSeconds % 60
-    const formattedDuration = `${minutes}:${seconds.toString().padStart(2, '0')}`
+    let formattedDuration: string
+    if (durationSeconds >= 3600) { // >= 1 hora
+      const hours = Math.floor(durationSeconds / 3600)
+      const minutes = Math.floor((durationSeconds % 3600) / 60)
+      const seconds = durationSeconds % 60
+      formattedDuration = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+    } else {
+      const minutes = Math.floor(durationSeconds / 60)
+      const seconds = durationSeconds % 60
+      formattedDuration = `${minutes}:${seconds.toString().padStart(2, '0')}`
+    }
 
     // Count unique exercises
     const uniqueExercises = new Set(session.logs.map((l: any) => l.exercise_id)).size
@@ -242,7 +250,7 @@ export async function getStudentWorkouts(trainerId: string, accessToken: string)
           r2_key: item.r2_key,
           mime_type: mimeType,
           sort_index: item.sort_index ?? null,
-          media_type: isVideo ? "video" : "image",
+          media_type: (isVideo ? "video" : "image") as 'video' | 'image',
           public_url: signed?.url || "",
         }
       })
@@ -353,9 +361,17 @@ export async function getWorkoutsForStudent(trainerId: string, studentId: string
       durationSeconds = Math.floor(durationMs / 1000)
     }
 
-    const minutes = Math.floor(durationSeconds / 60)
-    const seconds = durationSeconds % 60
-    const formattedDuration = `${minutes}:${seconds.toString().padStart(2, '0')}`
+    let formattedDuration: string
+    if (durationSeconds >= 3600) { // >= 1 hora
+      const hours = Math.floor(durationSeconds / 3600)
+      const minutes = Math.floor((durationSeconds % 3600) / 60)
+      const seconds = durationSeconds % 60
+      formattedDuration = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+    } else {
+      const minutes = Math.floor(durationSeconds / 60)
+      const seconds = durationSeconds % 60
+      formattedDuration = `${minutes}:${seconds.toString().padStart(2, '0')}`
+    }
 
     const uniqueExercises = new Set((session.logs || []).map((l: any) => l.exercise_id)).size
     const setCount = (session.logs || []).length
@@ -374,7 +390,7 @@ export async function getWorkoutsForStudent(trainerId: string, studentId: string
           r2_key: item.r2_key,
           mime_type: mimeType,
           sort_index: item.sort_index ?? null,
-          media_type: isVideo ? "video" : "image",
+          media_type: (isVideo ? "video" : "image") as 'video' | 'image',
           public_url: signed?.url || "",
         }
       })
