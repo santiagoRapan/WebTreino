@@ -52,8 +52,6 @@ export function ClientsTab() {
               onAcceptRequest={actions.acceptLinkRequest}
               onRejectRequest={actions.rejectLinkRequest}
               onCancelRequest={actions.cancelLinkRequest}
-              onViewHistory={(client) => router.push(`/alumnos/${encodeURIComponent(client.userId)}/historial`)}
-              onUpdateStatus={actions.handleUpdateStatus}
             />
           </CardContent>
         </Card>
@@ -64,7 +62,6 @@ export function ClientsTab() {
         onClose={() => actions.setIsEditDialogOpen(false)}
         client={state.editingClient}
         onClientUpdate={actions.setEditingClient}
-        onUpdateStatus={actions.handleUpdateStatus}
       />
 
       <NewClientDialog

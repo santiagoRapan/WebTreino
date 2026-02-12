@@ -91,10 +91,15 @@ export function WorkoutDetailModal({ session, isOpen, onClose }: WorkoutDetailMo
 
   const title = session.title || session.routine?.name || "Entrenamiento sin título"
 
+  // Check if any exercise has RPE data
+  const hasRPE = details.some(exercise => 
+    exercise.sets.some(set => set.rpe !== null)
+  )
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl h-[90vh] max-h-[90vh] !flex !flex-col !p-0 !gap-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-2 shrink-0">
+        <DialogHeader className="p-6 pb-2 pr-14 shrink-0">
           <DialogTitle className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
               <AvatarImage src={session.performer.avatar_url || undefined} />
@@ -256,18 +261,18 @@ export function WorkoutDetailModal({ session, isOpen, onClose }: WorkoutDetailMo
                     </div>
 
                     <div className="space-y-2">
-                      <div className="grid grid-cols-4 text-xs text-muted-foreground px-2">
+                      <div className={`grid ${hasRPE ? 'grid-cols-4' : 'grid-cols-3'} text-xs text-muted-foreground px-2`}>
                         <div>Serie</div>
                         <div>Peso</div>
                         <div>Reps</div>
-                        <div>RPE</div>
+                        {hasRPE && <div>RPE</div>}
                       </div>
                       {exercise.sets.map((set) => (
-                        <div key={set.id} className="grid grid-cols-4 text-sm px-2 py-1 border-t border-border/50">
+                        <div key={set.id} className={`grid ${hasRPE ? 'grid-cols-4' : 'grid-cols-3'} text-sm px-2 py-1 border-t border-border/50`}>
                           <div className="font-medium">{set.setIndex}</div>
                           <div>{set.weight !== null ? `${set.weight} kg` : '-'}</div>
                           <div>{set.reps !== null ? set.reps : '-'}</div>
-                          <div>{set.rpe !== null ? set.rpe : '-'}</div>
+                          {hasRPE && <div>{set.rpe !== null ? set.rpe : '-'}</div>}
                         </div>
                       ))}
                     </div>

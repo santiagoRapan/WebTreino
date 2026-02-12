@@ -5,10 +5,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Check, Edit, History, MessageSquare, MoreVertical, Trash2, X } from "lucide-react"
+import { Check, Edit, MessageSquare, MoreVertical, Trash2, X } from "lucide-react"
 import type { Client } from "../types"
 import { useTranslation } from "@/lib/i18n/LanguageProvider"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useRouter } from "next/navigation"
 
 interface ClientTableProps {
   clients: Client[]
@@ -18,8 +19,6 @@ interface ClientTableProps {
   onAcceptRequest?: (client: Client) => void
   onRejectRequest?: (client: Client) => void
   onCancelRequest?: (client: Client) => void
-  onViewHistory?: (client: Client) => void
-  onUpdateStatus?: (client: Client, newStatus: "active" | "inactive" | "pending") => void
 }
 
 export function ClientTable({
@@ -30,11 +29,16 @@ export function ClientTable({
   onAcceptRequest,
   onRejectRequest,
   onCancelRequest,
-  onViewHistory,
-  onUpdateStatus,
 }: ClientTableProps) {
   const { t } = useTranslation()
   const isMobile = useIsMobile()
+  const router = useRouter()
+
+  const handleClientClick = (client: Client) => {
+    if (client.status !== "pending") {
+      router.push(`/alumnos/${encodeURIComponent(client.userId)}`)
+    }
+  }
 
   // Mobile card view
   if (isMobile) {
@@ -49,10 +53,20 @@ export function ClientTable({
             .join("")
             .toUpperCase()
             .slice(0, 2)
-          const progress = typeof client.progress === "number" ? client.progress : 0
+          const joinDate = client.joinDate 
+            ? new Date(client.joinDate).toLocaleDateString('es-ES', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+              })
+            : "—"
 
           return (
-            <Card key={client.id} className="overflow-hidden">
+            <Card 
+              key={client.id} 
+              className="overflow-hidden hover:bg-accent/50 transition-colors cursor-pointer"
+              onClick={() => handleClientClick(client)}
+            >
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -66,7 +80,7 @@ export function ClientTable({
                     </div>
                   </div>
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
                         <MoreVertical className="w-4 h-4" />
                       </Button>
@@ -84,24 +98,25 @@ export function ClientTable({
                       ) : (
                         <>
                           {onChatWithClient && (
-                            <DropdownMenuItem onClick={() => onChatWithClient(displayName, client)}>
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation()
+                              onChatWithClient(displayName, client)
+                            }}>
                               <MessageSquare className="w-4 h-4 mr-2" />
                               {t("clients.actions.chat")}
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem onClick={() => onEditClient(client)}>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation()
+                            onEditClient(client)
+                          }}>
                             <Edit className="w-4 h-4 mr-2" />
                             {t("clients.actions.edit")}
                           </DropdownMenuItem>
-                          {onViewHistory && (
-                            <DropdownMenuItem onClick={() => onViewHistory(client)}>
-                              <History className="w-4 h-4 mr-2" />
-                              {t("clients.actions.viewHistory")}
-                            </DropdownMenuItem>
-                          )}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onClick={async () => {
+                            onClick={async (e) => {
+                              e.stopPropagation()
                               try {
                                 await onDeleteClient(client.id)
                               } catch (error) {
@@ -124,41 +139,17 @@ export function ClientTable({
                     <span className="text-muted-foreground">{t("clients.table.phone")}:</span>
                     <span>{client.phone || "—"}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">{t("clients.table.status")}:</span>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="p-0 h-auto hover:bg-transparent">
-                          <Badge
-                            variant={
-                              client.status === "active"
-                                ? "default"
-                                : client.status === "pending"
-                                  ? "secondary"
-                                  : "destructive"
-                            }
-                            className="cursor-pointer hover:opacity-80"
-                          >
-                            {t(`dashboard.status.${client.status}`)}
-                          </Badge>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onUpdateStatus?.(client, "active")}>
-                          {t("dashboard.status.active")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onUpdateStatus?.(client, "pending")}>
-                          {t("dashboard.status.pending")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onUpdateStatus?.(client, "inactive")}>
-                          {t("dashboard.status.inactive")}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                  {client.status === "pending" && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">{t("clients.table.status")}:</span>
+                      <Badge variant="secondary">
+                        {t(`dashboard.status.${client.status}`)}
+                      </Badge>
+                    </div>
+                  )}
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">{t("clients.table.progress")}:</span>
-                    <span>{progress}%</span>
+                    <span className="text-muted-foreground">Unido:</span>
+                    <span>{joinDate}</span>
                   </div>
                 </div>
 
@@ -206,10 +197,8 @@ export function ClientTable({
             <th className="px-3 py-2 text-left">{t("clients.table.name")}</th>
             <th className="px-3 py-2 text-left">{t("clients.table.email")}</th>
             <th className="px-3 py-2 text-left">{t("clients.table.phone")}</th>
-            <th className="px-3 py-2 text-left">{t("clients.table.status")}</th>
-            <th className="px-3 py-2 text-left">{t("clients.table.progress")}</th>
-            <th className="px-3 py-2 text-left">{t("clients.table.nextSession")}</th>
-            <th className="w-48 text-right">{t("clients.table.actions")}</th>
+            <th className="px-3 py-2 text-left">Fecha de unión</th>
+            <th className="px-6 py-2 text-center">{t("clients.table.actions")}</th>
           </tr>
         </thead>
         <tbody>
@@ -223,10 +212,20 @@ export function ClientTable({
               .toUpperCase()
               .slice(0, 2)
             const phone = client.phone || "—"
-            const progress = typeof client.progress === "number" ? client.progress : 0
+            const joinDate = client.joinDate 
+              ? new Date(client.joinDate).toLocaleDateString('es-ES', { 
+                  year: 'numeric', 
+                  month: 'short', 
+                  day: 'numeric' 
+                })
+              : "—"
 
             return (
-              <tr key={client.id} className="border-b border-border hover:bg-muted/30 transition-colors items-center">
+              <tr 
+                key={client.id} 
+                className="border-b border-border hover:bg-accent/50 transition-colors items-center cursor-pointer"
+                onClick={() => handleClientClick(client)}
+              >
                 <td className="px-3 py-2 font-medium flex items-center gap-2">
                   <Avatar className="w-14 h-14">
                     <AvatarImage src={client.avatar || "/images/placeholder.svg"} />
@@ -239,40 +238,16 @@ export function ClientTable({
                 <td className="px-3 py-2">{client.email || "—"}</td>
                 <td className="px-3 py-2">{phone}</td>
                 <td className="px-3 py-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="p-0 h-auto hover:bg-transparent">
-                        <Badge
-                          variant={
-                            client.status === "active"
-                              ? "default"
-                              : client.status === "pending"
-                                ? "secondary"
-                                : "destructive"
-                          }
-                          className="cursor-pointer hover:opacity-80"
-                        >
-                          {t(`dashboard.status.${client.status}`)}
-                        </Badge>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem onClick={() => onUpdateStatus?.(client, "active")}>
-                        {t("dashboard.status.active")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onUpdateStatus?.(client, "pending")}>
-                        {t("dashboard.status.pending")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onUpdateStatus?.(client, "inactive")}>
-                        {t("dashboard.status.inactive")}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {client.status === "pending" ? (
+                    <Badge variant="secondary">
+                      {t(`dashboard.status.${client.status}`)}
+                    </Badge>
+                  ) : (
+                    <span>{joinDate}</span>
+                  )}
                 </td>
-                <td className="px-3 py-2 text-left align-middle">{progress}%</td>
-                <td className="px-3 py-2">{client.nextSession || "—"}</td>
-                <td className="w-48 px-1 py-2">
-                  <div className="flex items-center gap-2">
+                <td className="px-6 py-2">
+                  <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
                     {/* Accept/Decline buttons for pending students */}
                     {client.status === "pending" && client.requestedBy === 'alumno' && onAcceptRequest && onRejectRequest && (
                       <>
@@ -298,7 +273,7 @@ export function ClientTable({
                     )}
 
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" size="icon">
                           <MoreVertical className="w-5 h-5" />
                         </Button>
@@ -323,25 +298,25 @@ export function ClientTable({
                         ) : (
                           <>
                             {onChatWithClient && (
-                              <DropdownMenuItem onClick={() => onChatWithClient(displayName, client)}>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation()
+                                onChatWithClient(displayName, client)
+                              }}>
                                 <MessageSquare className="w-4 h-4 mr-2" />
                                 {t("clients.actions.chat")}
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem onClick={() => onEditClient(client)}>
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation()
+                              onEditClient(client)
+                            }}>
                               <Edit className="w-4 h-4 mr-2" />
                               {t("clients.actions.edit")}
                             </DropdownMenuItem>
-                            {onViewHistory && (
-                              <DropdownMenuItem onClick={() => onViewHistory(client)}>
-                                <History className="w-4 h-4 mr-2" />
-                                {t("clients.actions.viewHistory")}
-                              </DropdownMenuItem>
-                            )}
-                            {/* Agenda removed */}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={async () => {
+                              onClick={async (e) => {
+                                e.stopPropagation()
                                 try {
                                   await onDeleteClient(client.id)
                                 } catch (error) {
@@ -364,7 +339,7 @@ export function ClientTable({
           })}
           {clients.length === 0 && (
             <tr>
-              <td colSpan={7} className="text-center py-8 text-muted-foreground">
+              <td colSpan={5} className="text-center py-8 text-muted-foreground">
                 {t("clients.noResults")}
               </td>
             </tr>

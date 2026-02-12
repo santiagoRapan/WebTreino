@@ -14,8 +14,8 @@ export interface UseUIStateReturn {
   // Search and Filter States
   searchTerm: string
   setSearchTerm: Dispatch<SetStateAction<string>>
-  clientFilter: "all" | "active" | "pending"
-  setClientFilter: Dispatch<SetStateAction<"all" | "active" | "pending">>
+  clientFilter: "active" | "pending"
+  setClientFilter: Dispatch<SetStateAction<"active" | "pending">>
 
   // Dialog States
   isEditDialogOpen: boolean
@@ -46,7 +46,7 @@ export function useUIState(): UseUIStateReturn {
 
   // Search and Filter States
   const [searchTerm, setSearchTerm] = useState<string>("")
-  const [clientFilter, setClientFilter] = useState<"all" | "active" | "pending">("all")
+  const [clientFilter, setClientFilter] = useState<"active" | "pending">("active")
 
   // Dialog States
   const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false)

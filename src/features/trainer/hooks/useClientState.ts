@@ -17,7 +17,7 @@ export interface UseClientStateReturn {
   refreshClients: () => Promise<void>
   
   // Computed helper for filtered clients
-  getFilteredClients: (searchTerm: string, filter: "all" | "active" | "pending") => Client[]
+  getFilteredClients: (searchTerm: string, filter: "active" | "pending") => Client[]
   // data loaders
   fetchStudentSessions: (studentId: string) => Promise<{ sessions: any[]; logs: any[] }>
   // History state
@@ -44,7 +44,7 @@ export function useClientState(): UseClientStateReturn {
     setClients(students)
   }, [students, loadingClients])
 
-  const getFilteredClients = (searchTerm: string, filter: "all" | "active" | "pending"): Client[] => {
+  const getFilteredClients = (searchTerm: string, filter: "active" | "pending"): Client[] => {
     const normalizeText = (text?: string) =>
       (text ?? "")
         .toLowerCase()
@@ -58,10 +58,7 @@ export function useClientState(): UseClientStateReturn {
         normalizeText(client.email).includes(normalizedSearchTerm) ||
         normalizeText(client.goal).includes(normalizedSearchTerm)
 
-      const matchesFilter = 
-        filter === "all" ||
-        (filter === "active" && client.status === "active") ||
-        (filter === "pending" && client.status === "pending")
+      const matchesFilter = client.status === filter
 
       return matchesSearch && matchesFilter
     })

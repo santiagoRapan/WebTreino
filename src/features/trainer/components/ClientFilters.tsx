@@ -9,8 +9,8 @@ import { useTranslation } from "@/lib/i18n/LanguageProvider"
 interface ClientFiltersProps {
   searchTerm: string
   setSearchTerm: (term: string) => void
-  clientFilter: "all" | "active" | "pending"
-  setClientFilter: (filter: "all" | "active" | "pending") => void
+  clientFilter: "active" | "pending"
+  setClientFilter: (filter: "active" | "pending") => void
   allClients: Client[]
 }
 
@@ -35,14 +35,6 @@ export function ClientFilters({
         />
       </div>
       <div className="flex gap-2">
-        <Button
-          variant={clientFilter === "all" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setClientFilter("all")}
-          className="hover:bg-accent hover:text-accent-foreground transition-colors"
-        >
-          {t("clients.filters.all")} ({allClients.length})
-        </Button>
         <Button
           variant={clientFilter === "active" ? "default" : "outline"}
           size="sm"

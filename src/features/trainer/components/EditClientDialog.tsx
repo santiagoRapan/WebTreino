@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/hooks/use-toast"
 import { useState } from "react"
 import { guestService } from "@/features/students/services/guest-service"
@@ -22,7 +21,6 @@ interface EditClientDialogProps {
   onClose: () => void
   client: Client | null
   onClientUpdate: (client: Client) => void
-  onUpdateStatus: (client: Client, newStatus: "active" | "inactive" | "pending") => Promise<void>
 }
 
 export function EditClientDialog({
@@ -30,7 +28,6 @@ export function EditClientDialog({
   onClose,
   client,
   onClientUpdate,
-  onUpdateStatus,
 }: EditClientDialogProps) {
   const [loading, setLoading] = useState(false)
 
@@ -38,12 +35,7 @@ export function EditClientDialog({
     if (!client) return
     setLoading(true)
     try {
-      // 1. Update status if changed
-      // Note: We don't track "original" status here easily without more state, 
-      // but calling update is safe even if same.
-      await onUpdateStatus(client, client.status)
-
-      // 2. Update other fields (Guest only for now as per previous implementation patterns)
+      // Update client fields (Guest only for now)
       if (client.isGuest) {
         await guestService.updateGuest(client.id, {
           name: client.name,
@@ -51,12 +43,9 @@ export function EditClientDialog({
           phone: client.phone,
         })
       } else {
-        // For registered users, we might need a different service call if we want to edit their profile
-        // But usually profile data comes from auth/users table which might be read-only for trainer
-        // For now, we assume only status is editable for registered users via this dialog, 
-        // or we implement a specific endpoint.
-        // Given the current scope, we'll focus on status and guest updates.
-        console.log("Updating registered user data is not fully implemented yet, only status.")
+        // For registered users, profile data comes from auth/users table
+        // Currently only basic info is editable through guest service or similar endpoints
+        console.log("Updating registered user data - implement profile update endpoint if needed")
       }
 
       toast({ title: "Datos actualizados correctamente" })
@@ -115,24 +104,6 @@ export function EditClientDialog({
               onChange={(e) => onClientUpdate({ ...client, phone: e.target.value })}
               className="col-span-3"
             />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-status" className="text-right">
-              Estado
-            </Label>
-            <Select
-              value={client.status}
-              onValueChange={(value) => onClientUpdate({ ...client, status: value as Client["status"] })}
-            >
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Seleccionar estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Activo</SelectItem>
-                <SelectItem value="pending">Pendiente</SelectItem>
-                <SelectItem value="inactive">Inactivo</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
         <DialogFooter>
