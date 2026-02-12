@@ -103,6 +103,20 @@ export function createClientHandlers(
           return
         }
 
+        // Also clean up any pending or accepted link requests to prevent duplicate constraint errors
+        // when the student tries to reconnect in the future
+        const { error: requestError } = await supabase
+          .from('trainer_link_request')
+          .delete()
+          .eq('trainer_id', trainerId)
+          .eq('student_id', studentId)
+          .in('status', ['pending', 'accepted'])
+        
+        if (requestError) {
+          console.warn('Error cleaning up link requests (non-critical):', requestError)
+          // Don't block the operation - this is just cleanup
+        }
+
         // Remove from local state
         const updatedClients = clientState.clients.filter((c: Client) => c.id !== clientId)
         clientState.setClients(updatedClients)
@@ -201,21 +215,140 @@ export function createClientHandlers(
         return
       }
 
-      const now = new Date().toISOString()
+      try {
+        const authUser = await getCurrentUser()
+        if (!authUser?.id) {
+          toast({ title: 'Error', description: 'No se pudo identificar al usuario actual', variant: 'destructive' })
+          return
+        }
 
-      const { error } = await supabase
-        .from('trainer_link_request')
-        .update({ status: 'accepted', decided_at: now })
-        .eq('id', client.requestId)
+        const now = new Date().toISOString()
 
-      if (error) {
-        console.error('acceptLinkRequest error:', error)
-        toast({ title: 'Error', description: `No se pudo aceptar la solicitud: ${error.message}`, variant: 'destructive' })
-        return
+        // First, get the request details to know trainer_id and student_id
+        const { data: requestData, error: fetchError } = await supabase
+          .from('trainer_link_request')
+          .select('trainer_id, student_id, status')
+          .eq('id', client.requestId)
+          .single()
+
+        if (fetchError || !requestData) {
+          console.error('Error fetching request:', fetchError)
+          toast({ title: 'Error', description: 'No se pudo encontrar la solicitud', variant: 'destructive' })
+          return
+        }
+
+        // Check if already accepted
+        if (requestData.status === 'accepted') {
+          toast({ 
+            title: 'Ya aceptada', 
+            description: 'Esta solicitud ya fue aceptada previamente. Verificando conexión...', 
+            variant: 'default' 
+          })
+          
+          // Check if the trainer_student relationship exists
+          const { data: existingRelation } = await supabase
+            .from('trainer_student')
+            .select('*')
+            .eq('trainer_id', requestData.trainer_id)
+            .eq('student_id', requestData.student_id)
+            .maybeSingle()
+
+          // If it doesn't exist, create it
+          if (!existingRelation) {
+            await supabase
+              .from('trainer_student')
+              .insert({
+                trainer_id: requestData.trainer_id,
+                student_id: requestData.student_id,
+                joined_at: now,
+                status: 'active'
+              })
+          }
+
+          await clientState.refreshClients()
+          return
+        }
+
+        // Update request status to accepted
+        const { error: updateError } = await supabase
+          .from('trainer_link_request')
+          .update({ status: 'accepted', decided_at: now })
+          .eq('id', client.requestId)
+          .eq('status', 'pending')
+
+        if (updateError) {
+          console.error('Error updating request:', updateError)
+          toast({ title: 'Error', description: `No se pudo aceptar la solicitud: ${updateError.message}`, variant: 'destructive' })
+          return
+        }
+
+        // Check if relationship already exists to prevent duplicates
+        const { data: checkExisting } = await supabase
+          .from('trainer_student')
+          .select('id')
+          .eq('trainer_id', requestData.trainer_id)
+          .eq('student_id', requestData.student_id)
+          .maybeSingle()
+
+        if (checkExisting) {
+          // Relationship already exists, just show success
+          toast({ title: 'Solicitud aceptada', description: `${client.name} añadido a tu roster` })
+          await clientState.refreshClients()
+          return
+        }
+
+        // Create the trainer_student relationship (no trigger exists, so we do it manually)
+        const { error: relationError } = await supabase
+          .from('trainer_student')
+          .insert({
+            trainer_id: requestData.trainer_id,
+            student_id: requestData.student_id,
+            joined_at: now,
+            status: 'active'
+          })
+
+        if (relationError) {
+          console.error('Error creating trainer_student relationship:', relationError)
+          
+          // Check if it's a duplicate key error (relationship already exists)
+          const isDuplicateKey = 
+            (relationError as any)?.code === '23505' || 
+            `${relationError.message}`.toLowerCase().includes('duplicate key')
+          
+          if (isDuplicateKey) {
+            // Relationship already exists, that's fine - just refresh
+            toast({ 
+              title: 'Solicitud aceptada', 
+              description: `${client.name} añadido a tu roster`, 
+            })
+          } else {
+            // Real error - rollback the request status
+            await supabase
+              .from('trainer_link_request')
+              .update({ status: 'pending' })
+              .eq('id', client.requestId)
+            
+            toast({ 
+              title: 'Error', 
+              description: `No se pudo crear la relación: ${relationError.message}`, 
+              variant: 'destructive' 
+            })
+            return
+          }
+        } else {
+          toast({ title: 'Solicitud aceptada', description: `${client.name} añadido a tu roster` })
+        }
+
+        await clientState.refreshClients()
+
+      } catch (error) {
+        console.error('Unexpected error in acceptLinkRequest:', error)
+        toast({ 
+          title: 'Error', 
+          description: 'Ocurrió un error inesperado al aceptar la solicitud', 
+          variant: 'destructive' 
+        })
       }
-
-      await clientState.refreshClients()
-      toast({ title: 'Solicitud aceptada', description: `${client.name} añadido a tu roster` })
     },
 
     rejectLinkRequest: async (client: Client) => {
