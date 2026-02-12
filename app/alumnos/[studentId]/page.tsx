@@ -64,6 +64,10 @@ export default function AlumnoDetailsPage() {
             ...profileData,
             joinDate: relationData?.joined_at
           })
+        } else if (!cancelled && profileError) {
+          console.error("Error loading student profile:", profileError)
+        } else if (!cancelled && !profileData) {
+          console.warn("No profile data found for student:", studentId)
         }
       } catch (error) {
         console.error("Error loading student data:", error)
@@ -98,7 +102,10 @@ export default function AlumnoDetailsPage() {
     return null
   }
 
-  const displayName = studentData?.name || "Alumno"
+  // Obtener el nombre del alumno: primero intentar de studentData, 
+  // si no está disponible, usar el nombre del performer del primer workout
+  const displayName = studentData?.name || sessions[0]?.performer?.name || "Alumno"
+  const avatarUrl = studentData?.avatar_url || sessions[0]?.performer?.avatar_url || null
   const avatarFallback = displayName
     .split(" ")
     .filter(Boolean)
@@ -130,7 +137,7 @@ export default function AlumnoDetailsPage() {
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
               <Avatar className="w-20 h-20">
-                <AvatarImage src={studentData?.avatar_url || undefined} />
+                <AvatarImage src={avatarUrl || undefined} />
                 <AvatarFallback className="text-lg">
                   {avatarFallback || "A"}
                 </AvatarFallback>
