@@ -7,6 +7,7 @@ import { useTrainerDashboard } from "@/lib/context/TrainerDashboardContext"
 import { useAuth } from "@/features/auth/services/auth-context"
 import { useTheme } from "next-themes"
 import { useTranslation } from "@/lib/i18n/LanguageProvider"
+import { useMemo } from "react"
 
 export function TrainerHeader() {
   const {
@@ -17,6 +18,16 @@ export function TrainerHeader() {
   const { customUser } = useAuth()
   const { theme, setTheme } = useTheme()
   const { t } = useTranslation()
+
+  // Add cache-busting timestamp to avatar URL to force reload after upload
+  const avatarUrl = useMemo(() => {
+    if (!customUser?.avatar_url) return "/images/trainer-profile.png"
+    // Add timestamp to R2 URLs to prevent browser caching
+    if (customUser.avatar_url.includes('.r2.dev') || customUser.avatar_url.includes('r2.cloudflarestorage.com')) {
+      return `${customUser.avatar_url}?t=${Date.now()}`
+    }
+    return customUser.avatar_url
+  }, [customUser?.avatar_url])
 
   const getTabTitle = (tab: string) => {
     const tabMap: Record<string, string> = {
@@ -62,7 +73,7 @@ export function TrainerHeader() {
             </p>
           </div>
           <Avatar className="h-8 w-8 md:h-10 md:w-10">
-            <AvatarImage src={customUser?.avatar_url || "/images/trainer-profile.png"} />
+            <AvatarImage src={avatarUrl} />
             <AvatarFallback>
               {customUser?.name?.charAt(0)?.toUpperCase() || "U"}
             </AvatarFallback>

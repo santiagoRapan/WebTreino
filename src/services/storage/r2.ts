@@ -1,4 +1,4 @@
-import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3"
+import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 
 function requiredEnv(name: string): string {
@@ -12,8 +12,8 @@ let r2Client: S3Client | null = null
 function getR2Client(): S3Client {
   if (r2Client) return r2Client
 
-  const accessKeyId = requiredEnv("R2_ACCESS_KEY_ID")
-  const secretAccessKey = requiredEnv("R2_SECRET_ACCESS_KEY")
+  const accessKeyId = requiredEnv("R2_ACCESS_KEY")
+  const secretAccessKey = requiredEnv("R2_SECRET_KEY")
   const accountId = process.env.R2_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID
   const endpoint = process.env.R2_ENDPOINT || (accountId ? `https://${accountId}.r2.cloudflarestorage.com` : undefined)
 
@@ -40,7 +40,7 @@ export async function createR2SignedGetUrl(params: {
   key: string
   expiresInSeconds?: number
 }): Promise<string> {
-  const bucket = requiredEnv("R2_BUCKET_NAME")
+  const bucket = requiredEnv("R2_PUBLIC_BUCKET_NAME")
 
   const command = new GetObjectCommand({
     Bucket: bucket,
@@ -50,4 +50,26 @@ export async function createR2SignedGetUrl(params: {
   return getSignedUrl(getR2Client(), command, {
     expiresIn: params.expiresInSeconds ?? 60,
   })
+}
+
+/**
+ * Upload a file to R2 storage
+ * @param params - Upload parameters (key, body, contentType)
+ * @returns Promise that resolves when upload is complete
+ */
+export async function uploadToR2(params: {
+  key: string
+  body: Buffer
+  contentType: string
+}): Promise<void> {
+  const bucket = requiredEnv("R2_PUBLIC_BUCKET_NAME")
+
+  const command = new PutObjectCommand({
+    Bucket: bucket,
+    Key: params.key,
+    Body: params.body,
+    ContentType: params.contentType,
+  })
+
+  await getR2Client().send(command)
 }

@@ -12,21 +12,21 @@ import { useTranslation } from "@/lib/i18n/LanguageProvider"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { AvatarUpload } from "./AvatarUpload"
 
 export function SettingsTab() {
-  const { signOut, authUser, customUser, updateUserProfile } = useAuth()
+  const { signOut, authUser, customUser, updateUserProfile, session, refreshUserData } = useAuth()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const { t, locale, setLocale } = useTranslation()
   const [isSaving, setIsSaving] = useState(false)
   const [name, setName] = useState("")
-  const [avatarUrl, setAvatarUrl] = useState("")
+  const [avatarCacheBuster, setAvatarCacheBuster] = useState(Date.now())
 
   useEffect(() => {
     if (customUser) {
       setName(customUser.name || "")
-      setAvatarUrl(customUser.avatar_url || "")
     }
   }, [customUser])
 
@@ -61,32 +61,17 @@ export function SettingsTab() {
     }
   }
 
-  const handleSaveAvatar = async () => {
-    try {
-      const result = await updateUserProfile({
-        avatar_url: avatarUrl
-      })
+  const handleAvatarUploadSuccess = async (newUrl: string) => {
+    // Update cache buster to force avatar reload
+    setAvatarCacheBuster(Date.now())
 
-      if (result.ok) {
-        toast({
-          title: t("settings.toasts.avatarSuccess.title"),
-          description: t("settings.toasts.avatarSuccess.description"),
-        })
-      } else {
-        toast({
-          title: t("settings.toasts.error.title"),
-          description: result.error,
-          variant: "destructive"
-        })
-      }
-    } catch (error) {
-      console.error("Error saving avatar:", error)
-      toast({
-        title: t("settings.toasts.error.title"),
-        description: "An unexpected error occurred",
-        variant: "destructive"
-      })
-    }
+    // Refresh user data from server
+    await refreshUserData()
+
+    toast({
+      title: t("settings.toasts.avatarSuccess.title"),
+      description: t("settings.toasts.avatarSuccess.description"),
+    })
   }
 
   const handleLogout = async () => {
@@ -171,7 +156,11 @@ export function SettingsTab() {
               {/* Right Column: Avatar */}
               <div className="flex flex-col items-center gap-3">
                 <Avatar className="w-24 h-24 border-2 border-border">
-                  <AvatarImage src={avatarUrl} alt={name} className="object-cover" />
+                  <AvatarImage
+                    src={customUser?.avatar_url ? `${customUser.avatar_url}?t=${avatarCacheBuster}` : undefined}
+                    alt={name}
+                    className="object-cover"
+                  />
                   <AvatarFallback className="text-lg bg-muted">{name?.charAt(0)?.toUpperCase() || "U"}</AvatarFallback>
                 </Avatar>
 
@@ -181,38 +170,22 @@ export function SettingsTab() {
                       {t("settings.profile.editPicture")}
                     </button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-md">
                     <DialogHeader>
                       <DialogTitle>{t("settings.profile.editAvatarTitle")}</DialogTitle>
                       <DialogDescription>
                         {t("settings.profile.editAvatarDescription")}
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="py-4 space-y-4">
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                          {t("settings.profile.avatarUrl")}
-                        </label>
-                        <div className="flex gap-2">
-                          <Input
-                            value={avatarUrl}
-                            onChange={(e) => setAvatarUrl(e.target.value)}
-                            placeholder="https://example.com/avatar.jpg"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex justify-center">
-                        <Avatar className="w-20 h-20 border border-border">
-                          <AvatarImage src={avatarUrl} />
-                          <AvatarFallback>Preview</AvatarFallback>
-                        </Avatar>
-                      </div>
+                    <div className="py-4">
+                      {session?.access_token && (
+                        <AvatarUpload
+                          currentAvatarUrl={customUser?.avatar_url || null}
+                          accessToken={session.access_token}
+                          onUploadSuccess={handleAvatarUploadSuccess}
+                        />
+                      )}
                     </div>
-                    <DialogFooter>
-                      <Button onClick={handleSaveAvatar}>
-                        {t("settings.profile.save")}
-                      </Button>
-                    </DialogFooter>
                   </DialogContent>
                 </Dialog>
               </div>
