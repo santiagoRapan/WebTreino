@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useExerciseSearch, type Exercise } from "@/features/exercises"
-import { createRoutineV2 } from "@/features/routines/services/routineHandlersV2"
+import { createRoutine } from "@/features/routines/services/routineHandlersV2"
 import {
   buildRepsRange,
   buildMissingRepsLabels,
@@ -236,7 +236,7 @@ export default function NuevaRutinaPage() {
         }
       })
 
-      const routineId = await createRoutineV2(
+      const routineId = await createRoutine(
         trimmedName,
         routineDescription.trim() || null,
         user.id,

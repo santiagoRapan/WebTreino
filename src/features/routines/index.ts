@@ -10,23 +10,14 @@ export { useRoutineDatabaseV2 as useRoutineDatabase } from './hooks/useRoutineDa
 
 // Services
 export {
-  createRoutineV2 as createRoutine,
-  loadRoutineV2 as loadRoutine,
-  loadAllRoutinesV2 as loadAllRoutines,
-  updateRoutineV2 as updateRoutine,
-  deleteRoutineV2 as deleteRoutine,
-  addExerciseToBlockV2 as addExerciseToBlock,
-  updateExerciseV2 as updateExercise,
-  deleteExerciseV2 as deleteExercise,
-  // Keep V2 names for compatibility
-  createRoutineV2,
-  loadRoutineV2,
-  loadAllRoutinesV2,
-  updateRoutineV2,
-  deleteRoutineV2,
-  addExerciseToBlockV2,
-  updateExerciseV2,
-  deleteExerciseV2
+  createRoutine,
+  loadRoutine,
+  loadAllRoutines,
+  updateRoutine,
+  deleteRoutine,
+  addExerciseToBlock,
+  updateExercise,
+  deleteExercise
 } from './services/routineHandlersV2'
 
 // Types

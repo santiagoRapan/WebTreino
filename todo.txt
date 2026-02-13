@@ -1,5 +1,3 @@
-heuristica de visualizacion del estado del sistema -> que siempre se marque en la barra lateral donde estamos
-
 editar como se crea la rutina hay que solucionarle:
     que los ejercicios se muestren ordenados por score
     que los botones se noten que son botones y mejorarle todo lo que pueda el estilo (excel de ale)

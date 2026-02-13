@@ -10,16 +10,15 @@ import type {
 } from "../types"
 
 /**
- * V2 Routine Handlers
+ * Routine Handlers
  * ==================
- * These handlers work with the new normalized schema (block_exercise and block_exercise_set)
- * Status: Ready for implementation, not yet integrated into the UI
+ * These handlers work with the normalized schema (block_exercise and block_exercise_set)
  */
 
 /**
- * Create a complete routine with blocks and exercises using V2 schema
+ * Create a complete routine with blocks and exercises
  */
-export async function createRoutineV2(
+export async function createRoutine(
   name: string,
   description: string | null,
   ownerId: string,
@@ -131,7 +130,7 @@ export async function createRoutineV2(
     return routineId
 
   } catch (error) {
-    console.error('Error in createRoutineV2:', error)
+    console.error('Error in createRoutine:', error)
     toast({
       title: "Error",
       description: "Ocurrió un error al crear la rutina.",
@@ -142,9 +141,9 @@ export async function createRoutineV2(
 }
 
 /**
- * Load a complete routine with all blocks, exercises, and sets (V2 schema)
+ * Load a complete routine with all blocks, exercises, and sets
  */
-export async function loadRoutineV2(routineId: string): Promise<RoutineWithBlocksV2 | null> {
+export async function loadRoutine(routineId: string): Promise<RoutineWithBlocksV2 | null> {
   try {
     const { data: routineData, error: routineError } = await supabase
       .from('routines')
@@ -213,15 +212,15 @@ export async function loadRoutineV2(routineId: string): Promise<RoutineWithBlock
     }
 
   } catch (error) {
-    console.error('Error in loadRoutineV2:', error)
+    console.error('Error in loadRoutine:', error)
     return null
   }
 }
 
 /**
- * Load all routines for a user (V2 schema)
+ * Load all routines for a user
  */
-export async function loadAllRoutinesV2(ownerId: string): Promise<RoutineWithBlocksV2[]> {
+export async function loadAllRoutines(ownerId: string): Promise<RoutineWithBlocksV2[]> {
   try {
     const { data: routinesData, error: routinesError } = await supabase
       .from('routines')
@@ -296,16 +295,16 @@ export async function loadAllRoutinesV2(ownerId: string): Promise<RoutineWithBlo
     })
 
   } catch (error) {
-    console.error('Error in loadAllRoutinesV2:', error)
+    console.error('Error in loadAllRoutines:', error)
     return []
   }
 }
 
 /**
- * Update a complete routine (V2 schema)
+ * Update a complete routine
  * This deletes and recreates all blocks and exercises
  */
-export async function updateRoutineV2(
+export async function updateRoutine(
   routineId: string,
   name: string,
   description: string | null,
@@ -413,16 +412,16 @@ export async function updateRoutineV2(
     return true
 
   } catch (error) {
-    console.error('Error in updateRoutineV2:', error)
+    console.error('Error in updateRoutine:', error)
     return false
   }
 }
 
 /**
- * Delete a routine (V2 schema)
+ * Delete a routine
  * Note: CASCADE should handle deletion of blocks, exercises, and sets
  */
-export async function deleteRoutineV2(
+export async function deleteRoutine(
   routineId: string,
   ownerId: string
 ): Promise<boolean> {
@@ -451,15 +450,15 @@ export async function deleteRoutineV2(
     return true
 
   } catch (error) {
-    console.error('Error in deleteRoutineV2:', error)
+    console.error('Error in deleteRoutine:', error)
     return false
   }
 }
 
 /**
- * Add an exercise with sets to a block (V2 schema)
+ * Add an exercise with sets to a block
  */
-export async function addExerciseToBlockV2(
+export async function addExerciseToBlock(
   payload: CreateBlockExerciseV2Payload
 ): Promise<BlockExerciseWithSetsV2 | null> {
   try {
@@ -513,15 +512,15 @@ export async function addExerciseToBlockV2(
     }
 
   } catch (error) {
-    console.error('Error in addExerciseToBlockV2:', error)
+    console.error('Error in addExerciseToBlock:', error)
     return null
   }
 }
 
 /**
- * Update an exercise and its sets (V2 schema)
+ * Update an exercise and its sets
  */
-export async function updateExerciseV2(
+export async function updateExercise(
   exerciseId: string,
   payload: UpdateBlockExerciseV2Payload
 ): Promise<boolean> {
@@ -580,15 +579,15 @@ export async function updateExerciseV2(
     return true
 
   } catch (error) {
-    console.error('Error in updateExerciseV2:', error)
+    console.error('Error in updateExercise:', error)
     return false
   }
 }
 
 /**
- * Delete an exercise and its sets (V2 schema)
+ * Delete an exercise and its sets
  */
-export async function deleteExerciseV2(exerciseId: string): Promise<boolean> {
+export async function deleteExercise(exerciseId: string): Promise<boolean> {
   try {
     const { error } = await supabase
       .from('block_exercise')
@@ -603,7 +602,7 @@ export async function deleteExerciseV2(exerciseId: string): Promise<boolean> {
     return true
 
   } catch (error) {
-    console.error('Error in deleteExerciseV2:', error)
+    console.error('Error in deleteExercise:', error)
     return false
   }
 }

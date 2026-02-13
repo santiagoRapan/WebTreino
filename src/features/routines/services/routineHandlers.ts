@@ -174,9 +174,9 @@ export function createRoutineHandlers(
         const isTempId = typeof templateId === 'string' && templateId.startsWith('temp-')
 
         if (!isTempId) {
-          // Import deleteRoutineV2 dynamically to avoid circular dependencies
-          const { deleteRoutineV2 } = await import('../services/routineHandlersV2')
-          const success = await deleteRoutineV2(templateId as string, routineState.customUser.id)
+          // Import deleteRoutine dynamically to avoid circular dependencies
+          const { deleteRoutine } = await import('../services/routineHandlersV2')
+          const success = await deleteRoutine(templateId as string, routineState.customUser.id)
 
           if (!success) {
             return

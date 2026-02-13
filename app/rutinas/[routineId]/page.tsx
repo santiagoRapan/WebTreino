@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useExerciseSearch, type Exercise } from "@/features/exercises"
-import { loadRoutineV2, updateRoutineV2 } from "@/features/routines/services/routineHandlersV2"
+import { loadRoutine, updateRoutine, createRoutine } from "@/features/routines/services/routineHandlersV2"
 import {
   buildMissingRepsLabels,
   buildRepsRange,
@@ -23,6 +23,7 @@ import {
   getSingleRepsValue,
   isMissingReps,
   isValidRest,
+  normalizeRepsRange,
   sanitizeDigits,
   type RoutineExerciseDraft,
 } from "@/features/routines/shared/routineFormUtils"
@@ -32,11 +33,55 @@ import { Trash2 } from "lucide-react"
 import { ExercisePickerModal } from "@/components/features/routines/ExercisePickerModal"
 
 const DEFAULT_BLOCK_NAME = "Rutina"
+const DRAFT_STORAGE_KEY = "rutina-nueva-draft"
+const DEFAULT_SETS = 3
 
-export default function EditRutinaPage() {
+function loadDraftFromStorage(): {
+  routineName: string
+  routineDescription: string
+  items: RoutineExerciseDraft[]
+} | null {
+  if (typeof window === "undefined") return null
+  try {
+    const stored = localStorage.getItem(DRAFT_STORAGE_KEY)
+    if (!stored) return null
+    return JSON.parse(stored) as {
+      routineName: string
+      routineDescription: string
+      items: RoutineExerciseDraft[]
+    }
+  } catch {
+    return null
+  }
+}
+
+function saveDraftToStorage(draft: {
+  routineName: string
+  routineDescription: string
+  items: RoutineExerciseDraft[]
+}): void {
+  if (typeof window === "undefined") return
+  try {
+    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft))
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function clearDraftFromStorage(): void {
+  if (typeof window === "undefined") return
+  try {
+    localStorage.removeItem(DRAFT_STORAGE_KEY)
+  } catch {
+    // ignore storage errors
+  }
+}
+
+export default function RutinaFormPage() {
   const router = useRouter()
   const params = useParams()
   const routineId = params?.routineId as string | undefined
+  const isNew = routineId === "nueva"
 
   const initialSnapshotRef = useRef<{
     routineName: string
@@ -47,7 +92,8 @@ export default function EditRutinaPage() {
   const [routineName, setRoutineName] = useState("")
   const [routineDescription, setRoutineDescription] = useState("")
   const [items, setItems] = useState<RoutineExerciseDraft[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(!isNew)
+  const [isHydrated, setIsHydrated] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [restTouched, setRestTouched] = useState<Record<string, boolean>>({})
   const [perSetRestTouched, setPerSetRestTouched] = useState<Record<string, Record<number, boolean>>>({})
@@ -55,14 +101,34 @@ export default function EditRutinaPage() {
   const [isExerciseModalOpen, setIsExerciseModalOpen] = useState(false)
   const exerciseSearch = useExerciseSearch({ debounceMs: 250, pageSize: 8 })
 
+  // Load draft when creating new routine
   useEffect(() => {
+    if (!isNew) return
+    const draft = loadDraftFromStorage()
+    if (draft) {
+      setRoutineName(draft.routineName)
+      setRoutineDescription(draft.routineDescription)
+      setItems(draft.items)
+    }
+    setIsHydrated(true)
+  }, [isNew])
+
+  // Save draft when creating new routine
+  useEffect(() => {
+    if (!isNew || !isHydrated) return
+    saveDraftToStorage({ routineName, routineDescription, items })
+  }, [isNew, routineName, routineDescription, items, isHydrated])
+
+  // Load routine when editing
+  useEffect(() => {
+    if (isNew) return
     let isMounted = true
 
-    const loadRoutine = async () => {
+    const loadRoutineData = async () => {
       if (!routineId) return
       setIsLoading(true)
       try {
-        const routine = await loadRoutineV2(routineId)
+        const routine = await loadRoutine(routineId)
         if (!routine) {
           toast({
             title: "No encontrada",
@@ -146,12 +212,12 @@ export default function EditRutinaPage() {
       }
     }
 
-    loadRoutine()
+    loadRoutineData()
 
     return () => {
       isMounted = false
     }
-  }, [routineId, router])
+  }, [isNew, routineId, router])
 
   const totalSets = useMemo(() => {
     return items.reduce((sum, item) => sum + (Number.isFinite(item.sets) ? item.sets : 0), 0)
@@ -166,10 +232,10 @@ export default function EditRutinaPage() {
     })
   }, [items])
 
-  const canSave = routineName.trim().length > 0 && items.length > 0 && !hasInvalidRest && !isSaving
+  const canSave = routineName.trim().length > 0 && items.length > 0 && !hasInvalidRest && !isSaving && !!routineId
 
   const handleSaveRoutine = async () => {
-    if (isSaving || !routineId) return
+    if (isSaving) return
     const trimmedName = routineName.trim()
     if (!trimmedName) return
 
@@ -182,7 +248,7 @@ export default function EditRutinaPage() {
     const missingRepsItems = validItems.filter((item) => {
       const repsMode = item.repsMode ?? "single"
       if (item.seriesMode === "distintas") {
-        const normalized = ensurePerSet({ ...item, sets: getSafeSets(item.sets, 1) })
+        const normalized = ensurePerSet({ ...item, sets: getSafeSets(item.sets, DEFAULT_SETS) })
         return (normalized.perSet ?? []).some((set) => isMissingReps(set.reps || "", repsMode))
       }
       return isMissingReps(item.reps || "", repsMode)
@@ -248,34 +314,62 @@ export default function EditRutinaPage() {
         }
       })
 
-      const updated = await updateRoutineV2(
-        routineId,
-        trimmedName,
-        routineDescription.trim() || null,
-        user.id,
-        [
-          {
-            name: DEFAULT_BLOCK_NAME,
-            block_order: 1,
-            notes: null,
-            exercises: exercisesPayload,
-          },
-        ]
-      )
+      if (isNew) {
+        // Create new routine
+        const newRoutineId = await createRoutine(
+          trimmedName,
+          routineDescription.trim() || null,
+          user.id,
+          [
+            {
+              name: DEFAULT_BLOCK_NAME,
+              block_order: 1,
+              notes: null,
+              exercises: exercisesPayload,
+            },
+          ]
+        )
 
-      if (updated) {
-        window.dispatchEvent(new CustomEvent('treino:routine-created', {
-          detail: { routineId }
-        }))
-        router.push('/rutinas')
+        if (newRoutineId) {
+          clearDraftFromStorage()
+          window.dispatchEvent(new CustomEvent('treino:routine-created', {
+            detail: { routineId: newRoutineId }
+          }))
+          router.push('/rutinas')
+        }
+      } else {
+        // Update existing routine
+        const updated = await updateRoutine(
+          routineId!,
+          trimmedName,
+          routineDescription.trim() || null,
+          user.id,
+          [
+            {
+              name: DEFAULT_BLOCK_NAME,
+              block_order: 1,
+              notes: null,
+              exercises: exercisesPayload,
+            },
+          ]
+        )
+
+        if (updated) {
+          window.dispatchEvent(new CustomEvent('treino:routine-created', {
+            detail: { routineId }
+          }))
+          router.push('/rutinas')
+        }
       }
     } finally {
       setIsSaving(false)
     }
   }
 
-  const handleCancel = () => {
-    if (initialSnapshotRef.current) {
+  const handleCancel = () =>{
+    if (isNew) {
+      clearDraftFromStorage()
+    } else if (initialSnapshotRef.current) {
       setRoutineName(initialSnapshotRef.current.routineName)
       setRoutineDescription(initialSnapshotRef.current.routineDescription)
       setItems(initialSnapshotRef.current.items)
@@ -298,9 +392,13 @@ export default function EditRutinaPage() {
       <div className="mx-auto w-full space-y-4 p-4 md:p-6 lg:px-8">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">Editar rutina</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {isNew ? "Nueva rutina" : "Editar rutina"}
+            </h1>
             <p className="text-sm text-muted-foreground">
-              Modifica los ejercicios y luego guarda los cambios.
+              {isNew
+                ? "Completa los ejercicios y luego guarda la rutina."
+                : "Modifica los ejercicios y luego guarda los cambios."}
             </p>
           </div>
         </div>
@@ -973,7 +1071,7 @@ export default function EditRutinaPage() {
                         exerciseId: String(ex.id),
                         exerciseName: ex.name || "",
                         exerciseGifUrl: ex.gif_URL || "",
-                        sets: 3,
+                        sets: DEFAULT_SETS,
                         reps: "",
                         weight: "",
                         rpe: "",

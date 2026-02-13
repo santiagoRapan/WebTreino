@@ -4,23 +4,21 @@ import { useState, useCallback } from 'react'
 import { toast } from '@/hooks/use-toast'
 import type { RoutineWithBlocksV2, CreateBlockExerciseV2Payload } from '../types'
 import {
-  createRoutineV2,
-  loadRoutineV2,
-  loadAllRoutinesV2,
-  updateRoutineV2,
-  deleteRoutineV2,
-  addExerciseToBlockV2,
-  updateExerciseV2,
-  deleteExerciseV2
+  createRoutine,
+  loadRoutine,
+  loadAllRoutines,
+  updateRoutine,
+  deleteRoutine,
+  addExerciseToBlock,
+  updateExercise,
+  deleteExercise
 } from '../services/routineHandlersV2'
 
 /**
- * V2 Database Hook
+ * Database Hook for Routines
  * ================
- * React hook for managing routines using the V2 schema
+ * React hook for managing routines
  * Includes state management, caching, and all CRUD operations
- * 
- * Status: Ready for implementation
  */
 export function useRoutineDatabaseV2() {
   const [loading, setLoading] = useState(false)
@@ -29,7 +27,7 @@ export function useRoutineDatabaseV2() {
   const [lastUpdateEvent, setLastUpdateEvent] = useState<Date | null>(null)
 
   /**
-   * Save a complete routine with blocks and exercises (V2)
+   * Save a complete routine with blocks and exercises
    */
   const saveRoutineV2 = async (
     name: string,
@@ -46,7 +44,7 @@ export function useRoutineDatabaseV2() {
       setLoading(true)
       setError(null)
 
-      const routineId = await createRoutineV2(name, description, ownerId, blocks)
+      const routineId = await createRoutine(name, description, ownerId, blocks)
 
       if (routineId) {
         // Update cache
@@ -99,7 +97,7 @@ export function useRoutineDatabaseV2() {
       // Load from database
       setLoading(true)
       setError(null)
-      const loadedRoutines = await loadAllRoutinesV2(ownerId)
+      const loadedRoutines = await loadAllRoutines(ownerId)
 
       // Update state and cache
       setRoutines(loadedRoutines)
@@ -130,7 +128,7 @@ export function useRoutineDatabaseV2() {
       setLoading(true)
       setError(null)
 
-      const routine = await loadRoutineV2(routineId)
+      const routine = await loadRoutine(routineId)
       return routine
 
     } catch (err) {
@@ -161,7 +159,7 @@ export function useRoutineDatabaseV2() {
       setLoading(true)
       setError(null)
 
-      const success = await updateRoutineV2(routineId, name, description, ownerId, blocks)
+      const success = await updateRoutine(routineId, name, description, ownerId, blocks)
 
       if (success) {
         // Update cache
@@ -191,7 +189,7 @@ export function useRoutineDatabaseV2() {
       setLoading(true)
       setError(null)
 
-      const success = await deleteRoutineV2(routineId, ownerId)
+      const success = await deleteRoutine(routineId, ownerId)
 
       if (success) {
         // Update local state
@@ -225,7 +223,7 @@ export function useRoutineDatabaseV2() {
       setLoading(true)
       setError(null)
 
-      const result = await addExerciseToBlockV2(payload)
+      const result = await addExerciseToBlock(payload)
 
       if (result) {
         toast({
@@ -281,8 +279,8 @@ export function useRoutineDatabaseV2() {
 
     // Direct service access (for advanced use cases)
     services: {
-      updateExerciseV2,
-      deleteExerciseV2
+      updateExercise,
+      deleteExercise
     }
   }
 }
