@@ -71,7 +71,7 @@ export function Sidebar() {
           if (item.id !== "chat") return true
           return !authLoading && isAuthenticated
         }).map((item) => {
-          const isActive = pathname === item.href
+          const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
           const label = t(item.translationKey)
           return (
             <Link

@@ -1,3 +1,14 @@
-En el historial cuando entro me muestra el hash del alumno tipo wtf
+heuristica de visualizacion del estado del sistema -> que siempre se marque en la barra lateral donde estamos
 
-en pendientes cuando no hay ninugno da un mensaje poco claro
+editar como se crea la rutina hay que solucionarle:
+    que los ejercicios se muestren ordenados por score
+    que los botones se noten que son botones y mejorarle todo lo que pueda el estilo (excel de ale)
+
+ver de que se pueda poner rpe en la planificacion
+
+ver lo de crear ejercicio en la web si es que se puede
+
+
+---
+
+hablar lo de los guests y que onda con el telefono y mail

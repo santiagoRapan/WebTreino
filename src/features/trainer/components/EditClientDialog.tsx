@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
 import { useState } from "react"
 import { guestService } from "@/features/students/services/guest-service"
+import { updateCustomUser } from "@/services/auth"
 import type { Client } from "../types"
 
 interface EditClientDialogProps {
@@ -35,17 +36,22 @@ export function EditClientDialog({
     if (!client) return
     setLoading(true)
     try {
-      // Update client fields (Guest only for now)
       if (client.isGuest) {
+        // Update guest user (email and phone are editable)
         await guestService.updateGuest(client.id, {
           name: client.name,
           email: client.email,
           phone: client.phone,
         })
       } else {
-        // For registered users, profile data comes from auth/users table
-        // Currently only basic info is editable through guest service or similar endpoints
-        console.log("Updating registered user data - implement profile update endpoint if needed")
+        // Update registered user (only name is editable via public.users)
+        const result = await updateCustomUser(client.userId, {
+          name: client.name,
+        })
+        
+        if (result.error) {
+          throw new Error('Failed to update user profile')
+        }
       }
 
       toast({ title: "Datos actualizados correctamente" })
@@ -83,28 +89,32 @@ export function EditClientDialog({
               className="col-span-3"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-email" className="text-right">
-              Email
-            </Label>
-            <Input
-              id="edit-email"
-              value={client.email || ""}
-              onChange={(e) => onClientUpdate({ ...client, email: e.target.value })}
-              className="col-span-3"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-phone" className="text-right">
-              Teléfono
-            </Label>
-            <Input
-              id="edit-phone"
-              value={client.phone || ""}
-              onChange={(e) => onClientUpdate({ ...client, phone: e.target.value })}
-              className="col-span-3"
-            />
-          </div>
+          {client.isGuest && (
+            <>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-email" className="text-right">
+                  Email
+                </Label>
+                <Input
+                  id="edit-email"
+                  value={client.email || ""}
+                  onChange={(e) => onClientUpdate({ ...client, email: e.target.value })}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-phone" className="text-right">
+                  Teléfono
+                </Label>
+                <Input
+                  id="edit-phone"
+                  value={client.phone || ""}
+                  onChange={(e) => onClientUpdate({ ...client, phone: e.target.value })}
+                  className="col-span-3"
+                />
+              </div>
+            </>
+          )}
         </div>
         <DialogFooter>
           <Button

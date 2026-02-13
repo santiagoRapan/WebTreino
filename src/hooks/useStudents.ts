@@ -101,11 +101,25 @@ export function useStudents(): UseStudentsReturn {
         return
       }
 
+      let rosterEmailMap: Record<string, string | null> = {}
+
+      if (studentIds.length > 0) {
+        try {
+          const response = await fetch(`/api/auth/user-email?userIds=${studentIds.join(',')}`)
+          if (response.ok) {
+            const data = await response.json()
+            rosterEmailMap = data.emails || {}
+          }
+        } catch (error) {
+          console.error('Error fetching user emails:', error)
+        }
+      }
+
       const rosterClients: Client[] = (rosterProfiles || []).map((profile: any, idx: number) => ({
         id: idx + 1,
         userId: profile.id,
         name: profile.name || 'Alumno',
-        email: '',
+        email: rosterEmailMap[profile.id] || '',
         phone: '',
         status: "active" as const,
         joinDate: new Date(profile.created_on || new Date()).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
@@ -147,6 +161,20 @@ export function useStudents(): UseStudentsReturn {
         (pendingProfiles || []).map((p: any) => [p.id, p])
       )
 
+      let pendingEmailMap: Record<string, string | null> = {}
+
+      if (pendingStudentIds.length > 0) {
+        try {
+          const response = await fetch(`/api/auth/user-email?userIds=${pendingStudentIds.join(',')}`)
+          if (response.ok) {
+            const data = await response.json()
+            pendingEmailMap = data.emails || {}
+          }
+        } catch (error) {
+          console.error('Error fetching pending user emails:', error)
+        }
+      }
+
       const pendingClients: Client[] = (pendingRows || []).map((row: any, idx: number) => {
         const profile = profileMap.get(row.student_id) || {}
         return {
@@ -155,7 +183,7 @@ export function useStudents(): UseStudentsReturn {
           requestId: row.id,
           requestedBy: row.requested_by,
           name: profile.name || 'Solicitud pendiente',
-          email: '',
+          email: pendingEmailMap[row.student_id] || '',
           phone: '',
           status: "pending" as const,
           joinDate: new Date(row.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),

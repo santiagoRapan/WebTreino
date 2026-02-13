@@ -44,14 +44,26 @@ export default function AlumnoDetailsPage() {
       try {
         setLoadingStudent(true)
 
-        // Get student profile
+        // Get student profile from public.users (no email here)
         const { data: profileData, error: profileError } = await supabase
           .from("users")
-          .select("name, email, avatar_url")
+          .select("name, avatar_url")
           .eq("id", studentId)
           .maybeSingle()
 
         if (!cancelled && !profileError && profileData) {
+          // Get email from auth.users via admin API
+          let email = null
+          try {
+            const response = await fetch(`/api/auth/user-email?userId=${studentId}`)
+            if (response.ok) {
+              const data = await response.json()
+              email = data.email
+            }
+          } catch (error) {
+            console.error("Error fetching user email:", error)
+          }
+
           // Get join date from trainer_student relationship
           const { data: relationData } = await supabase
             .from("trainer_student")
@@ -62,6 +74,7 @@ export default function AlumnoDetailsPage() {
 
           setStudentData({
             ...profileData,
+            email,
             joinDate: relationData?.joined_at
           })
         } else if (!cancelled && profileError) {

@@ -93,6 +93,22 @@ export function useStudents(): UseStudentsReturn {
         (rosterProfiles || []).map((profile: any) => [profile.id, profile])
       )
 
+      // Fetch emails for all registered students in batch
+      const rosterStudentIds = (rosterRows || []).map((row: any) => row.student_id)
+      let emailMap: Record<string, string | null> = {}
+      
+      if (rosterStudentIds.length > 0) {
+        try {
+          const response = await fetch(`/api/auth/user-email?userIds=${rosterStudentIds.join(',')}`)
+          if (response.ok) {
+            const data = await response.json()
+            emailMap = data.emails || {}
+          }
+        } catch (error) {
+          console.error('Error fetching user emails:', error)
+        }
+      }
+
       const rosterClients: Client[] = (rosterRows || []).map((row: any) => {
         const profile = rosterProfileMap.get(row.student_id) || {}
         return {
@@ -100,7 +116,7 @@ export function useStudents(): UseStudentsReturn {
           userId: String(row.student_id),
           relationshipId: String(row.id), // Store the trainer_student.id for reference
           name: profile.name || 'Alumno',
-          email: '',
+          email: emailMap[row.student_id] || '',
           phone: '',
           status: (row.status as any) || "active",
           joinDate: formatDate(row.joined_at || profile.created_on),
@@ -144,6 +160,21 @@ export function useStudents(): UseStudentsReturn {
         (pendingProfiles || []).map((p: any) => [p.id, p])
       )
 
+      // Fetch emails for pending students in batch
+      let pendingEmailMap: Record<string, string | null> = {}
+      
+      if (pendingStudentIds.length > 0) {
+        try {
+          const response = await fetch(`/api/auth/user-email?userIds=${pendingStudentIds.join(',')}`)
+          if (response.ok) {
+            const data = await response.json()
+            pendingEmailMap = data.emails || {}
+          }
+        } catch (error) {
+          console.error('Error fetching pending user emails:', error)
+        }
+      }
+
       const pendingClients: Client[] = (pendingRows || []).map((row: any) => {
         const profile = pendingProfileMap.get(row.student_id) || {}
         return {
@@ -154,7 +185,7 @@ export function useStudents(): UseStudentsReturn {
           requestedBy: row.requested_by ?? null,
           requestStatus: row.status ?? null,
           name: profile.name || 'Solicitud pendiente',
-          email: '',
+          email: pendingEmailMap[row.student_id] || '',
           phone: '',
           status: "pending" as const,
           joinDate: formatDate(row.created_at),
