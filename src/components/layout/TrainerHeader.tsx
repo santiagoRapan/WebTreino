@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Menu, Moon, Sun } from "lucide-react"
@@ -17,6 +18,11 @@ export function TrainerHeader() {
   const { customUser } = useAuth()
   const { theme, setTheme } = useTheme()
   const { t } = useTranslation()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const getTabTitle = (tab: string) => {
     const tabMap: Record<string, string> = {
@@ -50,7 +56,7 @@ export function TrainerHeader() {
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           className="bg-background border-border"
         >
-          {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {mounted && (theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />)}
         </Button>
         <div className="flex items-center gap-2">
           <div className="text-right hidden sm:block">

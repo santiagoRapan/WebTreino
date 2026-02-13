@@ -11,25 +11,20 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useExerciseSearch, type Exercise } from "@/features/exercises"
 import { loadRoutine, updateRoutine, createRoutine } from "@/features/routines/services/routineHandlersV2"
+import { RoutineExerciseCard } from "@/features/routines/components/RoutineExerciseCard"
 import {
   buildMissingRepsLabels,
-  buildRepsRange,
   ensurePerSet,
   getIncompleteRoutineToast,
   getMissingRepsToast,
-  getRepsRangeParts,
   getSafeSets,
   getSessionRequiredToast,
-  getSingleRepsValue,
   isMissingReps,
   isValidRest,
-  normalizeRepsRange,
-  sanitizeDigits,
   type RoutineExerciseDraft,
 } from "@/features/routines/shared/routineFormUtils"
 import { supabase } from "@/services/database"
 import { toast } from "@/hooks/use-toast"
-import { Trash2 } from "lucide-react"
 import { ExercisePickerModal } from "@/components/features/routines/ExercisePickerModal"
 
 const DEFAULT_BLOCK_NAME = "Rutina"
@@ -436,628 +431,34 @@ export default function RutinaFormPage() {
               </CardHeader>
 
               <CardContent className="space-y-3">
-
-                {items.map((item, idx) => {
-                  const itemForRender = item.seriesMode === "distintas" ? ensurePerSet(item) : item
-                  const setsCount = Math.max(1, itemForRender.sets)
-                  const perSet = itemForRender.perSet ?? []
-
-                  return (
-                    <div key={item.id} className="rounded-md border">
-                      <div className="flex flex-col gap-3 p-3 md:flex-row md:items-start md:gap-3">
-                        {/* Delete button - aligned with gif center (h-20 = 80px, so mt-6 = 24px to center 32px button) */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground shrink-0 md:mt-6"
-                          onClick={() => setItems((prev) => prev.filter((p) => p.id !== item.id))}
-                          aria-label="Eliminar ejercicio"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-
-                        {/* Exercise cell (gif + name) */}
-                        <div className="flex items-center gap-3 w-56 shrink-0">
-                          <div className="h-20 w-20 overflow-hidden rounded-md border bg-muted flex items-center justify-center shrink-0">
-                            {item.exerciseGifUrl ? (
-                              <img
-                                src={item.exerciseGifUrl}
-                                alt={item.exerciseName || "Ejercicio"}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <div className="text-[10px] text-muted-foreground">GIF</div>
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-sm font-medium leading-tight">
-                              {item.exerciseName?.trim()
-                                ? item.exerciseName
-                                : idx === 0
-                                  ? "Selecciona"
-                                  : "Ejercicio"}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Detail area */}
-                        <div className="flex-1 space-y-2">
-                          {item.seriesMode === "iguales" ? (
-                            <div className="space-y-2">
-                              {/* Header for iguales mode */}
-                              <div className="hidden md:grid grid-cols-6 gap-2 text-xs text-muted-foreground">
-                                <div>Series</div>
-                                <div className="flex items-center gap-1">
-                                  <span>Reps</span>
-                                  <button
-                                    type="button"
-                                    className="rounded-md border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                                    onClick={() =>
-                                      setItems((prev) =>
-                                        prev.map((p) => {
-                                          if (p.id !== item.id) return p
-                                          const current = p.repsMode ?? "single"
-                                          if (current === "range") {
-                                            return { ...p, repsMode: "single", reps: getSingleRepsValue(p.reps) }
-                                          }
-                                          return { ...p, repsMode: "range" }
-                                        })
-                                      )
-                                    }
-                                  >
-                                    {item.repsMode === "range" ? "rango" : "simple"}
-                                  </button>
-                                </div>
-                                <div>Peso</div>
-                                <div>RPE</div>
-                                <div>Descanso</div>
-                                <div>Notas</div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2 md:grid-cols-6 md:items-center">
-                              <div>
-                                <div className="text-xs text-muted-foreground md:hidden mb-1">Series</div>
-                                <div className="flex items-center gap-1">
-                                  <div className="flex items-center rounded-md border bg-background">
-                                    <button
-                                      type="button"
-                                      className="px-2 py-1 text-lg font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors rounded-l-md"
-                                      onClick={() => {
-                                        const nextSets = Math.max(1, itemForRender.sets - 1)
-                                        setItems((prev) =>
-                                          prev.map((p) => {
-                                            if (p.id !== item.id) return p
-                                            const updated = { ...p, sets: nextSets }
-                                            return p.seriesMode === "distintas" ? ensurePerSet(updated) : updated
-                                          })
-                                        )
-                                      }}
-                                    >
-                                      −
-                                    </button>
-                                    <span className="px-3 py-1 text-sm font-medium min-w-[2rem] text-center">
-                                      {itemForRender.sets}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      className="px-2 py-1 text-lg font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors rounded-r-md"
-                                      onClick={() => {
-                                        const nextSets = itemForRender.sets + 1
-                                        setItems((prev) =>
-                                          prev.map((p) => {
-                                            if (p.id !== item.id) return p
-                                            const updated = { ...p, sets: nextSets }
-                                            return p.seriesMode === "distintas" ? ensurePerSet(updated) : updated
-                                          })
-                                        )
-                                      }}
-                                    >
-                                      +
-                                    </button>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    className="rounded-md border bg-background px-2 py-1 text-[11px] hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                                    onClick={() =>
-                                      setItems((prev) =>
-                                        prev.map((p) => {
-                                          if (p.id !== item.id) return p
-                                          if (p.seriesMode === "iguales") {
-                                            return ensurePerSet({ ...p, seriesMode: "distintas" })
-                                          }
-                                          return { ...p, seriesMode: "iguales" }
-                                        })
-                                      )
-                                    }
-                                  >
-                                    {item.seriesMode === "iguales" ? "iguales" : "diferentes"}
-                                  </button>
-                                </div>
-                              </div>
-                              <div className={item.repsMode === "range" ? "w-24" : "w-20"}>
-                                <div className="text-xs text-muted-foreground md:hidden mb-1">Reps</div>
-                                {((repsMode) => {
-                                  if (repsMode === "range") {
-                                    const { min, max } = getRepsRangeParts(item.reps)
-                                    return (
-                                      <div className="flex items-center gap-1">
-                                        <Input
-                                          value={min}
-                                          onChange={(e) =>
-                                            setItems((prev) =>
-                                              prev.map((p) => {
-                                                if (p.id !== item.id) return p
-                                                const cleaned = sanitizeDigits(e.target.value, 4)
-                                                const parts = getRepsRangeParts(p.reps)
-                                                return { ...p, reps: buildRepsRange(cleaned, parts.max) }
-                                              })
-                                            )
-                                          }
-                                          placeholder="10"
-                                          inputMode="numeric"
-                                          pattern="[0-9]*"
-                                          maxLength={4}
-                                          className="w-20 text-center"
-                                        />
-                                        <span className="text-xs text-muted-foreground">-</span>
-                                        <Input
-                                          value={max}
-                                          onChange={(e) =>
-                                            setItems((prev) =>
-                                              prev.map((p) => {
-                                                if (p.id !== item.id) return p
-                                                const cleaned = sanitizeDigits(e.target.value, 4)
-                                                const parts = getRepsRangeParts(p.reps)
-                                                return { ...p, reps: buildRepsRange(parts.min, cleaned) }
-                                              })
-                                            )
-                                          }
-                                          placeholder="12"
-                                          inputMode="numeric"
-                                          pattern="[0-9]*"
-                                          maxLength={4}
-                                          className="w-20 text-center"
-                                        />
-                                      </div>
-                                    )
-                                  }
-                                  return (
-                                    <Input
-                                      value={item.reps}
-                                      onChange={(e) =>
-                                        setItems((prev) =>
-                                          prev.map((p) =>
-                                            p.id === item.id
-                                              ? { ...p, reps: sanitizeDigits(e.target.value, 4) }
-                                              : p
-                                          )
-                                        )
-                                      }
-                                      placeholder="10"
-                                      inputMode="numeric"
-                                      pattern="[0-9]*"
-                                      maxLength={4}
-                                    />
-                                  )
-                                })(item.repsMode ?? "single")}
-                              </div>
-                              <div>
-                                <div className="text-xs text-muted-foreground md:hidden mb-1">Peso</div>
-                                <div className="relative w-20">
-                                  <Input
-                                    value={item.weight}
-                                    onChange={(e) =>
-                                      setItems((prev) =>
-                                        prev.map((p) =>
-                                          p.id === item.id
-                                            ? { ...p, weight: sanitizeDigits(e.target.value, 4) }
-                                            : p
-                                        )
-                                      )
-                                    }
-                                    placeholder="0"
-                                    inputMode="numeric"
-                                    pattern="[0-9]*"
-                                    maxLength={4}
-                                    className="pr-9"
-                                  />
-                                  <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                                    kg
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="w-20">
-                                <div className="text-xs text-muted-foreground md:hidden mb-1">RPE</div>
-                                <Input
-                                  value={item.rpe}
-                                  onChange={(e) =>
-                                    setItems((prev) =>
-                                      prev.map((p) =>
-                                        p.id === item.id
-                                          ? { ...p, rpe: sanitizeDigits(e.target.value, 3) }
-                                          : p
-                                      )
-                                    )
-                                  }
-                                  placeholder="-"
-                                  inputMode="numeric"
-                                  pattern="[0-9]*"
-                                  maxLength={3}
-                                />
-                              </div>
-                              <div className="w-20">
-                                <div className="text-xs text-muted-foreground md:hidden mb-1">Descanso</div>
-                                {(() => {
-                                  const restInvalid = !isValidRest(item.rest)
-                                  const showRestError = restInvalid && restTouched[item.id]
-                                  return (
-                                    <div className="space-y-1">
-                                      <Input
-                                        value={item.rest}
-                                        onChange={(e) =>
-                                          setItems((prev) =>
-                                            prev.map((p) =>
-                                              p.id === item.id
-                                                ? { ...p, rest: e.target.value }
-                                                : p
-                                            )
-                                          )
-                                        }
-                                        placeholder="-"
-                                        maxLength={5}
-                                        className={showRestError ? "border-destructive focus-visible:ring-destructive/40" : ""}
-                                        onBlur={() =>
-                                          setRestTouched((prev) => ({
-                                            ...prev,
-                                            [item.id]: true,
-                                          }))
-                                        }
-                                      />
-                                      {showRestError ? (
-                                        <div className="text-[11px] text-destructive">
-                                          Formato Incorrecto
-                                          <br />
-                                          Ejemplos: 2:00, 1:30, 0:45
-                                        </div>
-                                      ) : null}
-                                    </div>
-                                  )
-                                })()}
-                              </div>
-                              <div>
-                                <div className="text-xs text-muted-foreground md:hidden mb-1">Notas</div>
-                                <Textarea
-                                  value={item.notes}
-                                  onChange={(e) => {
-                                    e.target.style.height = 'auto'
-                                    e.target.style.height = e.target.scrollHeight + 'px'
-                                    setItems((prev) =>
-                                      prev.map((p) => (p.id === item.id ? { ...p, notes: e.target.value } : p))
-                                    )
-                                  }}
-                                  onFocus={(e) => {
-                                    e.target.style.height = 'auto'
-                                    e.target.style.height = e.target.scrollHeight + 'px'
-                                  }}
-                                  placeholder="-"
-                                  className="min-h-[38px] resize-none overflow-hidden"
-                                  rows={1}
-                                  maxLength={90}
-                                />
-                              </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              {/* Header for per-set rows */}
-                              <div className="hidden md:grid grid-cols-[1fr_40px_1fr_1fr_1fr_1fr] gap-2 text-xs text-muted-foreground">
-                                <div>Series</div>
-                                <div>#</div>
-                                <div className="flex items-center gap-1">
-                                  <span>Reps</span>
-                                  <button
-                                    type="button"
-                                    className="rounded-md border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                                    onClick={() =>
-                                      setItems((prev) =>
-                                        prev.map((p) => {
-                                          if (p.id !== item.id) return p
-                                          const current = p.repsMode ?? "single"
-                                          if (current === "range") {
-                                            const normalized = ensurePerSet(p)
-                                            const perSet = (normalized.perSet ?? []).map((set) => ({
-                                              ...set,
-                                              reps: getSingleRepsValue(set.reps),
-                                            }))
-                                            return { ...normalized, repsMode: "single", perSet }
-                                          }
-                                          return { ...p, repsMode: "range" }
-                                        })
-                                      )
-                                    }
-                                  >
-                                    {item.repsMode === "range" ? "rango" : "simple"}
-                                  </button>
-                                </div>
-                                <div>Peso</div>
-                                <div>RPE</div>
-                                <div>Descanso</div>
-                              </div>
-
-                              {/* Per-set rows */}
-                              {Array.from({ length: setsCount }).map((_, setIdx) => (
-                                <div
-                                  key={`${item.id}-set-${setIdx}`}
-                                  className="grid grid-cols-[40px_1fr] gap-2 rounded-md border p-2 md:grid-cols-[1fr_40px_1fr_1fr_1fr_1fr] md:items-center md:border-0 md:p-0"
-                                >
-                                  {/* Series input + toggle only on first row */}
-                                  {setIdx === 0 ? (
-                                    <div className="flex items-center gap-1 row-span-1">
-                                      <div className="flex items-center rounded-md border bg-background">
-                                        <button
-                                          type="button"
-                                          className="px-2 py-1 text-lg font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors rounded-l-md"
-                                          onClick={() => {
-                                            const nextSets = Math.max(1, itemForRender.sets - 1)
-                                            setItems((prev) =>
-                                              prev.map((p) => {
-                                                if (p.id !== item.id) return p
-                                                const updated = { ...p, sets: nextSets }
-                                                return p.seriesMode === "distintas" ? ensurePerSet(updated) : updated
-                                              })
-                                            )
-                                          }}
-                                        >
-                                          −
-                                        </button>
-                                        <span className="px-3 py-1 text-sm font-medium min-w-[2rem] text-center">
-                                          {itemForRender.sets}
-                                        </span>
-                                        <button
-                                          type="button"
-                                          className="px-2 py-1 text-lg font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors rounded-r-md"
-                                          onClick={() => {
-                                            const nextSets = itemForRender.sets + 1
-                                            setItems((prev) =>
-                                              prev.map((p) => {
-                                                if (p.id !== item.id) return p
-                                                const updated = { ...p, sets: nextSets }
-                                                return p.seriesMode === "distintas" ? ensurePerSet(updated) : updated
-                                              })
-                                            )
-                                          }}
-                                        >
-                                          +
-                                        </button>
-                                      </div>
-                                      <button
-                                        type="button"
-                                        className="rounded-md border bg-background px-2 py-1 text-[11px] hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                                        onClick={() =>
-                                          setItems((prev) =>
-                                            prev.map((p) => {
-                                              if (p.id !== item.id) return p
-                                              if (p.seriesMode === "iguales") {
-                                                return ensurePerSet({ ...p, seriesMode: "distintas" })
-                                              }
-                                              return { ...p, seriesMode: "iguales" }
-                                            })
-                                          )
-                                        }
-                                      >
-                                        {item.seriesMode === "iguales" ? "iguales" : "diferentes"}
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <div className="hidden md:block" />
-                                  )}
-                                  <div className="text-sm font-medium text-muted-foreground">{setIdx + 1}</div>
-                                  <div className="grid grid-cols-2 gap-2 md:contents">
-                                    <div className={item.repsMode === "range" ? "w-32" : "w-20"}>
-                                      {((repsMode) => {
-                                        const currentValue = perSet[setIdx]?.reps ?? ""
-                                        if (repsMode === "range") {
-                                          const { min, max } = getRepsRangeParts(currentValue)
-                                          return (
-                                            <div className="flex items-center gap-1">
-                                              <Input
-                                                value={min}
-                                                onChange={(e) =>
-                                                  setItems((prev) =>
-                                                    prev.map((p) => {
-                                                      if (p.id !== item.id) return p
-                                                      const next = ensurePerSet(p)
-                                                      const cleaned = sanitizeDigits(e.target.value, 4)
-                                                      const parts = getRepsRangeParts(next.perSet![setIdx]?.reps ?? "")
-                                                      next.perSet![setIdx] = {
-                                                        ...next.perSet![setIdx],
-                                                        reps: buildRepsRange(cleaned, parts.max),
-                                                      }
-                                                      return { ...next }
-                                                    })
-                                                  )
-                                                }
-                                                placeholder="10"
-                                                inputMode="numeric"
-                                                pattern="[0-9]*"
-                                                maxLength={4}
-                                                className="w-20 text-center"
-                                              />
-                                              <span className="text-xs text-muted-foreground">-</span>
-                                              <Input
-                                                value={max}
-                                                onChange={(e) =>
-                                                  setItems((prev) =>
-                                                    prev.map((p) => {
-                                                      if (p.id !== item.id) return p
-                                                      const next = ensurePerSet(p)
-                                                      const cleaned = sanitizeDigits(e.target.value, 4)
-                                                      const parts = getRepsRangeParts(next.perSet![setIdx]?.reps ?? "")
-                                                      next.perSet![setIdx] = {
-                                                        ...next.perSet![setIdx],
-                                                        reps: buildRepsRange(parts.min, cleaned),
-                                                      }
-                                                      return { ...next }
-                                                    })
-                                                  )
-                                                }
-                                                placeholder="12"
-                                                inputMode="numeric"
-                                                pattern="[0-9]*"
-                                                maxLength={4}
-                                                className="w-20 text-center"
-                                              />
-                                            </div>
-                                          )
-                                        }
-                                        return (
-                                          <Input
-                                            value={currentValue}
-                                            onChange={(e) =>
-                                              setItems((prev) =>
-                                                prev.map((p) => {
-                                                  if (p.id !== item.id) return p
-                                                  const next = ensurePerSet(p)
-                                                  next.perSet![setIdx] = {
-                                                    ...next.perSet![setIdx],
-                                                    reps: sanitizeDigits(e.target.value, 4),
-                                                  }
-                                                  return { ...next }
-                                                })
-                                              )
-                                            }
-                                            placeholder={item.reps || "10"}
-                                            inputMode="numeric"
-                                            pattern="[0-9]*"
-                                            maxLength={4}
-                                          />
-                                        )
-                                      })(item.repsMode ?? "single")}
-                                    </div>
-                                    <div className="relative w-20">
-                                      <Input
-                                        value={perSet[setIdx]?.weight ?? ""}
-                                        onChange={(e) =>
-                                          setItems((prev) =>
-                                            prev.map((p) => {
-                                              if (p.id !== item.id) return p
-                                              const next = ensurePerSet(p)
-                                              next.perSet![setIdx] = {
-                                                ...next.perSet![setIdx],
-                                                weight: sanitizeDigits(e.target.value, 4),
-                                              }
-                                              return { ...next }
-                                            })
-                                          )
-                                        }
-                                        placeholder={item.weight || "0"}
-                                        inputMode="numeric"
-                                        pattern="[0-9]*"
-                                        maxLength={4}
-                                        className="pr-9"
-                                      />
-                                      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                                        kg
-                                      </span>
-                                    </div>
-                                    <div className="w-20">
-                                      <Input
-                                        value={perSet[setIdx]?.rpe ?? ""}
-                                        onChange={(e) =>
-                                          setItems((prev) =>
-                                            prev.map((p) => {
-                                              if (p.id !== item.id) return p
-                                              const next = ensurePerSet(p)
-                                              next.perSet![setIdx] = {
-                                                ...next.perSet![setIdx],
-                                                rpe: sanitizeDigits(e.target.value, 3),
-                                              }
-                                              return { ...next }
-                                            })
-                                          )
-                                        }
-                                        placeholder={item.rpe || "-"}
-                                        inputMode="numeric"
-                                        pattern="[0-9]*"
-                                        maxLength={3}
-                                      />
-                                    </div>
-                                    <div className="w-24 space-y-1">
-                                      {(() => {
-                                        const restInvalid = !isValidRest(perSet[setIdx]?.rest ?? "")
-                                        const showRestError = restInvalid && perSetRestTouched[item.id]?.[setIdx]
-                                        return (
-                                          <>
-                                      <Input
-                                        value={perSet[setIdx]?.rest ?? ""}
-                                        onChange={(e) =>
-                                          setItems((prev) =>
-                                            prev.map((p) => {
-                                              if (p.id !== item.id) return p
-                                              const next = ensurePerSet(p)
-                                              next.perSet![setIdx] = {
-                                                ...next.perSet![setIdx],
-                                                rest: e.target.value,
-                                              }
-                                              return { ...next }
-                                            })
-                                          )
-                                        }
-                                        placeholder="-"
-                                        maxLength={5}
-                                        className={showRestError ? "border-destructive focus-visible:ring-destructive/40" : ""}
-                                        onBlur={() =>
-                                          setPerSetRestTouched((prev) => ({
-                                            ...prev,
-                                            [item.id]: {
-                                              ...prev[item.id],
-                                              [setIdx]: true,
-                                            },
-                                          }))
-                                        }
-                                      />
-                                      {showRestError ? (
-                                        <div className="text-[11px] text-destructive">
-                                          Formato Incorrecto
-                                          <br />
-                                          Ejemplos: 2:00, 1:30, 0:45
-                                        </div>
-                                      ) : null}
-                                          </>
-                                        )
-                                      })()}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-
-                              {/* Notes always single field */}
-                              <div className="pt-2">
-                                <div className="text-xs text-muted-foreground mb-1">Notas</div>
-                                <Textarea
-                                  value={item.notes}
-                                  onChange={(e) => {
-                                    e.target.style.height = 'auto'
-                                    e.target.style.height = e.target.scrollHeight + 'px'
-                                    setItems((prev) =>
-                                      prev.map((p) => (p.id === item.id ? { ...p, notes: e.target.value } : p))
-                                    )
-                                  }}
-                                  onFocus={(e) => {
-                                    e.target.style.height = 'auto'
-                                    e.target.style.height = e.target.scrollHeight + 'px'
-                                  }}
-                                  placeholder="-"
-                                  className="min-h-[38px] resize-none overflow-hidden"
-                                  rows={1}
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
+                {items.map((item, idx) => (
+                  <RoutineExerciseCard
+                    key={item.id}
+                    item={item}
+                    index={idx}
+                    onUpdate={(id, updater) =>
+                      setItems((prev) => prev.map((p) => (p.id === id ? updater(p) : p)))
+                    }
+                    onDelete={(id) => setItems((prev) => prev.filter((p) => p.id !== id))}
+                    restTouched={restTouched}
+                    perSetRestTouched={perSetRestTouched}
+                    onRestTouched={(id) =>
+                      setRestTouched((prev) => ({
+                        ...prev,
+                        [id]: true,
+                      }))
+                    }
+                    onPerSetRestTouched={(id, setIdx) =>
+                      setPerSetRestTouched((prev) => ({
+                        ...prev,
+                        [id]: {
+                          ...prev[id],
+                          [setIdx]: true,
+                        },
+                      }))
+                    }
+                  />
+                ))}
 
                 <div className="pt-2">
                   <ExercisePickerModal
@@ -1066,20 +467,23 @@ export default function RutinaFormPage() {
                     trigger={<Button variant="outline">Agregar ejercicio +</Button>}
                     exerciseSearch={exerciseSearch}
                     onSelect={(ex: Exercise) => {
-                      setItems((prev) => [...prev, {
-                        id: `ex-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-                        exerciseId: String(ex.id),
-                        exerciseName: ex.name || "",
-                        exerciseGifUrl: ex.gif_URL || "",
-                        sets: DEFAULT_SETS,
-                        reps: "",
-                        weight: "",
-                        rpe: "",
-                        notes: "",
-                        rest: "",
-                        seriesMode: "iguales",
-                        repsMode: "single",
-                      }])
+                      setItems((prev) => [
+                        ...prev,
+                        {
+                          id: `ex-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                          exerciseId: String(ex.id),
+                          exerciseName: ex.name || "",
+                          exerciseGifUrl: ex.gif_URL || "",
+                          sets: DEFAULT_SETS,
+                          reps: "",
+                          weight: "",
+                          rpe: "",
+                          notes: "",
+                          rest: "",
+                          seriesMode: "iguales",
+                          repsMode: "single",
+                        },
+                      ])
                       setIsExerciseModalOpen(false)
                     }}
                   />
