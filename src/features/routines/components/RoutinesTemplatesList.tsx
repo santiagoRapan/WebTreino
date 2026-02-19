@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, MoreVertical, FileText, ChevronRight, Trash2 } from "lucide-react"
+import { Search, MoreVertical, FileText, Copy, ChevronRight, Trash2 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +35,7 @@ interface RoutinesTemplatesListProps {
   onMoveTemplate: (templateId: string | number, folderId: string | number) => void
   onDeleteTemplate: (templateId: string | number) => void
   onExportToExcel: (template: RoutineTemplate) => void
+  onDuplicateTemplate: (templateId: string | number) => Promise<void>
   onSaveAssignments: (templateId: string | number, selectedClientIds: string[]) => Promise<void>
   allClients: Client[]
   loadingClients: boolean
@@ -73,6 +74,7 @@ export function RoutinesTemplatesList({
   onMoveTemplate,
   onDeleteTemplate,
   onExportToExcel,
+  onDuplicateTemplate,
   onSaveAssignments,
   allClients,
   loadingClients,
@@ -185,6 +187,10 @@ export function RoutinesTemplatesList({
                         <DropdownMenuItem onClick={() => onExportToExcel(tpl)}>
                           <FileText className="w-4 h-4 mr-2 text-green-500" />
                           {translations.exportExcel}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => void onDuplicateTemplate(tpl.id)}>
+                          <Copy className="w-4 h-4 mr-2" />
+                          Duplicar rutina
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         {allFolders

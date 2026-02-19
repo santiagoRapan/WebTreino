@@ -453,6 +453,95 @@ export function RoutinesTab() {
     await refreshRoutineData()
   }
 
+  const handleDuplicateTemplate = async (templateId: string | number) => {
+    if (!ownerId) {
+      toast({ title: "Error", description: "No se pudo identificar al usuario.", variant: "destructive" })
+      return
+    }
+
+    if (typeof templateId !== "string") {
+      toast({ title: "Error", description: "ID de rutina inválido.", variant: "destructive" })
+      return
+    }
+
+    const sourceRoutine = loadedRoutines.find((routine) => routine.id === templateId)
+    if (!sourceRoutine) {
+      toast({
+        title: "Rutina no encontrada",
+        description: "No se pudo cargar la rutina para duplicarla.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const sourceName = (sourceRoutine.name || "").trim()
+      const baseName = sourceName.replace(/\s*\(\d+\)\s*$/, "").trim() || sourceName || "Rutina"
+      const escapedBaseName = baseName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      const duplicateNameRegex = new RegExp(`^${escapedBaseName}\\s*\\((\\d+)\\)$`)
+
+      let maxDuplicateNumber = 0
+      for (const routine of loadedRoutines) {
+        const routineName = (routine?.name || "").trim()
+        const match = routineName.match(duplicateNameRegex)
+        if (match) {
+          const current = Number(match[1])
+          if (Number.isFinite(current) && current > maxDuplicateNumber) {
+            maxDuplicateNumber = current
+          }
+        }
+      }
+
+      const duplicatedName = `${baseName} (${maxDuplicateNumber + 1})`
+
+      const blocksPayload = (sourceRoutine.blocks || []).map((block: any, blockIndex: number) => ({
+        name: block.name || `Bloque ${blockIndex + 1}`,
+        block_order: typeof block.block_order === "number" ? block.block_order : blockIndex + 1,
+        notes: block.notes ?? null,
+        exercises: (block.exercises || []).map((exercise: any, exerciseIndex: number) => ({
+          block_id: "",
+          exercise_id: exercise.exercise_id,
+          display_order:
+            typeof exercise.display_order === "number" ? exercise.display_order : exerciseIndex + 1,
+          superset_group: exercise.superset_group ?? null,
+          notes: exercise.notes ?? undefined,
+          sets: (exercise.sets || []).map((set: any, setIndex: number) => ({
+            set_index: typeof set.set_index === "number" ? set.set_index : setIndex + 1,
+            reps: set.reps ?? undefined,
+            load_kg: set.load_kg ?? null,
+            unit: set.unit ?? "kg",
+            notes: set.notes ?? undefined,
+          })),
+        })),
+      }))
+
+      const duplicatedRoutineId = await routineDatabase.saveRoutineV2(
+        duplicatedName,
+        sourceRoutine.description || null,
+        ownerId,
+        blocksPayload
+      )
+
+      if (!duplicatedRoutineId) {
+        throw new Error("No se pudo crear la copia de la rutina")
+      }
+
+      await refreshRoutineData()
+
+      toast({
+        title: "Rutina duplicada",
+        description: `Se creó \"${duplicatedName}\" sin asignaciones.`,
+      })
+    } catch (error) {
+      console.error("Error duplicando rutina:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo duplicar la rutina.",
+        variant: "destructive",
+      })
+    }
+  }
+
   // Delete exercise from routine
   const deleteExerciseFromRoutine = (exerciseIndex: number) => {
     if (!editingRoutine) return
@@ -574,6 +663,7 @@ export function RoutinesTab() {
           onMoveTemplate={handleMoveTemplate}
           onDeleteTemplate={handleDeleteTemplateWithRefresh}
           onExportToExcel={handleExportRoutineToExcel}
+          onDuplicateTemplate={handleDuplicateTemplate}
           onSaveAssignments={async (templateId: string | number, selectedClientIds: string[]) => {
             try {
               if (typeof templateId === 'string' && templateId.startsWith('temp-')) {
