@@ -13,12 +13,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "@/hooks/use-toast"
 import type { RoutineTemplate, RoutineFolder } from "@/features/routines/types"
 import type { Client } from "@/features/trainer/types"
@@ -33,12 +35,12 @@ interface RoutinesTemplatesListProps {
   onMoveTemplate: (templateId: string | number, folderId: string | number) => void
   onDeleteTemplate: (templateId: string | number) => void
   onExportToExcel: (template: RoutineTemplate) => void
-  onAssignToClient: (template: RoutineTemplate, client: Client) => void
-  onSendToClient: (templateId: string | number, clientId: string) => Promise<void>
+  onSaveAssignments: (templateId: string | number, selectedClientIds: string[]) => Promise<void>
   allClients: Client[]
   loadingClients: boolean
   clientsError: string | null
   assignedCounts: Record<string, number>
+  assignedStudentUserIdsByRoutine: Record<string, string[]>
   translations: {
     templatesTitle: string
     templatesSubtitle: string
@@ -71,19 +73,38 @@ export function RoutinesTemplatesList({
   onMoveTemplate,
   onDeleteTemplate,
   onExportToExcel,
-  onAssignToClient,
-  onSendToClient,
+  onSaveAssignments,
   allClients,
   loadingClients,
   clientsError,
   assignedCounts,
+  assignedStudentUserIdsByRoutine,
   translations,
 }: RoutinesTemplatesListProps) {
-  const [routineAssignments, setRoutineAssignments] = useState<Record<string, string>>({})
+  const [assignmentDialogRoutine, setAssignmentDialogRoutine] =
+    useState<RoutineTemplate | null>(null)
+  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([])
+  const [savingRoutineId, setSavingRoutineId] = useState<string | null>(null)
 
   const filteredTemplates = templates.filter((t) =>
     t.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const toggleClientSelection = (clientId: string, checked: boolean) => {
+    setSelectedClientIds((prev) =>
+      checked ? Array.from(new Set([...prev, clientId])) : prev.filter((id) => id !== clientId)
+    )
+  }
+
+  const openAssignmentsDialog = (template: RoutineTemplate) => {
+    const assignedUserIds = assignedStudentUserIdsByRoutine[String(template.id)] || []
+    const initialClientIds = allClients
+      .filter((client) => assignedUserIds.includes(client.userId))
+      .map((client) => client.id)
+
+    setAssignmentDialogRoutine(template)
+    setSelectedClientIds(initialClientIds)
+  }
 
   return (
     <Card className="bg-card border-border lg:col-span-2">
@@ -138,63 +159,14 @@ export function RoutinesTemplatesList({
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 min-w-[220px]">
-                  <Select
-                    key={`${String(tpl.id)}:${routineAssignments[String(tpl.id)] ?? ""}`}
-                    value={routineAssignments[String(tpl.id)] ?? undefined}
-                    onValueChange={(clientId) => {
-                      setRoutineAssignments((prev) => ({
-                        ...prev,
-                        [String(tpl.id)]: clientId,
-                      }))
-                      const client = allClients.find((c) => c.id === clientId)
-                      if (client) {
-                        onAssignToClient(tpl, client)
-                      }
-                    }}
+                  <Button
+                    variant="outline"
+                    className="bg-transparent"
+                    disabled={loadingClients || !!clientsError || allClients.length === 0}
+                    onClick={() => openAssignmentsDialog(tpl)}
                   >
-                    <SelectTrigger disabled={loadingClients}>
-                      <SelectValue
-                        placeholder={
-                          loadingClients
-                            ? translations.loadingStudents
-                            : clientsError
-                              ? translations.errorLoadingStudents
-                              : allClients.length === 0
-                                ? translations.noStudentsRegistered
-                                : translations.assignToStudent
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {loadingClients ? (
-                        <SelectItem value="loading" disabled>
-                          {translations.loadingStudents}
-                        </SelectItem>
-                      ) : clientsError ? (
-                        <SelectItem value="error" disabled>
-                          Error: {clientsError}
-                        </SelectItem>
-                      ) : allClients.length === 0 ? (
-                        <SelectItem value="empty" disabled>
-                          {translations.noStudentsRegistered}
-                        </SelectItem>
-                      ) : (
-                        allClients.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
-                                {c.name?.charAt(0).toUpperCase() ?? "?"}
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{c.name ?? "Unknown"}</span>
-                                <span className="text-xs text-muted-foreground">{c.email}</span>
-                              </div>
-                            </div>
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                    Asignar rutina
+                  </Button>
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
@@ -239,66 +211,6 @@ export function RoutinesTemplatesList({
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <Button
-                    className="hover:bg-orange-500 transition-colors"
-                    title={
-                      typeof tpl.id === "string" && tpl.id.startsWith("temp-")
-                        ? "Guarda la rutina antes de enviarla"
-                        : undefined
-                    }
-                    disabled={
-                      !routineAssignments[String(tpl.id)] ||
-                      (typeof tpl.id === "string" && tpl.id.startsWith("temp-"))
-                    }
-                    onClick={async () => {
-                      if (typeof tpl.id === "string" && tpl.id.startsWith("temp-")) {
-                        toast({
-                          title: "Rutina no guardada",
-                          description: translations.saveBeforeSending,
-                          variant: "destructive",
-                        })
-                        return
-                      }
-                      const selectedClientId = routineAssignments[String(tpl.id)]
-                      if (selectedClientId) {
-                        try {
-                          await onSendToClient(tpl.id, selectedClientId)
-                          const selectedClient = allClients.find(
-                            (c) => c.id === selectedClientId
-                          )
-                          toast({
-                            title: "Rutina enviada",
-                            description: `La rutina "${tpl.name}" ha sido enviada a ${selectedClient?.name ?? "el cliente"}.`,
-                          })
-                          setRoutineAssignments((prev) => {
-                            const next = { ...prev }
-                            delete next[String(tpl.id)]
-                            return next
-                          })
-                        } catch (error) {
-                          console.error("Error al enviar rutina:", error)
-                          toast({
-                            title: "Error",
-                            description: "No se pudo enviar la rutina. Inténtalo de nuevo.",
-                            variant: "destructive",
-                          })
-                        }
-                      }
-                    }}
-                  >
-                    {(() => {
-                      if (typeof tpl.id === "string" && tpl.id.startsWith("temp-")) {
-                        return "Guarda la rutina primero"
-                      }
-                      const selectedClientId = routineAssignments[String(tpl.id)]
-                      const selectedClient = selectedClientId
-                        ? allClients.find((c) => c.id === selectedClientId)
-                        : null
-                      return selectedClient
-                        ? `${translations.sendTo} ${selectedClient.name ?? "cliente"}`
-                        : translations.selectStudent
-                    })()}
-                  </Button>
                 </div>
               </div>
             </div>
@@ -309,6 +221,114 @@ export function RoutinesTemplatesList({
             </div>
           )}
         </div>
+
+        <Dialog
+          open={!!assignmentDialogRoutine}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAssignmentDialogRoutine(null)
+              setSelectedClientIds([])
+            }
+          }}
+        >
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>
+                Asignar rutina {assignmentDialogRoutine ? `"${assignmentDialogRoutine.name}"` : ""}
+              </DialogTitle>
+              <DialogDescription>
+                Selecciona los alumnos y pulsa "Listo" para guardar los cambios.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="max-h-80 overflow-y-auto rounded-md border border-border">
+              {loadingClients ? (
+                <div className="p-4 text-sm text-muted-foreground">{translations.loadingStudents}</div>
+              ) : clientsError ? (
+                <div className="p-4 text-sm text-destructive">Error: {clientsError}</div>
+              ) : allClients.length === 0 ? (
+                <div className="p-4 text-sm text-muted-foreground">
+                  {translations.noStudentsRegistered}
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {allClients.map((client) => {
+                    const checked = selectedClientIds.includes(client.id)
+                    return (
+                      <label
+                        key={client.id}
+                        className="flex cursor-pointer items-center gap-3 p-3 hover:bg-muted/40"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(value) =>
+                            toggleClientSelection(client.id, value === true)
+                          }
+                        />
+                        <div className="flex flex-col">
+                          <span className="font-medium text-sm text-card-foreground">
+                            {client.name || "Alumno"}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {client.email || "Sin email"}
+                          </span>
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setAssignmentDialogRoutine(null)
+                  setSelectedClientIds([])
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                disabled={!assignmentDialogRoutine || savingRoutineId === String(assignmentDialogRoutine?.id)}
+                onClick={async () => {
+                  if (!assignmentDialogRoutine) return
+                  if (
+                    typeof assignmentDialogRoutine.id === "string" &&
+                    assignmentDialogRoutine.id.startsWith("temp-")
+                  ) {
+                    toast({
+                      title: "Rutina no guardada",
+                      description: translations.saveBeforeSending,
+                      variant: "destructive",
+                    })
+                    return
+                  }
+
+                  const routineId = String(assignmentDialogRoutine.id)
+                  setSavingRoutineId(routineId)
+                  try {
+                    await onSaveAssignments(assignmentDialogRoutine.id, selectedClientIds)
+                    setAssignmentDialogRoutine(null)
+                    setSelectedClientIds([])
+                  } catch (error) {
+                    console.error("Error guardando asignaciones:", error)
+                    toast({
+                      title: "Error",
+                      description: "No se pudieron guardar los cambios de asignación.",
+                      variant: "destructive",
+                    })
+                  } finally {
+                    setSavingRoutineId(null)
+                  }
+                }}
+              >
+                {savingRoutineId === String(assignmentDialogRoutine?.id) ? "Guardando..." : "Listo"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   )

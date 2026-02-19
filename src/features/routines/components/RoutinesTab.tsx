@@ -7,11 +7,11 @@ import { useTranslation } from "@/lib/i18n/LanguageProvider"
 import { useExerciseSearch } from "@/features/exercises"
 import { useAuth } from "@/features/auth/services/auth-context"
 import { supabase } from "@/services/database"
+import { toast } from "@/hooks/use-toast"
 import {
   useRoutineDatabase,
   updateRoutine,
   type CreateBlockExerciseV2Payload,
-  useRoutineAssignments,
   type RoutineTemplate,
 } from "@/features/routines"
 import { RoutinesHeader } from "./RoutinesHeader"
@@ -42,9 +42,6 @@ export function RoutinesTab() {
   // Routine Database hook
   const routineDatabase = useRoutineDatabase()
 
-  // Routine Assignments hook
-  const { assignRoutineToStudent } = useRoutineAssignments()
-
   // Optimized exercise search hook for exercise selector dialog
   const exerciseSearch = useExerciseSearch({
     debounceMs: 300,
@@ -63,7 +60,6 @@ export function RoutinesTab() {
       selectedFolderId,
       showNewFolderInput,
       newFolderName,
-      showNewRoutineInput,
       newRoutineName,
       routineSearch,
       editingRoutine,
@@ -79,7 +75,6 @@ export function RoutinesTab() {
       setSelectedFolderId,
       setShowNewFolderInput,
       setNewFolderName,
-      setShowNewRoutineInput,
       setNewRoutineName,
       setRoutineSearch,
       setEditingRoutine,
@@ -106,6 +101,9 @@ export function RoutinesTab() {
   const [isSaving, setIsSaving] = useState(false)
   // Track how many students have this routine assigned
   const [assignedCounts, setAssignedCounts] = useState<Record<string, number>>({})
+  // Track which student userIds have each routine assigned
+  const [assignedStudentUserIdsByRoutine, setAssignedStudentUserIdsByRoutine] =
+    useState<Record<string, string[]>>({})
   // Track if we've already handled the newRoutine action
   const hasHandledNewRoutine = useRef(false)
 
@@ -228,35 +226,47 @@ export function RoutinesTab() {
     }
   }, [searchParams, router])
 
-  // Load assignment counts for routines owned by the trainer
-  useEffect(() => {
-    const loadAssignmentCounts = async () => {
-      if (!authUser?.id) return
-      try {
-        // Fetch trainee_routine rows for routines owned by this trainer
-        const { data, error } = await supabase
-          .from('trainee_routine')
-          .select('routine_id, routines!inner(owner_id)')
-          .eq('routines.owner_id', authUser.id)
+  const loadAssignmentMetadata = useCallback(async () => {
+    if (!authUser?.id) return
 
-        if (error) {
-          console.warn('Unable to load assignment counts:', error)
-          return
-        }
+    try {
+      const { data, error } = await supabase
+        .from('trainee_routine')
+        .select('routine_id, trainee_id, routines!inner(owner_id)')
+        .eq('routines.owner_id', authUser.id)
 
-        const counts: Record<string, number> = {}
-        for (const row of (data as any[]) || []) {
-          const rid = String((row as any).routine_id)
-          counts[rid] = (counts[rid] || 0) + 1
-        }
-        setAssignedCounts(counts)
-      } catch (err) {
-        console.warn('Error computing assignment counts:', err)
+      if (error) {
+        console.warn('Unable to load assignment metadata:', error)
+        return
       }
-    }
 
-    loadAssignmentCounts()
-  }, [authUser?.id, routineFolders])
+      const counts: Record<string, number> = {}
+      const byRoutine = new Map<string, Set<string>>()
+
+      for (const row of (data as any[]) || []) {
+        const routineId = String((row as any).routine_id)
+        const traineeId = String((row as any).trainee_id)
+        counts[routineId] = (counts[routineId] || 0) + 1
+        if (!byRoutine.has(routineId)) {
+          byRoutine.set(routineId, new Set())
+        }
+        byRoutine.get(routineId)?.add(traineeId)
+      }
+
+      setAssignedCounts(counts)
+      setAssignedStudentUserIdsByRoutine(
+        Object.fromEntries(
+          Array.from(byRoutine.entries()).map(([routineId, userIds]) => [routineId, Array.from(userIds)])
+        )
+      )
+    } catch (err) {
+      console.warn('Error computing assignment metadata:', err)
+    }
+  }, [authUser?.id])
+
+  useEffect(() => {
+    loadAssignmentMetadata()
+  }, [loadAssignmentMetadata, routineFolders])
 
   // Helper function to refresh routine data
   const refreshRoutineData = useCallback(async () => {
@@ -519,7 +529,7 @@ export function RoutinesTab() {
         subtitle={t("routines.subtitle")}
         showNewFolderInput={showNewFolderInput}
         newFolderName={newFolderName}
-        showNewRoutineInput={showNewRoutineInput}
+        showNewRoutineInput={false}
         newRoutineName={newRoutineName}
         onFolderNameChange={setNewFolderName}
         onRoutineNameChange={setNewRoutineName}
@@ -532,7 +542,6 @@ export function RoutinesTab() {
           setNewFolderName("")
         }}
         onCancelNewRoutine={() => {
-          setShowNewRoutineInput(false)
           setNewRoutineName("")
         }}
         translations={{
@@ -565,62 +574,74 @@ export function RoutinesTab() {
           onMoveTemplate={handleMoveTemplate}
           onDeleteTemplate={handleDeleteTemplateWithRefresh}
           onExportToExcel={handleExportRoutineToExcel}
-          onAssignToClient={handleAssignTemplateToClient}
-          onSendToClient={async (templateId: string | number, clientId: string) => {
+          onSaveAssignments={async (templateId: string | number, selectedClientIds: string[]) => {
             try {
-              // Find the routine template
-              const routine = routineDatabase.routines.find(r => r.id === templateId)
-              if (!routine) {
-                throw new Error('Routine not found')
+              if (typeof templateId === 'string' && templateId.startsWith('temp-')) {
+                toast({
+                  title: 'Rutina no guardada',
+                  description: 'Primero guarda la rutina antes de asignarla a alumnos.',
+                  variant: 'destructive',
+                })
+                return
               }
 
-              // Find the client
-              const client = allClients.find(c => c.id === clientId)
-              if (!client) {
-                throw new Error('Client not found')
-              }
-
-              // Convert RoutineWithBlocksV2 to RoutineTemplate format
-              const routineTemplate: RoutineTemplate = {
-                id: routine.id,
-                name: routine.name,
-                description: routine.description,
-                exercises: routine.blocks.flatMap(block =>
-                  block.exercises?.map(exercise => ({
-                    exerciseId: exercise.exercise_id,
-                    sets: exercise.sets?.length || 0,
-                    reps: exercise.sets?.[0]?.reps || '',
-                    rest_seconds: 60, // default rest
-                    load_target: exercise.sets?.[0]?.load_kg?.toString() || '',
-                    tempo: '',
-                    notes: exercise.notes
-                  })) || []
+              const selectedUserIds = Array.from(
+                new Set(
+                  selectedClientIds
+                    .map((clientId) => allClients.find((client) => client.id === clientId)?.userId)
+                    .filter((userId): userId is string => Boolean(userId))
                 )
-              }
-
-              // Assign the routine using the proper function
-              // Use client.userId (the actual user ID) instead of client.id
-              const success = await assignRoutineToStudent(
-                routineTemplate,
-                client.userId, // Use the actual user ID, not the client ID
-                authUser?.id || '',
-                undefined // notes
               )
 
-              if (success) {
-                // Optimistically bump assignment count for this routine
-                setAssignedCounts(prev => ({
-                  ...prev,
-                  [String(templateId)]: (prev[String(templateId)] || 0) + 1
+              const routineId = String(templateId)
+              const currentUserIds = assignedStudentUserIdsByRoutine[routineId] || []
+              const rosterUserIds = new Set(allClients.map((client) => client.userId))
+              const managedCurrentUserIds = currentUserIds.filter((userId) => rosterUserIds.has(userId))
+
+              const toAssign = selectedUserIds.filter((userId) => !managedCurrentUserIds.includes(userId))
+              const toUnassign = managedCurrentUserIds.filter((userId) => !selectedUserIds.includes(userId))
+
+              if (toAssign.length > 0) {
+                const payload = toAssign.map((userId) => ({
+                  trainee_id: userId,
+                  routine_id: templateId,
+                  assigned_on: new Date().toISOString(),
                 }))
+
+                const { error: assignError } = await supabase
+                  .from('trainee_routine')
+                  .insert(payload)
+
+                if (assignError && (assignError as any).code !== '23505') {
+                  throw assignError
+                }
               }
+
+              if (toUnassign.length > 0) {
+                const { error: unassignError } = await supabase
+                  .from('trainee_routine')
+                  .delete()
+                  .eq('routine_id', templateId)
+                  .in('trainee_id', toUnassign)
+
+                if (unassignError) {
+                  throw unassignError
+                }
+              }
+
+              await loadAssignmentMetadata()
+
+              toast({
+                title: 'Asignaciones actualizadas',
+                description: `${toAssign.length} asignadas · ${toUnassign.length} desasignadas.`,
+              })
             } catch (error) {
-              // If assignment fails, we could revert the optimistic update here
-              console.error('Error assigning routine:', error)
+              console.error('Error syncing routine assignments:', error)
               throw error
             }
           }}
           assignedCounts={assignedCounts}
+          assignedStudentUserIdsByRoutine={assignedStudentUserIdsByRoutine}
           allClients={allClients}
           loadingClients={loadingClients}
           clientsError={clientsError}
