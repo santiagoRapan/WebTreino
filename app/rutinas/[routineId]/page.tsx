@@ -91,7 +91,6 @@ export default function RutinaFormPage() {
   const [isHydrated, setIsHydrated] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [restTouched, setRestTouched] = useState<Record<string, boolean>>({})
-  const [perSetRestTouched, setPerSetRestTouched] = useState<Record<string, Record<number, boolean>>>({})
 
   const [isExerciseModalOpen, setIsExerciseModalOpen] = useState(false)
   const exerciseSearch = useExerciseSearch({ debounceMs: 250, pageSize: 8 })
@@ -195,7 +194,6 @@ export default function RutinaFormPage() {
           setRoutineDescription(routine.description ?? "")
           setItems(mappedItems)
           setRestTouched({})
-          setPerSetRestTouched({})
           initialSnapshotRef.current = {
             routineName: routine.name,
             routineDescription: routine.description ?? "",
@@ -369,7 +367,6 @@ export default function RutinaFormPage() {
       setRoutineDescription(initialSnapshotRef.current.routineDescription)
       setItems(initialSnapshotRef.current.items)
       setRestTouched({})
-      setPerSetRestTouched({})
     }
     router.push('/rutinas')
   }
@@ -441,20 +438,10 @@ export default function RutinaFormPage() {
                     }
                     onDelete={(id) => setItems((prev) => prev.filter((p) => p.id !== id))}
                     restTouched={restTouched}
-                    perSetRestTouched={perSetRestTouched}
                     onRestTouched={(id) =>
                       setRestTouched((prev) => ({
                         ...prev,
                         [id]: true,
-                      }))
-                    }
-                    onPerSetRestTouched={(id, setIdx) =>
-                      setPerSetRestTouched((prev) => ({
-                        ...prev,
-                        [id]: {
-                          ...prev[id],
-                          [setIdx]: true,
-                        },
                       }))
                     }
                   />

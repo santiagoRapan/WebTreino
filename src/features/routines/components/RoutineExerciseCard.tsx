@@ -24,9 +24,7 @@ interface RoutineExerciseCardProps {
   onUpdate: (id: string, updater: (item: RoutineExerciseDraft) => RoutineExerciseDraft) => void
   onDelete: (id: string) => void
   restTouched: Record<string, boolean>
-  perSetRestTouched: Record<string, Record<number, boolean>>
   onRestTouched: (id: string) => void
-  onPerSetRestTouched: (id: string, setIdx: number) => void
 }
 
 export function RoutineExerciseCard({
@@ -35,9 +33,7 @@ export function RoutineExerciseCard({
   onUpdate,
   onDelete,
   restTouched,
-  perSetRestTouched,
   onRestTouched,
-  onPerSetRestTouched,
 }: RoutineExerciseCardProps) {
   const itemForRender = item.seriesMode === "distintas" ? ensurePerSet(item) : item
   const setsCount = Math.max(1, itemForRender.sets)
@@ -85,41 +81,51 @@ export function RoutineExerciseCard({
           </div>
         </div>
         
-        <div className="flex items-center gap-1.5">
-          <div className="flex items-center rounded-md border bg-background shadow-sm">
-            <button
-              type="button"
-              className="px-2.5 py-1.5 text-base font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-              onClick={() => {
-                const nextSets = Math.max(1, itemForRender.sets - 1)
-                handleUpdate((p) => {
-                  const updated = { ...p, sets: nextSets }
-                  return p.seriesMode === "distintas" ? ensurePerSet(updated) : updated
-                })
-              }}
-            >
-              −
-            </button>
-            <span className="min-w-[2.5rem] px-3 py-1.5 text-center text-sm font-semibold">
-              {itemForRender.sets}
-            </span>
-            <button
-              type="button"
-              className="px-2.5 py-1.5 text-base font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-              onClick={() => {
-                const nextSets = itemForRender.sets + 1
-                handleUpdate((p) => {
-                  const updated = { ...p, sets: nextSets }
-                  return p.seriesMode === "distintas" ? ensurePerSet(updated) : updated
-                })
-              }}
-            >
-              +
-            </button>
+        <div className="flex flex-col items-end gap-1.5">
+          {/* Sets counter with label */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">Series:</span>
+            <div className="flex items-center rounded-md border bg-background shadow-sm">
+              <button
+                type="button"
+                className="px-2 py-1 text-base font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors rounded-l-md"
+                onClick={() => {
+                  const nextSets = Math.max(1, itemForRender.sets - 1)
+                  handleUpdate((p) => {
+                    const updated = { ...p, sets: nextSets }
+                    return p.seriesMode === "distintas" ? ensurePerSet(updated) : updated
+                  })
+                }}
+              >
+                −
+              </button>
+              <span className="min-w-[2rem] px-2 py-1 text-center text-sm font-semibold">
+                {itemForRender.sets}
+              </span>
+              <button
+                type="button"
+                className="px-2 py-1 text-base font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors rounded-r-md"
+                onClick={() => {
+                  const nextSets = itemForRender.sets + 1
+                  handleUpdate((p) => {
+                    const updated = { ...p, sets: nextSets }
+                    return p.seriesMode === "distintas" ? ensurePerSet(updated) : updated
+                  })
+                }}
+              >
+                +
+              </button>
+            </div>
           </div>
+          
+          {/* Series mode toggle with text */}
           <button
             type="button"
-            className="rounded-md border bg-background px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
+            className={`rounded-md border px-2.5 py-1 text-xs font-medium shadow-sm transition-colors ${
+              item.seriesMode === "iguales"
+                ? "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                : "bg-primary/10 text-primary border-primary/30 hover:bg-primary/20"
+            }`}
             onClick={() =>
               handleUpdate((p) => {
                 if (p.seriesMode === "iguales") {
@@ -129,14 +135,14 @@ export function RoutineExerciseCard({
               })
             }
           >
-            {item.seriesMode === "iguales" ? "=" : "≠"}
+            {item.seriesMode === "iguales" ? "Todas iguales" : "Distintas"}
           </button>
         </div>
       </div>
 
       {/* Tabla de series estilo Excel */}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[600px]">
+        <table className="w-full min-w-[500px]">
           <thead>
             <tr className="border-b bg-muted/20 text-xs font-medium text-muted-foreground">
               <th className="p-2 text-center w-12">#</th>
@@ -145,7 +151,11 @@ export function RoutineExerciseCard({
                   <span>Reps</span>
                   <button
                     type="button"
-                    className="rounded border bg-background px-1.5 py-0.5 text-[10px] hover:bg-muted/80 transition-colors"
+                    className={`rounded border px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                      item.repsMode === "range"
+                        ? "bg-primary/10 text-primary border-primary/30 hover:bg-primary/20"
+                        : "bg-background hover:bg-muted/80"
+                    }`}
                     onClick={() =>
                       handleUpdate((p) => {
                         const current = p.repsMode ?? "single"
@@ -164,14 +174,12 @@ export function RoutineExerciseCard({
                       })
                     }
                   >
-                    {item.repsMode === "range" ? "rango" : "single"}
+                    {item.repsMode === "range" ? "Rango" : "Fijas"}
                   </button>
                 </div>
               </th>
               <th className="p-2 text-left w-24">Peso (kg)</th>
               <th className="p-2 text-left w-20">RPE</th>
-              <th className="p-2 text-left w-24">Descanso</th>
-              {item.seriesMode === "iguales" && <th className="p-2 text-left min-w-40">Notas</th>}
             </tr>
           </thead>
           <tbody>
@@ -260,45 +268,6 @@ export function RoutineExerciseCard({
                     pattern="[0-9]*"
                     maxLength={3}
                     className="h-9 w-16"
-                  />
-                </td>
-                <td className="p-2">
-                  {(() => {
-                    const restInvalid = !isValidRest(item.rest)
-                    const showRestError = restInvalid && restTouched[item.id]
-                    return (
-                      <div className="space-y-1">
-                        <Input
-                          value={item.rest}
-                          onChange={(e) => handleUpdate((p) => ({ ...p, rest: e.target.value }))}
-                          placeholder="-"
-                          maxLength={5}
-                          className={`h-9 w-20 ${showRestError ? "border-destructive focus-visible:ring-destructive/40" : ""}`}
-                          onBlur={() => onRestTouched(item.id)}
-                        />
-                        {showRestError && (
-                          <div className="text-[10px] text-destructive">Formato: 2:00</div>
-                        )}
-                      </div>
-                    )
-                  })()}
-                </td>
-                <td className="p-2">
-                  <Textarea
-                    value={item.notes}
-                    onChange={(e) => {
-                      e.target.style.height = "auto"
-                      e.target.style.height = e.target.scrollHeight + "px"
-                      handleUpdate((p) => ({ ...p, notes: e.target.value }))
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.height = "auto"
-                      e.target.style.height = e.target.scrollHeight + "px"
-                    }}
-                    placeholder="-"
-                    className="min-h-[36px] w-full resize-none overflow-hidden text-sm"
-                    rows={1}
-                    maxLength={90}
                   />
                 </td>
               </tr>
@@ -425,41 +394,58 @@ export function RoutineExerciseCard({
                       className="h-9 w-16"
                     />
                   </td>
-                  <td className="p-2">
-                    {(() => {
-                      const restInvalid = !isValidRest(perSet[setIdx]?.rest ?? "")
-                      const showRestError = restInvalid && perSetRestTouched[item.id]?.[setIdx]
-                      return (
-                        <div className="space-y-1">
-                          <Input
-                            value={perSet[setIdx]?.rest ?? ""}
-                            onChange={(e) =>
-                              handleUpdate((p) => {
-                                const next = ensurePerSet(p)
-                                next.perSet![setIdx] = {
-                                  ...next.perSet![setIdx],
-                                  rest: e.target.value,
-                                }
-                                return { ...next }
-                              })
-                            }
-                            placeholder="-"
-                            maxLength={5}
-                            className={`h-9 w-20 ${showRestError ? "border-destructive focus-visible:ring-destructive/40" : ""}`}
-                            onBlur={() => onPerSetRestTouched(item.id, setIdx)}
-                          />
-                          {showRestError && (
-                            <div className="text-[10px] text-destructive">Formato: 2:00</div>
-                          )}
-                        </div>
-                      )
-                    })()}
-                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Notas y Descanso del ejercicio (fuera de la tabla) */}
+      <div className="border-t bg-muted/10 p-3">
+        <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Notas del ejercicio</label>
+            <Textarea
+              value={item.notes}
+              onChange={(e) => {
+                e.target.style.height = "auto"
+                e.target.style.height = e.target.scrollHeight + "px"
+                handleUpdate((p) => ({ ...p, notes: e.target.value }))
+              }}
+              onFocus={(e) => {
+                e.target.style.height = "auto"
+                e.target.style.height = e.target.scrollHeight + "px"
+              }}
+              placeholder="Notas adicionales del ejercicio..."
+              className="min-h-[38px] resize-none overflow-hidden text-sm"
+              rows={1}
+              maxLength={200}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Descanso</label>
+            {(() => {
+              const restInvalid = !isValidRest(item.rest)
+              const showRestError = restInvalid && restTouched[item.id]
+              return (
+                <div className="space-y-1">
+                  <Input
+                    value={item.rest}
+                    onChange={(e) => handleUpdate((p) => ({ ...p, rest: e.target.value }))}
+                    placeholder="2:00"
+                    maxLength={5}
+                    className={`h-9 w-24 ${showRestError ? "border-destructive focus-visible:ring-destructive/40" : ""}`}
+                    onBlur={() => onRestTouched(item.id)}
+                  />
+                  {showRestError && (
+                    <div className="text-[10px] text-destructive">Formato: 2:00</div>
+                  )}
+                </div>
+              )
+            })()}
+          </div>
+        </div>
       </div>
     </div>
   )

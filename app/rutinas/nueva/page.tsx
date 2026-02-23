@@ -113,7 +113,6 @@ export default function NuevaRutinaPage() {
   const [items, setItems] = useState<RoutineExerciseDraft[]>([])
   const [isHydrated, setIsHydrated] = useState(false)
   const [restTouched, setRestTouched] = useState<Record<string, boolean>>({})
-  const [perSetRestTouched, setPerSetRestTouched] = useState<Record<string, Record<number, boolean>>>({})
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
@@ -312,20 +311,10 @@ export default function NuevaRutinaPage() {
                     }
                     onDelete={(id) => setItems((prev) => prev.filter((p) => p.id !== id))}
                     restTouched={restTouched}
-                    perSetRestTouched={perSetRestTouched}
                     onRestTouched={(id) =>
                       setRestTouched((prev) => ({
                         ...prev,
                         [id]: true,
-                      }))
-                    }
-                    onPerSetRestTouched={(id, setIdx) =>
-                      setPerSetRestTouched((prev) => ({
-                        ...prev,
-                        [id]: {
-                          ...prev[id],
-                          [setIdx]: true,
-                        },
                       }))
                     }
                   />
